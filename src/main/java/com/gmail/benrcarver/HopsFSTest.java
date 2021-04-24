@@ -1,11 +1,11 @@
 package com.gmail.benrcarver;
 
 import com.google.gson.JsonObject;
+import org.apache.commons.cli.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import sun.tools.jar.CommandLine;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
