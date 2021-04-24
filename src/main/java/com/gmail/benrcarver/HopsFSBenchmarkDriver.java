@@ -141,8 +141,8 @@ public class HopsFSBenchmarkDriver {
             // Compute the sum, with which we will compute the average. Also
             // compute the min and the max.
             double sumofTimes = times.stream().reduce(0.0, Double::sum);
-            double minTime = times.stream().reduce(0.0, Double::min);
             double maxTime = times.stream().reduce(0.0, Double::max);
+            double minTime = times.stream().reduce(maxTime, Double::min);
 
             // Compute the average.
             double average = sumofTimes / times.size();
@@ -153,8 +153,8 @@ public class HopsFSBenchmarkDriver {
         }
 
         double sumOfAllTimes = allTimes.stream().reduce(0.0, Double::sum);
-        double minTime = allTimes.stream().reduce(0.0, Double::min);
         double maxTime = allTimes.stream().reduce(0.0, Double::max);
+        double minTime = allTimes.stream().reduce(maxTime, Double::min);
         double average = sumOfAllTimes / allTimes.size();
 
         System.out.println("Total number of times collected: " + allTimes.size());
