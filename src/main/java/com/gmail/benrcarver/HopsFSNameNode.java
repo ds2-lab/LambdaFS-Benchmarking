@@ -1,4 +1,4 @@
-package hopsfs;
+package com.gmail.benrcarver;
 
 /**
  * Encapsulates a NameNode to which we will send requests to during the benchmark.

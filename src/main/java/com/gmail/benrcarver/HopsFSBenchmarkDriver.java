@@ -1,9 +1,9 @@
-package hopsfs;
+package com.gmail.benrcarver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import sun.tools.jar.CommandLine;
+import org.apache.commons.cli.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,32 +43,6 @@ public class HopsFSBenchmarkDriver {
     private static CommandLine parseArguments(String[] args) {
         Options options = new Options();
 
-        /*// The NDB URL that the HopsFS NameNode should query.
-        Option connectionUrlOption = new Option("url", CONNECTION_URL, true, "The connection URL for a query.");
-        connectionUrlOption.setRequired(false);
-
-        // The query that should be issued by the com.gmail.benrcarver.hopsfs.HopsFSClient objects.
-        Option queryOperationOption = new Option("q", QUERY, true, "Perform a query operation.");
-        queryOperationOption.setRequired(false);
-
-        // The source from which the NameNodes should retrieve there data.
-        // They will either query NDB or return data from their local memory.
-        Option dataSourceOpt = new Option("src", DATA_SOURCE, true, "The source from which the requested data should be retrieved.");
-        dataSourceOpt.setRequired(false);
-
-        // The number of queries to be issued by each com.gmail.benrcarver.hopsfs.HopsFSClient. This is NOT the total number of queries.
-        Option numQueriesOpt = new Option("n", NUMBER_OF_QUERIES, true, "The number of queries to make.");
-        numQueriesOpt.setRequired(false);
-
-        Option numThreadsOpt = new Option("t", NUMBER_OF_THREADS, true, "The number of threads to use during the benchmark.");
-        numThreadsOpt.setRequired(false);
-
-        options.addOption(connectionUrlOption);
-        options.addOption(queryOperationOption);
-        options.addOption(dataSourceOpt);
-        options.addOption(numQueriesOpt);
-        options.addOption(numThreadsOpt);*/
-
         Option yamlFileLocationOpt = new Option("i", "input", true, "The path to the YAMl file containing the benchmark definition.");
         yamlFileLocationOpt.setRequired(false);
 
@@ -78,8 +52,7 @@ public class HopsFSBenchmarkDriver {
 
         try {
             cmd = parser.parse(options, args);
-        } catch (
-                ParseException e) {
+        } catch (ParseException e) {
             System.out.println(e.getMessage());
             formatter.printHelp("utility-name", options);
 
@@ -106,7 +79,7 @@ public class HopsFSBenchmarkDriver {
         System.out.println("Parsing NameNode definitions now...");
         System.out.println("There are " + nameNodesForBenchmark.size() + " NameNode(s) to process.");
         for (HopsFSNameNode hopsFSNameNode : nameNodesForBenchmark) {
-            System.out.println("Creating " + hopsFSNameNode.getNumThreads() + " com.gmail.benrcarver.hopsfs.HopsFSClient objects for NameNode at " + hopsFSNameNode.getNameNodeUri());
+            System.out.println("Creating " + hopsFSNameNode.getNumThreads() + " com.gmail.benrcarver.com.gmail.benrcarver.HopsFSClient objects for NameNode at " + hopsFSNameNode.getNameNodeUri());
             for (int i = 0; i < hopsFSNameNode.getNumThreads(); i++) {
                 HopsFSClient client = new HopsFSClient(
                         hopsFSNameNode.getNumRpc(),
@@ -126,7 +99,7 @@ public class HopsFSBenchmarkDriver {
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
         List<Future<BenchmarkResult>> resultsList = new ArrayList<>();
 
-        System.out.println("Starting com.gmail.benrcarver.hopsfs.HopsFSClient objects now.");
+        System.out.println("Starting com.gmail.benrcarver.com.gmail.benrcarver.HopsFSClient objects now.");
         for (HopsFSClient client : clients) {
             Future<BenchmarkResult> timeResult = executor.submit(client);
             resultsList.add(timeResult);

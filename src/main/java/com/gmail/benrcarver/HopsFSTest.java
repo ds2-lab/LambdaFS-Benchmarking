@@ -1,4 +1,4 @@
-package hopsfs;
+package com.gmail.benrcarver;
 
 import com.google.gson.JsonObject;
 import org.apache.hadoop.conf.Configuration;

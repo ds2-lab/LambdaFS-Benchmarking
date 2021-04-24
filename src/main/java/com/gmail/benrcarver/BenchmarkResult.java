@@ -1,9 +1,9 @@
-package hopsfs;
+package com.gmail.benrcarver;
 
 import java.util.ArrayList;
 
 /**
- * Encapsulates a result returned by a com.gmail.benrcarver.hopsfs.HopsFSClient during the benchmark.
+ * Encapsulates a result returned by a com.gmail.benrcarver.com.gmail.benrcarver.HopsFSClient during the benchmark.
  */
 public class BenchmarkResult {
     /**

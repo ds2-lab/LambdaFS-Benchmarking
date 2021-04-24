@@ -1,7 +1,5 @@
-package hopsfs;
+package com.gmail.benrcarver;
 
-import com.google.gson.JsonObject;
-import org.apache.commons.cli.*;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
