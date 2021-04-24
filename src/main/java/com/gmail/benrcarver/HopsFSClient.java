@@ -20,32 +20,32 @@ public class HopsFSClient implements Callable<BenchmarkResult>{
     /**
      * The number of RPC calls to make.
      */
-    private int numRPC;
+    private final int numRPC;
 
     /**
      * Current HopsFS API requires an ID, which is the ID of the desired user in the NDB database.
      */
-    private int id;
+    private final int id;
 
     /**
      * The URI of the NameNode we'll be contacting.
      */
-    private String nameNodeUri;
+    private final String nameNodeUri;
 
     /**
      * The query to be issued via the RPC call.
      */
-    private String query;
+    private final String query;
 
     /**
      * Indicates whether the NameNode should retrieve requested "metadata" from NDB or its local storage.
      */
-    private String dataSource;
+    private final String dataSource;
 
     /**
      * The NDB URI that the NameNode should issue NDB requests to.
      */
-    private String ndbConnectionUri;
+    private final String ndbConnectionUri;
 
     /**
      * The number of queries the NameNode should execute PER RPC REQUEST.
@@ -57,7 +57,7 @@ public class HopsFSClient implements Callable<BenchmarkResult>{
      * assuming the NameNode is directed to issue NDB queries rather than retrieve
      * data from its local memory/cache).
      */
-    private int numQueries;
+    private final int numQueries;
 
     public HopsFSClient(int numRpc, int numQueries, int id, String nameNodeUri, String query,
                         String dataSource, String ndbConnectionUri) {
@@ -68,13 +68,6 @@ public class HopsFSClient implements Callable<BenchmarkResult>{
         this.query = query;
         this.dataSource = dataSource;
         this.ndbConnectionUri = ndbConnectionUri;
-    }
-
-    /**
-     * Default constructor.
-     */
-    public HopsFSClient() {
-        
     }
 
     @Override

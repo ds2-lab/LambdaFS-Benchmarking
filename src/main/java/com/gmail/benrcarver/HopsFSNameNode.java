@@ -7,22 +7,22 @@ public class HopsFSNameNode {
     /**
      * Indicates whether the NameNode should retrieve requested "metadata" from NDB or its local storage.
      */
-    private final String dataSource;
+    private String dataSource;
 
     /**
      * The NDB URI that the NameNode should issue NDB requests to.
      */
-    private final String ndbConnectionUri;
+    private String ndbConnectionUri;
 
     /**
      * The query that we want the NameNode to execute.
      */
-    private final String query;
+    private String query;
 
     /**
      * URI of the NameNode.
      */
-    private final String nameNodeUri;
+    private String nameNodeUri;
 
     /**
      * The number of queries the NameNode should execute PER RPC REQUEST.
@@ -34,22 +34,22 @@ public class HopsFSNameNode {
      * assuming the NameNode is directed to issue NDB queries rather than retrieve
      * data from its local memory/cache).
      */
-    private final int numQueries;
+    private int numQueries;
 
     /**
      * The number of RPC calls we should issue to this NameNode PER THREAD.
      */
-    private final int numRpc;
+    private int numRpc;
 
     /**
      * Current HopsFS API requires an ID, which is the ID of the desired user in the NDB database.
      */
-    private final int id;
+    private int id;
 
     /**
      * The number of threads that will target this NameNode during this test.
      */
-    private final  int numThreads;
+    private int numThreads;
 
     public HopsFSNameNode(String dataSource, String ndbConnectionUri, String query, String nameNodeUri,
                           int numQueries, int numRpc, int numThreads, int id) {
@@ -61,6 +61,13 @@ public class HopsFSNameNode {
         this.numRpc = numRpc;
         this.numThreads = numThreads;
         this.id = id;
+    }
+
+    /**
+     * Default constructor.
+     */
+    public HopsFSNameNode() {
+
     }
 
     public String getDataSource() {
