@@ -7,10 +7,7 @@ import org.apache.commons.cli.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -150,8 +147,9 @@ public class HopsFSBenchmarkDriver {
             // Compute the average.
             double average = sumofTimes / times.size();
 
-            System.out.println("NameNode at " + nameNodeUri + " (AVG/MIN/MAX):\n" + average + "\n" + minTime
-                    + "\n" + maxTime + "\n");
+            System.out.println("Number of times for NameNode at " + nameNodeUri + ": " + times.size());
+            System.out.println("NameNode at " + nameNodeUri + " (AVG/MIN/MAX/ALL):\n" + average + "\n" + minTime
+                    + "\n" + maxTime + "\n" + times.toString() + "\n");
         }
 
         double sumOfAllTimes = allTimes.stream().reduce(0.0, Double::sum);
@@ -159,7 +157,8 @@ public class HopsFSBenchmarkDriver {
         double maxTime = allTimes.stream().reduce(0.0, Double::max);
         double average = sumOfAllTimes / allTimes.size();
 
-        System.out.println("HopsFS Aggregate Results (AVG/MIN/MAX):\n" + average + "\n" + minTime
-                + "\n" + maxTime + "\n");
+        System.out.println("Total number of times collected: " + allTimes.size());
+        System.out.println("HopsFS Aggregate Results (AVG/MIN/MAX/ALL):\n" + average + "\n" + minTime
+                + "\n" + maxTime + "\n" + allTimes.toString() + "\n");
     }
 }
