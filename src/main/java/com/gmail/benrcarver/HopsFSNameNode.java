@@ -2,6 +2,28 @@ package com.gmail.benrcarver;
 
 /**
  * Encapsulates a NameNode to which we will send requests to during the benchmark.
+ *
+ * Defined via YAML.
+ *
+ * Example:
+
+ - dataSource: FROM_NDB
+   ndbConnectionUri: jdbc:mysql://10.150.0.11:3306/world
+   query: "SELECT * FROM users WHERE ID = 1"
+   nameNodeUri: "hdfs://10.150.0.13:9000"
+   numQueries: 1
+   numRpc: 64
+   id: 1
+   numThreads: 4
+ - dataSource: FROM_NDB
+   ndbConnectionUri: jdbc:mysql://10.150.0.11:3306/world
+   query: "SELECT * FROM users WHERE ID = 1"
+   nameNodeUri: "hdfs://10.150.0.6:9000"
+   numQueries: 1
+   numRpc: 64
+   id: 1
+   numThreads: 4
+ *
  */
 public class HopsFSNameNode {
     /**

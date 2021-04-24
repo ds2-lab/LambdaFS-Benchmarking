@@ -16,6 +16,9 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Callable;
 
+/**
+ * Executed as a thread by a thread pool executor. Issues RPC requests to a HopsFS NameNode.
+ */
 public class HopsFSClient implements Callable<BenchmarkResult>{
     /**
      * The number of RPC calls to make.

@@ -17,6 +17,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * This is the OLD HopsFS test/benchmark.
+ */
 public class HopsFSTest {
 
     private static final String DATA_SOURCE = "DATA_SOURCE";

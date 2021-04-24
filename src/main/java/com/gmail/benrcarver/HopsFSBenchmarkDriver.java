@@ -13,30 +13,19 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 
+/**
+ * The actual driver for the benchmark.
+ */
 public class HopsFSBenchmarkDriver {
-    private static final String DATA_SOURCE = "DATA_SOURCE";
-    private static final String FROM_CACHE = "FROM_CACHE";
-    private static final String FROM_NDB = "FROM_NDB";
-    private static final String RESULT = "RESULT";
-    private static final String NUM_QUERIES = "NUM_QUERIES";
-    private static final String CONNECTION_URL = "CONNECTION_URL";
-    private static final String OPERATION_TYPE = "OPERATION_TYPE";
-    private static final String QUERY = "QUERY";
-    private static final String CLUSTERJ = "CLUSTERJ";
-    private static final String ID = "ID";
-    private static final String FIRST_NAME = "FIRST_NAME";
-    private static final String LAST_NAME = "LAST_NAME";
-    private static final String POSITION = "POSITION";
-    private static final String DEPARTMENT = "DEPARTMENT";
-    private static final String CONFIG_PATH = "ndb-config.properties";
-    private static final String DEFAULT_DATA_SOURCE = "FROM_NDB";
-    private static final String NUMBER_OF_QUERIES = "NUM_QUERIES";
-    private static final String NUMBER_OF_THREADS = "NUM_THREADS";
-
     private static final String DEFAULT_CONFIG_LOCATION = "./benchmark.yaml";
 
-    private static ArrayList<HopsFSClient> clients = new ArrayList<>();
+    private static final ArrayList<HopsFSClient> clients = new ArrayList<>();
 
+    /**
+     * Parse command-line arguments. Currently, there is possibly just one, which would
+     * be the path to the YAML file defining the benchmark.
+     * @param args The command-line arguments from the main method.
+     */
     private static CommandLine parseArguments(String[] args) {
         Options options = new Options();
 
@@ -60,13 +49,16 @@ public class HopsFSBenchmarkDriver {
     }
 
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
+        // Parse command-line arguments.
         CommandLine cmd = parseArguments(args);
 
+        // Load the YAML file from the default location or the user-specified location, if the user specified one.
         String configFileLocation = DEFAULT_CONFIG_LOCATION;
         if (cmd.hasOption("input")) {
             configFileLocation = cmd.getOptionValue("input");
         }
 
+        // Parse the YAML file.
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         CollectionType listType = mapper.getTypeFactory().constructCollectionType(ArrayList.class, HopsFSNameNode.class);
         mapper.findAndRegisterModules();
@@ -75,6 +67,8 @@ public class HopsFSBenchmarkDriver {
 
         System.out.println("Parsing NameNode definitions now...");
         System.out.println("There are " + nameNodesForBenchmark.size() + " NameNode(s) to process.");
+
+        // Create the HopsFSClient objects in preparation for the benchmark.
         for (HopsFSNameNode hopsFSNameNode : nameNodesForBenchmark) {
             System.out.println("Creating " + hopsFSNameNode.getNumThreads() + " com.gmail.benrcarver.com.gmail.benrcarver.HopsFSClient objects for NameNode at " + hopsFSNameNode.getNameNodeUri());
             for (int i = 0; i < hopsFSNameNode.getNumThreads(); i++) {
@@ -92,11 +86,13 @@ public class HopsFSBenchmarkDriver {
             }
         }
 
+        // Use a ThreadPoolExecutor to drive the benchmark.
         // Example: https://howtodoinjava.com/java/multi-threading/java-callable-future-example/
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
         List<Future<BenchmarkResult>> resultsList = new ArrayList<>();
 
-        System.out.println("Starting com.gmail.benrcarver.com.gmail.benrcarver.HopsFSClient objects now.");
+        System.out.println("Starting HopsFSClient objects now.");
+        // Fire 'em off.
         for (HopsFSClient client : clients) {
             Future<BenchmarkResult> timeResult = executor.submit(client);
             resultsList.add(timeResult);
