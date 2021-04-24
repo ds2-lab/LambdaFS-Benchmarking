@@ -125,9 +125,14 @@ public class HopsFSBenchmarkDriver {
             // latest results to the list.
             List<Long> associatedNameNodeTimes = resultsPerNameNode.get(associatedNameNodeUri);
 
-            // Record the times.
-            associatedNameNodeTimes.addAll(timeResults);
-            allTimes.addAll(timeResults);
+            if (associatedNameNodeTimes == null) {
+                associatedNameNodeTimes = new ArrayList<Long>(timeResults);
+                resultsPerNameNode.put(associatedNameNodeUri, associatedNameNodeTimes);
+            } else {
+                // Record the times.
+                associatedNameNodeTimes.addAll(timeResults);
+                allTimes.addAll(timeResults);
+            }
         }
 
         // Compute the total average and the per-NameNode average.
