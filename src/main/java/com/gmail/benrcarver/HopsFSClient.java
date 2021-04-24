@@ -78,7 +78,7 @@ public class HopsFSClient implements Callable<BenchmarkResult>{
         // 3) Return timing results to driver.
 
         // Collect time results here.
-        ArrayList<Long> times = new ArrayList<>();
+        ArrayList<Double> times = new ArrayList<>();
 
         // Step 1: Connect to HopsFS
         Configuration configuration = new Configuration();
@@ -93,7 +93,7 @@ public class HopsFSClient implements Callable<BenchmarkResult>{
             long endTime = System.nanoTime();
             long durationInNano = (endTime - startTime);
             long durationInMillis = TimeUnit.NANOSECONDS.toMillis(durationInNano);
-            times.add(durationInMillis);
+            times.add(durationInMillis / 1000.0);
         }
 
         BenchmarkResult result = new BenchmarkResult(nameNodeUri, times);

@@ -9,19 +9,19 @@ public class BenchmarkResult {
     /**
      * The timing results obtained via the benchmark.
      */
-    private ArrayList<Long> timeResults;
+    private ArrayList<Double> timeResults;
 
     /**
      * Identifies the NameNode used to generate the timing results.
      */
     private String associatedNameNodeUri;
 
-    public BenchmarkResult(String associatedNameNodeUri, ArrayList<Long> timeResults) {
+    public BenchmarkResult(String associatedNameNodeUri, ArrayList<Double> timeResults) {
         this.associatedNameNodeUri = associatedNameNodeUri;
         this.timeResults = timeResults;
     }
 
-    public ArrayList<Long> getTimeResults() {
+    public ArrayList<Double> getTimeResults() {
         return timeResults;
     }
 
