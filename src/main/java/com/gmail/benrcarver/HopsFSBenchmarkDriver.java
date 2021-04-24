@@ -128,6 +128,7 @@ public class HopsFSBenchmarkDriver {
             if (associatedNameNodeTimes == null) {
                 associatedNameNodeTimes = new ArrayList<Double>(timeResults);
                 resultsPerNameNode.put(associatedNameNodeUri, associatedNameNodeTimes);
+                allTimes.addAll(timeResults);
             } else {
                 // Record the times.
                 associatedNameNodeTimes.addAll(timeResults);
@@ -147,7 +148,7 @@ public class HopsFSBenchmarkDriver {
             double maxTime = times.stream().reduce(0.0, Double::max);
 
             // Compute the average.
-            double average = (double)sumofTimes / times.size();
+            double average = sumofTimes / times.size();
 
             System.out.println("NameNode at " + nameNodeUri + " (AVG/MIN/MAX):\n" + average + "\n" + minTime
                     + "\n" + maxTime + "\n");
@@ -156,7 +157,7 @@ public class HopsFSBenchmarkDriver {
         double sumOfAllTimes = allTimes.stream().reduce(0.0, Double::sum);
         double minTime = allTimes.stream().reduce(0.0, Double::min);
         double maxTime = allTimes.stream().reduce(0.0, Double::max);
-        double average = (double)sumOfAllTimes / allTimes.size();
+        double average = sumOfAllTimes / allTimes.size();
 
         System.out.println("HopsFS Aggregate Results (AVG/MIN/MAX):\n" + average + "\n" + minTime
                 + "\n" + maxTime + "\n");
