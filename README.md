@@ -1,6 +1,6 @@
 # HopsFS Latency Benchmark Utility
 
-![](https://i.imgur.com/mZ6D7gD.png)
+<img src="https://i.imgur.com/USMkTD7.png" width="192" height="192" />
 
 I wrote this utility to simplify the latency benchmarking process for HopsFS.
 
