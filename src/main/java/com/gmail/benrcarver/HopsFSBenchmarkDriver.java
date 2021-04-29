@@ -105,7 +105,7 @@ public class HopsFSBenchmarkDriver {
 
         System.out.println("Creating histogram with " + buckets + " buckets.");
 
-        histogram = new long[buckets];
+        histogram = new long[buckets + 1];
 
         histogramoverflow = 0;
         operations = 0;
@@ -207,7 +207,7 @@ public class HopsFSBenchmarkDriver {
         double average = sumOfAllTimes / allTimes.size();
         
         for (double latency : allTimes) {
-            measure((int)latency);
+            measure(latency);
         }
 
         System.out.println("Total number of times collected: " + allTimes.size());
@@ -245,6 +245,7 @@ public class HopsFSBenchmarkDriver {
         // Latency reported in us and collected in bucket by ms.
         if ((int)latencyMilliseconds >= buckets) {
             histogramoverflow++;
+            histogram[buckets]++;
         } else {
             histogram[(int)latencyMilliseconds]++;
         }
