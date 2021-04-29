@@ -10,6 +10,7 @@ This software is written in Java and built/compiled with Maven.
 
 - Automatically exports latencies to a text file at the end of the benchmark.
 - Reports the results of the benchmark as a histogram in text format; easy importing to Microsoft Excel.
+- Reports latencies per each NameNode as well as aggregated results of all NameNodes.
 - Can specify the number of Histogram buckets via the command-line (buckets are at a millisecond granularity).
 - Easily define benchmarks via YAML.
 
