@@ -1,4 +1,6 @@
-# HopsFS Latency Benchmark Utility
+# Latency Benchmark Utility for HopsFS 
+
+_This is in no way affiliated with HopsFS._
 
 <img src="https://i.imgur.com/USMkTD7.png" width="192" height="192" />
 
