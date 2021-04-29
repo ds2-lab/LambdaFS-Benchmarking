@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.type.CollectionType;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.apache.commons.cli.*;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -210,9 +212,19 @@ public class HopsFSBenchmarkDriver {
             measure(latency);
         }
 
+        BufferedWriter outputWriter = null;
+        outputWriter = new BufferedWriter(new FileWriter("output.txt"));
+        for (int i = 0; i < allTimes.size(); i++) {
+            // Maybe:
+            outputWriter.write(allTimes.get(i)+"");
+            outputWriter.newLine();
+        }
+        outputWriter.flush();
+        outputWriter.close();
+
         System.out.println("Total number of times collected: " + allTimes.size());
-        System.out.println("HopsFS Aggregate Results (AVG/MIN/MAX/ALL):\n" + average + "\n" + minTime
-                + "\n" + maxTime + "\n" + allTimes.toString() + "\n");
+        System.out.println("HopsFS Aggregate Results (AVG/MIN/MAX):\n" + average + "\n" + minTime
+                + "\n" + maxTime + "\n");
 
         double variance = totalSquaredLatency / ((double) operations) - (average * average);
         System.out.println("Operations: " + operations);
