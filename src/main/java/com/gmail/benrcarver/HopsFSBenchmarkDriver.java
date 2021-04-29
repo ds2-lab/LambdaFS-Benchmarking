@@ -17,6 +17,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * The actual driver for the benchmark.
+ *
+ * TODO: Add functionality to specify the name of the BenchmarkClient class to be used.
+ * TODO: Figure out how to pass arbitrary arguments to the BenchmarkClient in question.
  */
 public class HopsFSBenchmarkDriver {
     private static final String DEFAULT_CONFIG_LOCATION = "./benchmark.yaml";
