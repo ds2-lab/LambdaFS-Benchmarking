@@ -31,7 +31,7 @@ public class HopsFSBenchmarkDriver {
     /**
      * Groups operations in discrete blocks of 1ms width.
      */
-    private static long[] histogram;
+        private static long[] histogram;
 
     /**
      * Counts all operations outside the histogram's range.
@@ -47,14 +47,14 @@ public class HopsFSBenchmarkDriver {
      * The sum of each latency measurement over all operations.
      * Calculated in ms.
      */
-    private static long totallatency;
+    private static long totalLatency;
 
     /**
      * The sum of each latency measurement squared over all operations.
      * Used to calculate variance of latency.
      * Calculated in ms.
      */
-    private static double totalsquaredlatency;
+    private static double totalSquaredLatency;
 
     /**
      * Parse command-line arguments. Currently, there is possibly just one, which would
@@ -103,10 +103,14 @@ public class HopsFSBenchmarkDriver {
             buckets = DEFAULT_NUM_BUCKETS;
         }
 
+        System.out.println("Creating histogram with " + buckets + " buckets.");
+
+        histogram = new long[buckets];
+
         histogramoverflow = 0;
         operations = 0;
-        totallatency = 0;
-        totalsquaredlatency = 0;
+        totalLatency = 0;
+        totalSquaredLatency = 0;
 
         // Parse the YAML file.
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
@@ -210,7 +214,7 @@ public class HopsFSBenchmarkDriver {
         System.out.println("HopsFS Aggregate Results (AVG/MIN/MAX/ALL):\n" + average + "\n" + minTime
                 + "\n" + maxTime + "\n" + allTimes.toString() + "\n");
 
-        double variance = totalsquaredlatency / ((double) operations) - (average * average);
+        double variance = totalSquaredLatency / ((double) operations) - (average * average);
         System.out.println("Operations: " + operations);
         System.out.println("LatencyVariance(us): " + variance);
 
@@ -235,15 +239,17 @@ public class HopsFSBenchmarkDriver {
         System.out.println("> " + buckets + ": " + histogramoverflow);
     }
 
-    public static synchronized void measure(int latency) {
+    public static synchronized void measure(double latencySeconds) {
+        double latencyMilliseconds = latencySeconds * 1000;
+
         // Latency reported in us and collected in bucket by ms.
-        if (latency >= buckets) {
+        if ((int)latencyMilliseconds >= buckets) {
             histogramoverflow++;
         } else {
-            histogram[latency]++;
+            histogram[(int)latencyMilliseconds]++;
         }
         operations++;
-        totallatency += latency;
-        totalsquaredlatency += ((double) latency) * ((double) latency);
+        totalLatency += latencyMilliseconds;
+        totalSquaredLatency += (latencyMilliseconds * latencyMilliseconds);
     }
 }
