@@ -17,7 +17,7 @@ This software is written in Java and built/compiled with Maven.
 ### Define a Benchmark
 
 ```yaml
-- dataSource: FROM_NDB                                      # Can be "FROM_NDB" or "LOCAL_CACHE"
+- dataSource: FROM_NDB                                     # Can be "FROM_NDB" or "LOCAL_CACHE"
   ndbConnectionUri: jdbc:mysql://10.150.0.11:3306/world    # IP address of your MySQL Cluster (NDB) MySQL server.
   query: "SELECT * FROM users WHERE ID = 1"                # MySQL query that the NameNode should execute.
   nameNodeUri: "hdfs://10.150.0.6:9000"                    # Endpoint of the desired NameNode.
