@@ -13,7 +13,7 @@ This software is written in Java and built/compiled with Maven.
 - Can specify the number of Histogram buckets via the command-line (buckets are at a millisecond granularity).
 - Easily define benchmarks via YAML.
 
-### Define a Benchmarkcd　
+### Define a Benchmark
 
 ```yaml
 - dataSource: FROM_NDB                                      # Can be "FROM_NDB" or "LOCAL_CACHE"
