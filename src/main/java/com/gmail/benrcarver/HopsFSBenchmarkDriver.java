@@ -19,7 +19,42 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class HopsFSBenchmarkDriver {
     private static final String DEFAULT_CONFIG_LOCATION = "./benchmark.yaml";
 
+    private static final int DEFAULT_NUM_BUCKETS = 1000;
+
     private static final ArrayList<HopsFSClient> clients = new ArrayList<>();
+
+    /**
+     * Specify the range of latencies to track in the histogram.
+     */
+    private static int buckets;
+
+    /**
+     * Groups operations in discrete blocks of 1ms width.
+     */
+    private static long[] histogram;
+
+    /**
+     * Counts all operations outside the histogram's range.
+     */
+    private static long histogramoverflow;
+
+    /**
+     * The total number of reported operations.
+     */
+    private static long operations;
+
+    /**
+     * The sum of each latency measurement over all operations.
+     * Calculated in ms.
+     */
+    private static long totallatency;
+
+    /**
+     * The sum of each latency measurement squared over all operations.
+     * Used to calculate variance of latency.
+     * Calculated in ms.
+     */
+    private static double totalsquaredlatency;
 
     /**
      * Parse command-line arguments. Currently, there is possibly just one, which would
@@ -31,6 +66,9 @@ public class HopsFSBenchmarkDriver {
 
         Option yamlFileLocationOpt = new Option("i", "input", true, "The path to the YAMl file containing the benchmark definition.");
         yamlFileLocationOpt.setRequired(false);
+
+        Option histogramBucketsOpt = new Option("b", "buckets", true, "Specify the range of latencies to track in the histogram.");
+        histogramBucketsOpt.setRequired(false);
 
         CommandLineParser parser = new GnuParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -57,6 +95,18 @@ public class HopsFSBenchmarkDriver {
         if (cmd.hasOption("input")) {
             configFileLocation = cmd.getOptionValue("input");
         }
+
+        if (cmd.hasOption("buckets")) {
+            buckets = Integer.parseInt(cmd.getOptionValue("buckets"));
+        }
+        else {
+            buckets = DEFAULT_NUM_BUCKETS;
+        }
+
+        histogramoverflow = 0;
+        operations = 0;
+        totallatency = 0;
+        totalsquaredlatency = 0;
 
         // Parse the YAML file.
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
@@ -121,12 +171,11 @@ public class HopsFSBenchmarkDriver {
             if (associatedNameNodeTimes == null) {
                 associatedNameNodeTimes = new ArrayList<Double>(timeResults);
                 resultsPerNameNode.put(associatedNameNodeUri, associatedNameNodeTimes);
-                allTimes.addAll(timeResults);
             } else {
                 // Record the times.
                 associatedNameNodeTimes.addAll(timeResults);
-                allTimes.addAll(timeResults);
             }
+            allTimes.addAll(timeResults);
         }
 
         // Compute the total average and the per-NameNode average.
@@ -152,9 +201,49 @@ public class HopsFSBenchmarkDriver {
         double maxTime = allTimes.stream().reduce(0.0, Double::max);
         double minTime = allTimes.stream().reduce(maxTime, Double::min);
         double average = sumOfAllTimes / allTimes.size();
+        
+        for (double latency : allTimes) {
+            measure((int)latency);
+        }
 
         System.out.println("Total number of times collected: " + allTimes.size());
         System.out.println("HopsFS Aggregate Results (AVG/MIN/MAX/ALL):\n" + average + "\n" + minTime
                 + "\n" + maxTime + "\n" + allTimes.toString() + "\n");
+
+        double variance = totalsquaredlatency / ((double) operations) - (average * average);
+        System.out.println("Operations: " + operations);
+        System.out.println("LatencyVariance(us): " + variance);
+
+        long opcounter=0;
+        boolean done95th = false;
+        for (int i = 0; i < buckets; i++) {
+            opcounter += histogram[i];
+            if ((!done95th) && (((double) opcounter) / ((double) operations) >= 0.95)) {
+                System.out.println("95thPercentileLatency(us): " + i * 1000);
+                done95th = true;
+            }
+            if (((double) opcounter) / ((double) operations) >= 0.99) {
+                System.out.println("99thPercentileLatency(us): " + i * 1000);
+                break;
+            }
+        }
+
+        for (int i = 0; i < buckets; i++) {
+            System.out.println(i + ": " + histogram[i]);
+        }
+
+        System.out.println("> " + buckets + ": " + histogramoverflow);
+    }
+
+    public static synchronized void measure(int latency) {
+        // Latency reported in us and collected in bucket by ms.
+        if (latency >= buckets) {
+            histogramoverflow++;
+        } else {
+            histogram[latency]++;
+        }
+        operations++;
+        totallatency += latency;
+        totalsquaredlatency += ((double) latency) * ((double) latency);
     }
 }
