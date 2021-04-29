@@ -68,7 +68,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.gmail.benrcarver.HopsFSBenchmarkDriver</mainClass>
+                            <mainClass>com.gmail.benrcarver.BenchmarkDriver</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

@@ -27,6 +27,11 @@ package com.gmail.benrcarver;
  */
 public class HopsFSNameNode {
     /**
+     * Driver class associated with this configuration construct.
+     */
+    public static final Class DRIVER_CLASS = HopsFSClient.class;
+
+    /**
      * Indicates whether the NameNode should retrieve requested "metadata" from NDB or its local storage.
      */
     private String dataSource;

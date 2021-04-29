@@ -9,6 +9,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -21,12 +22,12 @@ import java.util.concurrent.ThreadPoolExecutor;
  * TODO: Add functionality to specify the name of the BenchmarkClient class to be used.
  * TODO: Figure out how to pass arbitrary arguments to the BenchmarkClient in question.
  */
-public class HopsFSBenchmarkDriver {
+public class BenchmarkDriver {
     private static final String DEFAULT_CONFIG_LOCATION = "./benchmark.yaml";
 
     private static final int DEFAULT_NUM_BUCKETS = 1000;
 
-    private static final ArrayList<HopsFSClient> clients = new ArrayList<>();
+    private static final ArrayList<BenchmarkClient> clients = new ArrayList<>();
 
     /**
      * Specify the range of latencies to track in the histogram.
@@ -41,18 +42,12 @@ public class HopsFSBenchmarkDriver {
     /**
      * Counts all operations outside the histogram's range.
      */
-    private static long histogramoverflow;
+    private static long histogramOverflow;
 
     /**
      * The total number of reported operations.
      */
     private static long operations;
-
-    /**
-     * The sum of each latency measurement over all operations.
-     * Calculated in ms.
-     */
-    private static long totalLatency;
 
     /**
      * The sum of each latency measurement squared over all operations.
@@ -75,6 +70,9 @@ public class HopsFSBenchmarkDriver {
         Option histogramBucketsOpt = new Option("b", "buckets", true, "Specify the range of latencies to track in the histogram.");
         histogramBucketsOpt.setRequired(false);
 
+        Option clientClassOpt = new Option("c", "client", true, "Fully-qualified classname of the client class to use for the benchmark.");
+        clientClassOpt.setRequired(true);
+
         CommandLineParser parser = new GnuParser();
         HelpFormatter formatter = new HelpFormatter();
         CommandLine cmd = null;
@@ -91,7 +89,7 @@ public class HopsFSBenchmarkDriver {
         return cmd;
     }
 
-    public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
+    public static void main(String[] args) throws IOException, ExecutionException, InterruptedException, InvocationTargetException, InstantiationException, IllegalAccessException {
         // Parse command-line arguments.
         CommandLine cmd = parseArguments(args);
 
@@ -112,9 +110,8 @@ public class HopsFSBenchmarkDriver {
 
         histogram = new long[buckets + 1];
 
-        histogramoverflow = 0;
+        histogramOverflow = 0;
         operations = 0;
-        totalLatency = 0;
         totalSquaredLatency = 0;
 
         // Parse the YAML file.
@@ -131,16 +128,14 @@ public class HopsFSBenchmarkDriver {
         for (HopsFSNameNode hopsFSNameNode : nameNodesForBenchmark) {
             System.out.println("Creating " + hopsFSNameNode.getNumThreads() + " com.gmail.benrcarver.com.gmail.benrcarver.HopsFSClient objects for NameNode at " + hopsFSNameNode.getNameNodeUri());
             for (int i = 0; i < hopsFSNameNode.getNumThreads(); i++) {
-                HopsFSClient client = new HopsFSClient(
-                        hopsFSNameNode.getNumRpc(),
-                        hopsFSNameNode.getNumQueries(),
-                        hopsFSNameNode.getId(),
-                        hopsFSNameNode.getNameNodeUri(),
-                        hopsFSNameNode.getQuery(),
-                        hopsFSNameNode.getDataSource(),
-                        hopsFSNameNode.getNdbConnectionUri()
-                );
-
+                BenchmarkClient client = (BenchmarkClient) HopsFSNameNode.DRIVER_CLASS.getConstructors()[0].newInstance(
+                    hopsFSNameNode.getNumRpc(),
+                    hopsFSNameNode.getNumQueries(),
+                    hopsFSNameNode.getId(),
+                    hopsFSNameNode.getNameNodeUri(),
+                    hopsFSNameNode.getQuery(),
+                    hopsFSNameNode.getDataSource(),
+                    hopsFSNameNode.getNdbConnectionUri());
                 clients.add(client);
             }
         }
@@ -152,7 +147,7 @@ public class HopsFSBenchmarkDriver {
 
         System.out.println("Starting HopsFSClient objects now.");
         // Fire 'em off.
-        for (HopsFSClient client : clients) {
+        for (BenchmarkClient client : clients) {
             Future<BenchmarkResult> timeResult = executor.submit(client);
             resultsList.add(timeResult);
         }
@@ -251,7 +246,7 @@ public class HopsFSBenchmarkDriver {
             System.out.println(i + ": " + histogram[i]);
         }
 
-        System.out.println("> " + buckets + ": " + histogramoverflow);
+        System.out.println("> " + buckets + ": " + histogramOverflow);
     }
 
     public static synchronized void measure(double latencySeconds) {
@@ -259,13 +254,12 @@ public class HopsFSBenchmarkDriver {
 
         // Latency reported in us and collected in bucket by ms.
         if ((int)latencyMilliseconds >= buckets) {
-            histogramoverflow++;
+            histogramOverflow++;
             histogram[buckets]++;
         } else {
             histogram[(int)latencyMilliseconds]++;
         }
         operations++;
-        totalLatency += latencyMilliseconds;
         totalSquaredLatency += (latencyMilliseconds * latencyMilliseconds);
     }
 }
