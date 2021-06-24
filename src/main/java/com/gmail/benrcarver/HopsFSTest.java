@@ -171,7 +171,7 @@ public class HopsFSTest {
         try {
             FSDataOutputStream outputStream = hdfs.create(filePath);
             System.out.println("Called create() successfully.");
-            BufferedWriter br = new BufferedWriter( new OutputStreamWriter( outputStream, "UTF-8" ) );
+            BufferedWriter br = new BufferedWriter( new OutputStreamWriter(outputStream, "UTF-8" ) );
             System.out.println("Created BufferedWriter object.");
             br.write("Hello World");
             System.out.println("Wrote 'Hello World!' using BufferedWriter.");

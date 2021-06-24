@@ -54,6 +54,16 @@
             <artifactId>hadoop-common</artifactId>
             <version>3.2.0.4-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>org.codehaus.woodstox</groupId>
+            <artifactId>stax2-api</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.woodstox</groupId>
+            <artifactId>woodstox-core</artifactId>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <properties>
