@@ -40,6 +40,10 @@ public class HopsFSTest {
     private static final String DEFAULT_DATA_SOURCE = "FROM_NDB";
 
     public static void main(String[] args) {
+        testWriteFile();
+    }
+
+    /*public static void main(String[] args) {
         Options options = new Options();
 
         Option connectionUrlOption = new Option("url", CONNECTION_URL, true, "The connection URL for a query.");
@@ -108,7 +112,7 @@ public class HopsFSTest {
         System.out.println("id = " + id);
 
         testLatencyBenchmark(connectionUrl, dataSource, query, id, numQueries);
-    }
+    }*/
 
     private static void testLatencyBenchmark(String connectionUrl, String dataSource, String query, int id, int numQueries) {
         System.out.println("Starting HdfsTest now.");
