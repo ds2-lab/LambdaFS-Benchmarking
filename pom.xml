@@ -54,13 +54,13 @@
             <groupId>io.hops</groupId>
             <artifactId>hadoop-hdfs</artifactId>
             <version>3.2.0.3-SNAPSHOT</version>
-            <scope>provided</scope>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>io.hops</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>3.2.0.3-SNAPSHOT</version>
-            <scope>provided</scope>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.codehaus.woodstox</groupId>
