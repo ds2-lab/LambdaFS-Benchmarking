@@ -39,8 +39,11 @@ public class HopsFSTest {
     private static final String CONFIG_PATH = "ndb-config.properties";
     private static final String DEFAULT_DATA_SOURCE = "FROM_NDB";
 
+    private static final String DEFAULT_FILENAME = "helloWorld.txt";
+    private static final String DEFAULT_FILE_CONTENTS = "Hello, world!";
+
     public static void main(String[] args) {
-        testWriteFile();
+        testWriteFile(args);
     }
 
     /*public static void main(String[] args) {
@@ -155,7 +158,45 @@ public class HopsFSTest {
         System.out.println("Average/Min/Max/All:\n" + average + "\n" + min + "\n" + max + "\n" + results.toString());
     }
 
-    private static void testWriteFile() {
+    private static void testWriteFile(String[] args) {
+        Options options = new Options();
+        Option fileNameOption = new Option("f", "fileName", true, "The name of the file to create.");
+        fileNameOption.setRequired(false);
+
+        Option fileContentsOption = new Option("c", "contents", true, "String to write as the file contents.");
+        fileContentsOption.setRequired(false);
+
+        options.addOption(fileNameOption);
+        options.addOption(fileContentsOption);
+
+        CommandLineParser parser = new GnuParser();
+        HelpFormatter formatter = new HelpFormatter();
+        CommandLine cmd = null;
+
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+            formatter.printHelp("utility-name", options);
+
+            System.exit(1);
+        }
+
+        String fileName;
+        if (cmd.hasOption("fileName"))
+            fileName = cmd.getOptionValue("fileName");
+        else
+            fileName = DEFAULT_FILENAME;
+
+        String fileContents;
+        if (cmd.hasOption("contents"))
+            fileContents = cmd.getOptionValue("contents");
+        else
+            fileContents = DEFAULT_FILE_CONTENTS;
+
+        System.out.println("File name: \"" + fileName + "\"");
+        System.out.println("File contents: \"" + fileContents + "\"");
+
         System.out.println("Starting HdfsTest now.");
         Configuration configuration = new Configuration();
         System.out.println("Created configuration.");
@@ -169,7 +210,7 @@ public class HopsFSTest {
             ex.printStackTrace();
         }
 
-        Path filePath = new Path("hdfs://10.150.0.6:9000/helloWorld.txt");
+        Path filePath = new Path("hdfs://10.150.0.6:9000/" + fileName);
         System.out.println("Created Path object.");
 
         try {
@@ -177,8 +218,8 @@ public class HopsFSTest {
             System.out.println("Called create() successfully.");
             BufferedWriter br = new BufferedWriter( new OutputStreamWriter(outputStream, "UTF-8" ) );
             System.out.println("Created BufferedWriter object.");
-            br.write("Hello World");
-            System.out.println("Wrote 'Hello World!' using BufferedWriter.");
+            br.write(fileContents);
+            System.out.println("Wrote \"" + fileContents + "\" using BufferedWriter.");
             br.close();
             System.out.println("Closed BufferedWriter.");
             hdfs.close();
