@@ -42,6 +42,9 @@ public class HopsFSTest {
     private static final String DEFAULT_FILENAME = "helloWorld.txt";
     private static final String DEFAULT_FILE_CONTENTS = "Hello, world!";
 
+    private static final String DEFAULT_OPERATION = "create";
+    private static final String LIST_OPERATIONS_STRING = "create, delete";
+
     public static void main(String[] args) {
         testWriteFile(args);
     }
@@ -163,11 +166,14 @@ public class HopsFSTest {
         Option fileNameOption = new Option("f", "fileName", true, "The name of the file to create.");
         fileNameOption.setRequired(false);
 
-        Option fileContentsOption = new Option("c", "contents", true, "String to write as the file contents.");
-        fileContentsOption.setRequired(false);
+        Option fileCreateContentsOption = new Option("c", "contents", true, "String to write as the file contents.");
+        fileCreateContentsOption.setRequired(false);
+
+        Option operationOption = new Option("o", "operation", true, "Specify the operation to perform by name.");
+        fileCreateContentsOption.setRequired(false);
 
         options.addOption(fileNameOption);
-        options.addOption(fileContentsOption);
+        options.addOption(fileCreateContentsOption);
 
         CommandLineParser parser = new GnuParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -194,6 +200,12 @@ public class HopsFSTest {
         else
             fileContents = DEFAULT_FILE_CONTENTS;
 
+        String operation;
+        if (cmd.hasOption("operation"))
+            operation = cmd.getOptionValue("operation");
+        else
+            operation = DEFAULT_OPERATION;
+
         System.out.println("File name: \"" + fileName + "\"");
         System.out.println("File contents: \"" + fileContents + "\"");
 
@@ -213,19 +225,34 @@ public class HopsFSTest {
         Path filePath = new Path("hdfs://10.150.0.6:9000/" + fileName);
         System.out.println("Created Path object.");
 
-        try {
-            FSDataOutputStream outputStream = hdfs.create(filePath);
-            System.out.println("Called create() successfully.");
-            BufferedWriter br = new BufferedWriter( new OutputStreamWriter(outputStream, "UTF-8" ) );
-            System.out.println("Created BufferedWriter object.");
-            br.write(fileContents);
-            System.out.println("Wrote \"" + fileContents + "\" using BufferedWriter.");
-            br.close();
-            System.out.println("Closed BufferedWriter.");
-            hdfs.close();
-            System.out.println("Closed DistributedFileSystem object.");
-        } catch (IOException ex) {
-            ex.printStackTrace();
+        if (operation.equals("create")) {
+            try {
+                FSDataOutputStream outputStream = hdfs.create(filePath);
+                System.out.println("Called create() successfully.");
+                BufferedWriter br = new BufferedWriter( new OutputStreamWriter(outputStream, "UTF-8" ) );
+                System.out.println("Created BufferedWriter object.");
+                br.write(fileContents);
+                System.out.println("Wrote \"" + fileContents + "\" using BufferedWriter.");
+                br.close();
+                System.out.println("Closed BufferedWriter.");
+                hdfs.close();
+                System.out.println("Closed DistributedFileSystem object.");
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+        else if (operation.equals("delete")) {
+            try {
+                FSDataOutputStream outputStream = hdfs.delete(filePath, true);
+                System.out.println("Called delete() successfully.");
+                hdfs.close();
+                System.out.println("Closed DistributedFileSystem object.");
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+        else {
+            throw new IllegalArgumentException("Unknown file system operation: \"" + operation + "\"");
         }
     }
 }
