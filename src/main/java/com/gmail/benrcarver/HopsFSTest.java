@@ -174,6 +174,7 @@ public class HopsFSTest {
 
         options.addOption(fileNameOption);
         options.addOption(fileCreateContentsOption);
+        options.addOption(operationOption);
 
         CommandLineParser parser = new GnuParser();
         HelpFormatter formatter = new HelpFormatter();
