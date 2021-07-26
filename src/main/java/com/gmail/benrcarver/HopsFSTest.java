@@ -225,6 +225,8 @@ public class HopsFSTest {
         Path filePath = new Path("hdfs://10.150.0.6:9000/" + fileName);
         System.out.println("Created Path object.");
 
+        System.out.println("Performing operation: \"" + operation + "\"");
+
         if (operation.equals("create")) {
             try {
                 FSDataOutputStream outputStream = hdfs.create(filePath);
