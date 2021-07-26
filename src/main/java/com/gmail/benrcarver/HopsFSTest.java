@@ -243,8 +243,8 @@ public class HopsFSTest {
         }
         else if (operation.equals("delete")) {
             try {
-                FSDataOutputStream outputStream = hdfs.delete(filePath, true);
-                System.out.println("Called delete() successfully.");
+                boolean success = hdfs.delete(filePath, true);
+                System.out.println("Delete was successful: " + success);
                 hdfs.close();
                 System.out.println("Closed DistributedFileSystem object.");
             } catch (IOException ex) {
