@@ -275,7 +275,9 @@ public class HopsFSTest {
                 break;
             case "rename":
                 try {
-                    boolean success = hdfs.rename(filePath, filePathRename);
+                    System.out.println("Original file path: \"" + filePath + "\"");
+                    System.out.println("New file path: \"" + filePathRename + "\"");
+                    hdfs.rename(filePath, filePathRename);
                     System.out.println("Finished rename operation.");
                     hdfs.close();
                     System.out.println("Closed DistributedFileSystem object.");
