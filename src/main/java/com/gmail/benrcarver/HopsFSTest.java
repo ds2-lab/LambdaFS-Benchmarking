@@ -44,7 +44,7 @@ public class HopsFSTest {
 
     private static final String DEFAULT_OPERATION = "create";
     private static final String DEFAULT_NEW_NAME = "rename_test.txt";
-    private static final String LIST_OPERATIONS_STRING = "create, delete, rename";
+    private static final String LIST_OPERATIONS_STRING = "create, delete, rename, mkdir";
 
     public static void main(String[] args) {
         testWriteFile(args);
@@ -285,6 +285,16 @@ public class HopsFSTest {
                     ex.printStackTrace();
                 }
                 break;
+            case "mkdir":
+                try {
+                    System.out.println("Attempting to create new directory: \"" + filePath + "\"");
+                    boolean directoryCreated = hdfs.mkdirs(filePath);
+                    System.out.println("Directory created successfully: " + directoryCreated);
+                    hdfs.close();
+                    System.out.println("Closed DistributedFileSystem object.");
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
             default:
                 throw new IllegalArgumentException("Unknown file system operation: \"" + operation + "\"");
         }
