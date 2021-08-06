@@ -47,7 +47,7 @@ public class HopsFSTest {
     private static final String LIST_OPERATIONS_STRING = "create, delete, rename, mkdir";
 
     public static void main(String[] args) {
-        testWriteFile(args);
+        testFileSystemOperation(args);
     }
 
     /*public static void main(String[] args) {
@@ -162,7 +162,7 @@ public class HopsFSTest {
         System.out.println("Average/Min/Max/All:\n" + average + "\n" + min + "\n" + max + "\n" + results.toString());
     }
 
-    private static void testWriteFile(String[] args) {
+    private static void testFileSystemOperation(String[] args) {
         // Used by all FS operations.
         Options options = new Options();
         Option fileNameOption = new Option("f", "fileName", true, "The name of the file to create.");
@@ -295,6 +295,7 @@ public class HopsFSTest {
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
+                break;
             default:
                 throw new IllegalArgumentException("Unknown file system operation: \"" + operation + "\"");
         }
