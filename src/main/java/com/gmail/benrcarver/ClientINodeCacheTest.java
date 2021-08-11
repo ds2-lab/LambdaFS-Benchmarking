@@ -42,6 +42,9 @@ public class ClientINodeCacheTest {
                 true, "The target directory in which the files will be created.");
         targetDirectoryOption.setRequired(false);
 
+        options.addOption(numFilesOption);
+        options.addOption(targetDirectoryOption);
+
         CommandLineParser parser = new GnuParser();
         HelpFormatter formatter = new HelpFormatter();
         CommandLine cmd = null;
