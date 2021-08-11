@@ -81,7 +81,7 @@ public class ClientINodeCacheTest {
         String[] fileContents = new String[numFilesToCreate];
         for (int i = 0; i < numFilesToCreate; i++) {
             filePaths[i] = new Path("hdfs://10.150.0.6:9000" + targetDirectoryPath + "testFile-" + i + ".txt");
-            fileContents[i] = "Hello World from " + targetDirectoryPath + "testFile-" + i + ".txt!");
+            fileContents[i] = "Hello World from " + targetDirectoryPath + "testFile-" + i + ".txt!";
         }
 
         /*Path[] filePaths = new Path[] {
