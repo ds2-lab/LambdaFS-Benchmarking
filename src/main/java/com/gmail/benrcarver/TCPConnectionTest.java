@@ -31,7 +31,11 @@ public class TCPConnectionTest {
     private static final String DIRECTORY_OPTION = "directory";
     private static final String NUM_FILES_OPTION = "num_files";
 
+<<<<<<< HEAD
     public static void main(String[] args) throws InterruptedException, IOException {
+=======
+    public static void main(String[] args) throws InterruptedException {
+>>>>>>> 12a22672c97333c1ef1add10b57836ce093c18c8
         Options options = new Options();
 
         Option numFilesOption = new Option("n", NUM_FILES_OPTION,
