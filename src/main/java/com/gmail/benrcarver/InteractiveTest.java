@@ -35,6 +35,7 @@ public class InteractiveTest {
             hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
             System.out.println("Called initialize() successfully.");
         } catch (URISyntaxException | IOException ex) {
+            System.out.println("\n\nERROR: Encountered exception while initializing DistributedFileSystem object.");
             ex.printStackTrace();
         }
 
