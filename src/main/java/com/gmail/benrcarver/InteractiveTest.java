@@ -1,16 +1,20 @@
 package com.gmail.benrcarver;
 
-import java.io.*;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.InputMismatchException;
-import java.util.Scanner;
 import com.google.gson.JsonObject;
 import org.apache.commons.cli.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+
+import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.InputMismatchException;
+import java.util.concurrent.TimeUnit;
 
 public class InteractiveTest {
     private static final Scanner scanner = new Scanner(System.in);
