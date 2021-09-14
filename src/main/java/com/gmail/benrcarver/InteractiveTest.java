@@ -84,9 +84,9 @@ public class InteractiveTest {
     }
 
     private static void createFileOperation() {
-        System.out.println("File path:\n> ");
+        System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
-        System.out.println("File contents:\n> ");
+        System.out.print("File contents:\n> ");
         String fileContents = scanner.nextLine();
 
         Path filePath = new Path("hdfs://10.241.64.14:9000/" + fileName);
@@ -106,9 +106,9 @@ public class InteractiveTest {
     }
 
     private static void renameOperation() {
-        System.out.println("Original file path:\n> ");
+        System.out.print("Original file path:\n> ");
         String originalFileName = scanner.nextLine();
-        System.out.println("Renamed file path:\n> ");
+        System.out.print("Renamed file path:\n> ");
         String renamedFileName = scanner.nextLine();
 
         Path filePath = new Path("hdfs://10.241.64.14:9000/" + originalFileName);
@@ -125,7 +125,7 @@ public class InteractiveTest {
     }
 
     private static void listOperation() {
-        System.out.println("Target directory:\n> ");
+        System.out.print("Target directory:\n> ");
         String targetDirectory = scanner.nextLine();
 
         try {
@@ -139,7 +139,7 @@ public class InteractiveTest {
     }
 
     private static void mkdirOperation() {
-        System.out.println("New directory path:\n> ");
+        System.out.print("New directory path:\n> ");
         String newDirectoryName = scanner.nextLine();
 
         Path filePath = new Path("hdfs://10.241.64.14:9000/" + newDirectoryName);
@@ -154,7 +154,7 @@ public class InteractiveTest {
     }
 
     private static void readOperation() {
-        System.out.println("File path:\n> ");
+        System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
 
         Path filePath = new Path("hdfs://10.241.64.14:9000/" + fileName);
@@ -169,7 +169,7 @@ public class InteractiveTest {
     }
 
     private static void deleteOperation() {
-        System.out.println("File or directory path:\n> ");
+        System.out.print("File or directory path:\n> ");
         String targetPath = scanner.nextLine();
 
         Path filePath = new Path("hdfs://10.241.64.14:9000/" + targetPath);
@@ -202,7 +202,7 @@ public class InteractiveTest {
         System.out.println("Operations:");
         System.out.println("(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Exit.");
         System.out.println("==================");
-        System.out.println("\tWhat would you like to do?");
+        System.out.println("\nWhat would you like to do?");
         System.out.print("> ");
     }
 }
