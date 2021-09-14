@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import org.apache.commons.cli.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 
@@ -132,10 +133,8 @@ public class InteractiveTest {
 
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-            Path path = new Path(filePath);
-            FSDataInputStream inputStream = hdfs.open(path);
-            System.out.println(inputStream.available());
-            fs.close();
+            FSDataInputStream inputStream = hdfs.open(filePath);
+            System.out.println("File contents:\n" + inputStream.available());
         } catch (IOException ex) {
             ex.printStackTrace();
         }
