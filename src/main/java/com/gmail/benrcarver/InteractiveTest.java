@@ -63,6 +63,10 @@ public class InteractiveTest {
                     deleteOperation();
                     break;
                 case 6:
+                    System.out.println("LIST selected!");
+                    listOperation();
+                    break;
+                case 7:
                     System.out.println("Exiting now... goodbye!");
                     try {
                         hdfs.close();
@@ -114,6 +118,20 @@ public class InteractiveTest {
             System.out.println("\t New file path: \"" + renamedFileName + "\"");
             hdfs.rename(filePath, filePathRename);
             System.out.println("\t Finished rename operation.");
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private static void listOperation() {
+        System.out.println("Target directory:\n> ");
+        String targetDirectory = scanner.nextLine();
+
+        try {
+            FileStatus[] fileStatus = fs.listStatus(new Path("hdfs://localhost:9000/" + targetDirectory));
+            for(FileStatus status : fileStatus){
+                System.out.println(status.getPath().toString());
+            }
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -180,7 +198,7 @@ public class InteractiveTest {
     private static void printMenu() {
         System.out.println("\n\n====== MENU ======");
         System.out.println("Operations:");
-        System.out.println("(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) Exit.");
+        System.out.println("(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Exit.");
         System.out.println("==================");
         System.out.println("\tWhat would you like to do?");
         System.out.print("> ");
