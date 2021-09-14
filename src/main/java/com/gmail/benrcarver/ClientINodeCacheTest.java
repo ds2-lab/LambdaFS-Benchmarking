@@ -87,20 +87,6 @@ public class ClientINodeCacheTest {
             fileContents[i] = "Hello World from " + targetDirectoryPath + "testFile-" + i + ".txt!";
         }
 
-        /*Path[] filePaths = new Path[] {
-                new Path("hdfs://10.150.0.6:9000/testDirectory2/testFile2-1.txt"),
-                new Path("hdfs://10.150.0.6:9000/testDirectory2/testFile2-2.txt"),
-                new Path("hdfs://10.150.0.6:9000/testDirectory2/testFile2-3.txt"),
-                new Path("hdfs://10.150.0.6:9000/testDirectory2/testFile2-4.txt")
-        };
-
-        String[] fileContents = new String[] {
-                "Hello from /testDirectory2/testFile2-1.txt!",
-                "Hello from /testDirectory2/testFile2-2.txt!",
-                "Hello from /testDirectory2/testFile2-3.txt!",
-                "Hello from /testDirectory2/testFile2-4.txt!"
-        };*/
-
         System.out.println("Creating and writing to files now...");
         for (int i = 0; i < numFilesToCreate; i++) {
             Path filePath = filePaths[i];

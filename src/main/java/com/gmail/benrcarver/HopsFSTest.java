@@ -50,77 +50,6 @@ public class HopsFSTest {
         testFileSystemOperation(args);
     }
 
-    /*public static void main(String[] args) {
-        Options options = new Options();
-
-        Option connectionUrlOption = new Option("url", CONNECTION_URL, true, "The connection URL for a query.");
-        connectionUrlOption.setRequired(false);
-
-        Option queryOperationOption = new Option("q", QUERY, true, "Perform a query operation.");
-        queryOperationOption.setRequired(false);
-
-        Option dataSourceOpt = new Option("src", DATA_SOURCE, true, "The source from which the requested data should be retrieved.");
-        dataSourceOpt.setRequired(false);
-
-        Option idOpt = new Option("id", ID, true, "The ID of the desired user.");
-        idOpt.setRequired(false);
-
-        Option firstNameOpt = new Option("fn", FIRST_NAME, true, "The first name of the desired user.");
-        Option lastNameOpt = new Option("ln", LAST_NAME, true, "The last name of the desired user.");
-
-        Option numQueriesOpt = new Option("nq", "NUM_QUERIES", true, "The number of queries to make.");
-
-        options.addOption(connectionUrlOption);
-        options.addOption(queryOperationOption);
-        options.addOption(dataSourceOpt);
-        options.addOption(idOpt);
-        options.addOption(firstNameOpt);
-        options.addOption(lastNameOpt);
-        options.addOption(numQueriesOpt);
-
-        CommandLineParser parser = new GnuParser();
-        HelpFormatter formatter = new HelpFormatter();
-        CommandLine cmd = null;
-
-        try {
-            cmd = parser.parse(options, args);
-        } catch (ParseException e) {
-            System.out.println(e.getMessage());
-            formatter.printHelp("utility-name", options);
-
-            System.exit(1);
-        }
-
-        String connectionUrl = "jdbc:mysql://10.150.0.11:3306/world";
-        String dataSource = "FROM_NDB";
-        String query = "SELECT * FROM users WHERE ID = 1";
-        int id = 1;
-        int numQueries = 1;
-
-        if (cmd.hasOption(CONNECTION_URL))
-            connectionUrl = cmd.getOptionValue(CONNECTION_URL);
-
-        if (cmd.hasOption(DATA_SOURCE))
-            dataSource = cmd.getOptionValue(DATA_SOURCE);
-
-        if (cmd.hasOption(QUERY))
-            query = cmd.getOptionValue(QUERY);
-
-        if (cmd.hasOption(ID))
-            id = Integer.parseInt(cmd.getOptionValue(ID));
-
-        if (cmd.hasOption("NUM_QUERIES"))
-            numQueries = Integer.parseInt(cmd.getOptionValue("NUM_QUERIES"));
-
-        System.out.println("Passing the following arguments to the latency benchmark:");
-        System.out.println("connection url = " + connectionUrl);
-        System.out.println("data source = " + dataSource);
-        System.out.println("query = " + query);
-        System.out.println("id = " + id);
-
-        testLatencyBenchmark(connectionUrl, dataSource, query, id, numQueries);
-    }*/
-
     private static void testLatencyBenchmark(String connectionUrl, String dataSource, String query, int id, int numQueries) {
         System.out.println("Starting HdfsTest now.");
         Configuration configuration = new Configuration();
@@ -173,7 +102,7 @@ public class HopsFSTest {
         fileCreateContentsOption.setRequired(false);
 
         // Used to specify which operation is being performed.
-        Option operationOption = new Option("o", "operation", true, "Specify the operation to perform by name.");
+        Option operationOption = new Option("o", "operation", true, "Specify the operation to perform by name. Valid operations include: " + LIST_OPERATIONS_STRING);
         fileCreateContentsOption.setRequired(false);
 
         Option newNameOption = new Option("n", "new_name", true, "The new name for the file (used during rename).");
