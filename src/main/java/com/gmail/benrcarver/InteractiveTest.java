@@ -185,9 +185,10 @@ public class InteractiveTest {
     private static int getNextOperation() {
         while (true) {
             try {
-                int op = scanner.nextInt();
+                String input = scanner.nextLine();
+                int op = Integer.parseInt(input);
                 return op;
-            } catch (InputMismatchException ex) {
+            } catch (NumberFormatException ex) {
                 System.out.println("\t Invalid input! Please enter an integer.");
             } catch (Exception ex) {
                 ex.printStackTrace();
