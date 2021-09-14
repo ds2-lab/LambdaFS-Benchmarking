@@ -60,7 +60,12 @@ public class InteractiveTest {
                     break;
                 case 5:
                     System.out.println("Exiting now... goodbye!");
-                    hdfs.close();
+                    try {
+                        hdfs.close();
+                    } catch (IOException ex) {
+                        System.out.println("Encountered exception while closing file system...");
+                        ex.printStackTrace();
+                    }
                     System.exit(0);
                 default:
                     System.out.println("ERROR: Unknown or invalid operation specified: " + op);
