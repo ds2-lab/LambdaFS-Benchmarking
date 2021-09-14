@@ -59,6 +59,10 @@ public class InteractiveTest {
                     renameOperation();
                     break;
                 case 5:
+                    System.out.println("DELETE selected!");
+                    deleteOperation();
+                    break;
+                case 6:
                     System.out.println("Exiting now... goodbye!");
                     try {
                         hdfs.close();
