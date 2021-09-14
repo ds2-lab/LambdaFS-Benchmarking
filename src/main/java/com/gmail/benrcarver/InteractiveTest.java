@@ -129,7 +129,7 @@ public class InteractiveTest {
         String targetDirectory = scanner.nextLine();
 
         try {
-            FileStatus[] fileStatus = hdfs.listStatus(new Path("hdfs://localhost:9000/" + targetDirectory));
+            FileStatus[] fileStatus = hdfs.listStatus(new Path("hdfs://10.241.64.14:9000/" + targetDirectory));
             for(FileStatus status : fileStatus){
                 System.out.println(status.getPath().toString());
             }
