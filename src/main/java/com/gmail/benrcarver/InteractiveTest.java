@@ -142,18 +142,16 @@ public class InteractiveTest {
     }
 
     private static void deleteOperation() {
-        private static void readOperation() {
-            System.out.println("File or directory path:\n> ");
-            String targetPath = scanner.nextLine();
+        System.out.println("File or directory path:\n> ");
+        String targetPath = scanner.nextLine();
 
-            Path filePath = new Path("hdfs://10.241.64.14:9000/" + targetPath);
+        Path filePath = new Path("hdfs://10.241.64.14:9000/" + targetPath);
 
-            try {
-                boolean success = hdfs.delete(filePath, true);
-                System.out.println("\t Delete was successful: " + success);
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
+        try {
+            boolean success = hdfs.delete(filePath, true);
+            System.out.println("\t Delete was successful: " + success);
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -174,7 +172,7 @@ public class InteractiveTest {
     private static void printMenu() {
         System.out.println("\n\n====== MENU ======");
         System.out.println("Operations:");
-        System.out.println("(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Exit.");
+        System.out.println("(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) Exit.");
         System.out.println("==================");
         System.out.println("\tWhat would you like to do?");
         System.out.print("> ");
