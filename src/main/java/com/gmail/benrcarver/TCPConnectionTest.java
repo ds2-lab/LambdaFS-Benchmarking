@@ -74,7 +74,7 @@ public class TCPConnectionTest {
         System.out.println("Created DistributedFileSystem object.");
 
         try {
-            hdfs.initialize(new URI("hdfs://10.150.0.6:9000"), configuration);
+            hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
             System.out.println("Called initialize() successfully.");
         } catch (URISyntaxException | IOException ex) {
             ex.printStackTrace();
@@ -83,7 +83,7 @@ public class TCPConnectionTest {
         Path[] filePaths = new Path[numFilesToCreate];
         String[] fileContents = new String[numFilesToCreate];
         for (int i = 0; i < numFilesToCreate; i++) {
-            filePaths[i] = new Path("hdfs://10.150.0.6:9000" + targetDirectoryPath + "testFile-" + i + ".txt");
+            filePaths[i] = new Path("hdfs://10.241.64.14:9000" + targetDirectoryPath + "testFile-" + i + ".txt");
             fileContents[i] = "Hello World from " + targetDirectoryPath + "testFile-" + i + ".txt!";
         }
 

@@ -58,7 +58,7 @@ public class HopsFSTest {
         System.out.println("Created DistributedFileSystem object.");
 
         try {
-            dfs.initialize(new URI("hdfs://10.150.0.6:9000"), configuration);
+            dfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
             System.out.println("Called initialize() successfully.");
         } catch (URISyntaxException | IOException ex) {
             ex.printStackTrace();
@@ -165,14 +165,14 @@ public class HopsFSTest {
         System.out.println("Created DistributedFileSystem object.");
 
         try {
-            hdfs.initialize(new URI("hdfs://10.150.0.6:9000"), configuration);
+            hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
             System.out.println("Called initialize() successfully.");
         } catch (URISyntaxException | IOException ex) {
             ex.printStackTrace();
         }
 
-        Path filePath = new Path("hdfs://10.150.0.6:9000/" + fileName);
-        Path filePathRename = new Path("hdfs://10.150.0.6:9000/" + newFileName);
+        Path filePath = new Path("hdfs://10.241.64.14:9000/" + fileName);
+        Path filePathRename = new Path("hdfs://10.241.64.14:9000/" + newFileName);
         System.out.println("Created Path object.");
 
         switch (operation) {

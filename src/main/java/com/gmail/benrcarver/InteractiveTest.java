@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.InputMismatchException;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
 public class InteractiveTest {
@@ -29,7 +30,7 @@ public class InteractiveTest {
         System.out.println("Created DistributedFileSystem object.");
 
         try {
-            hdfs.initialize(new URI("hdfs://10.150.0.6:9000"), configuration);
+            hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
             System.out.println("Called initialize() successfully.");
         } catch (URISyntaxException | IOException ex) {
             ex.printStackTrace();
@@ -73,8 +74,10 @@ public class InteractiveTest {
         System.out.println("File contents:\n> ");
         String fileContents = scanner.nextLine();
 
+        Path filePath = new Path("hdfs://10.241.64.14:9000/" + fileName);
+
         try {
-            FSDataOutputStream outputStream = hdfs.create(fileName);
+            FSDataOutputStream outputStream = hdfs.create(filePath);
             System.out.println("\t Called create() successfully.");
             BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
             System.out.println("\t Created BufferedWriter object.");
@@ -93,10 +96,13 @@ public class InteractiveTest {
         System.out.println("Renamed file path:\n> ");
         String renamedFileName = scanner.nextLine();
 
+        Path filePath = new Path("hdfs://10.241.64.14:9000/" + originalFileName);
+        Path filePathRename = new Path("hdfs://10.241.64.14:9000/" + renamedFileName);
+
         try {
             System.out.println("\t Original file path: \"" + originalFileName + "\"");
             System.out.println("\t New file path: \"" + renamedFileName + "\"");
-            hdfs.rename(originalFileName, renamedFileName);
+            hdfs.rename(filePath, filePathRename);
             System.out.println("\t Finished rename operation.");
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -107,9 +113,11 @@ public class InteractiveTest {
         System.out.println("New directory path:\n> ");
         String newDirectoryName = scanner.nextLine();
 
+        Path filePath = new Path("hdfs://10.241.64.14:9000/" + newDirectoryName);
+
         try {
             System.out.println("\t Attempting to create new directory: \"" + newDirectoryName + "\"");
-            boolean directoryCreated = hdfs.mkdirs(newDirectoryName);
+            boolean directoryCreated = hdfs.mkdirs(filePath);
             System.out.println("\t Directory created successfully: " + directoryCreated);
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -119,6 +127,8 @@ public class InteractiveTest {
     private static void readOperation() {
         System.out.println("File path:\n> ");
         String fileName = scanner.nextLine();
+
+        Path filePath = new Path("hdfs://10.241.64.14:9000/" + fileName);
 
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -131,13 +141,29 @@ public class InteractiveTest {
         }
     }
 
+    private static void deleteOperation() {
+        private static void readOperation() {
+            System.out.println("File or directory path:\n> ");
+            String targetPath = scanner.nextLine();
+
+            Path filePath = new Path("hdfs://10.241.64.14:9000/" + targetPath);
+
+            try {
+                boolean success = hdfs.delete(filePath, true);
+                System.out.println("\t Delete was successful: " + success);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
     private static int getNextOperation() {
         while (true) {
             try {
                 int op = scanner.nextInt();
                 return op;
             } catch (InputMismatchException ex) {
-                System.out.println("Invalid input! Please enter an integer.");
+                System.out.println("\t Invalid input! Please enter an integer.");
             } catch (Exception ex) {
                 ex.printStackTrace();
                 System.exit(1);

@@ -18,7 +18,7 @@ package com.gmail.benrcarver;
  - dataSource: FROM_NDB
    ndbConnectionUri: jdbc:mysql://10.150.0.11:3306/world
    query: "SELECT * FROM users WHERE ID = 1"
-   nameNodeUri: "hdfs://10.150.0.6:9000"
+   nameNodeUri: "hdfs://10.241.64.14:9000"
    numQueries: 1
    numRpc: 64
    id: 1
