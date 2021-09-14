@@ -7,6 +7,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.fs.FileStatus;
 
 import java.io.*;
 import java.net.URI;
@@ -128,7 +129,7 @@ public class InteractiveTest {
         String targetDirectory = scanner.nextLine();
 
         try {
-            FileStatus[] fileStatus = fs.listStatus(new Path("hdfs://localhost:9000/" + targetDirectory));
+            FileStatus[] fileStatus = hdfs.listStatus(new Path("hdfs://localhost:9000/" + targetDirectory));
             for(FileStatus status : fileStatus){
                 System.out.println(status.getPath().toString());
             }
