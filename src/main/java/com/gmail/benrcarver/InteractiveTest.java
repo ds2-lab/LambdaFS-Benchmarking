@@ -47,6 +47,7 @@ public class InteractiveTest {
             switch(op) {
                 case 0:
                     hdfs.printDebugInformation();
+                    break;
                 case 1:
                     System.out.println("CREATE FILE selected!");
                     createFileOperation();
