@@ -37,6 +37,7 @@ public class InteractiveTest {
         } catch (URISyntaxException | IOException ex) {
             System.out.println("\n\nERROR: Encountered exception while initializing DistributedFileSystem object.");
             ex.printStackTrace();
+            System.exit(1);
         }
 
         while (true) {
