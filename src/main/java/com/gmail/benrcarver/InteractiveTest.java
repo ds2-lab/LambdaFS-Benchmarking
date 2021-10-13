@@ -171,7 +171,12 @@ public class InteractiveTest {
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
             FSDataInputStream inputStream = hdfs.open(filePath);
-            System.out.println("File contents:\n" + inputStream.available());
+            String line = null;
+            while ((line = br.readLine()) != null)
+                System.out.println(line);
+
+            inputStream.close();
+            br.close();
         } catch (IOException ex) {
             ex.printStackTrace();
         }
