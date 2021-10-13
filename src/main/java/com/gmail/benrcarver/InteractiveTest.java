@@ -24,7 +24,7 @@ public class InteractiveTest {
     private static DistributedFileSystem hdfs;
     private static Configuration configuration;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         System.out.println("Starting HdfsTest now.");
         configuration = new Configuration();
         System.out.println("Created configuration.");
@@ -41,6 +41,7 @@ public class InteractiveTest {
         }
 
         while (true) {
+            Thread.sleep(250);
             printMenu();
             int op = getNextOperation();
 
