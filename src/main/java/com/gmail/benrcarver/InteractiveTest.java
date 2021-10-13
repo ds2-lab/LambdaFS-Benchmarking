@@ -10,13 +10,11 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 
 import java.io.*;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.InputMismatchException;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class InteractiveTest {
@@ -27,10 +25,11 @@ public class InteractiveTest {
     public static void main(String[] args) throws InterruptedException {
         System.out.println("Starting HdfsTest now.");
         configuration = new Configuration();
-        configuration.addResource(
-                "/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml");
-        configuration.addResource(
-                "/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/core-site.xml");
+        try {
+            configuration.addResource(new File("/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml").toURI().toURL());
+        } catch (MalformedURLException ex) {
+            ex.printStackTrace();
+        }
         System.out.println("Created configuration.");
         hdfs = new DistributedFileSystem();
         System.out.println("Created DistributedFileSystem object.");
