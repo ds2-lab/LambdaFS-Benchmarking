@@ -27,6 +27,10 @@ public class InteractiveTest {
     public static void main(String[] args) throws InterruptedException {
         System.out.println("Starting HdfsTest now.");
         configuration = new Configuration();
+        configuration.addResource(
+                "/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml");
+        configuration.addResource(
+                "/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/core-site.xml");
         System.out.println("Created configuration.");
         hdfs = new DistributedFileSystem();
         System.out.println("Created DistributedFileSystem object.");
