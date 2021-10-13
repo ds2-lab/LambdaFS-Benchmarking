@@ -169,8 +169,8 @@ public class InteractiveTest {
         Path filePath = new Path("hdfs://10.241.64.14:9000/" + fileName);
 
         try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
             FSDataInputStream inputStream = hdfs.open(filePath);
+            BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
             String line = null;
             while ((line = br.readLine()) != null)
                 System.out.println(line);
