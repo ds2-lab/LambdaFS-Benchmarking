@@ -122,7 +122,7 @@ public class CreateDeleteTimedTest {
 
         Instant createFinished = Instant.now();
 
-        Duration createDuration = Duration.between(createFinished, testStart);
+        Duration createDuration = Duration.between(testStart, createFinished);
 
         System.out.println("Finished creating all " + numFilesToCreate + " files. Create phase took: "
             + humanReadableFormat(createDuration));
@@ -136,8 +136,8 @@ public class CreateDeleteTimedTest {
         }
 
         Instant deleteFinished = Instant.now();
-        Duration deleteDuration = Duration.between(deleteFinished, createFinished);
-        Duration totalTimeElapsed = Duration.between(deleteFinished, testStart);
+        Duration deleteDuration = Duration.between(createFinished, deleteFinished);
+        Duration totalTimeElapsed = Duration.between(testStart, deleteFinished);
 
         System.out.println("Finished deleting all " + numFilesToCreate + " files. Delete phase took " +
                 humanReadableFormat(deleteDuration));
