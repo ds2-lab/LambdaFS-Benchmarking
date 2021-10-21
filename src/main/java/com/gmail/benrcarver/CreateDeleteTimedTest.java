@@ -69,6 +69,12 @@ public class CreateDeleteTimedTest {
         if (cmd.hasOption(NUM_FILES_OPTION))
             numFilesToCreate = Integer.parseInt(cmd.getOptionValue(NUM_FILES_OPTION));
 
+        if (!targetDirectoryPath.startsWith("/"))
+            targetDirectoryPath = "/" + targetDirectoryPath;
+
+        if (!targetDirectoryPath.endsWith("/"))
+            targetDirectoryPath += "/";
+
         System.out.println("Starting HdfsTest now.");
         Configuration configuration = new Configuration();
         System.out.println("Created configuration.");
