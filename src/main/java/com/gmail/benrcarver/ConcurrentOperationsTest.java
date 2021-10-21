@@ -80,7 +80,7 @@ public class ConcurrentOperationsTest {
             this.id = id;
         }
 
-        private void readFile(String filePath) {
+        private void readFile(String filePath, DistributedFileSystem hdfs) {
             Path path = new Path("hdfs://10.241.64.14:9000/" + filePath);
 
             try {
@@ -103,7 +103,7 @@ public class ConcurrentOperationsTest {
 
             for (int i = 0; i < filePaths.length; i++) {
                 String filePath = filePaths[i];
-                readFile(filePath);
+                readFile(filePath, hdfs);
 
                 try {
                     Thread.sleep(10);
@@ -127,7 +127,7 @@ public class ConcurrentOperationsTest {
             this.id = id;
         }
 
-        private void createAndWriteFile(String filePath, String fileContent) {
+        private void createAndWriteFile(String filePath, String fileContent, DistributedFileSystem hdfs) {
             Path path = new Path("hdfs://10.241.64.14:9000/" + filePath);
 
             try {
@@ -158,7 +158,7 @@ public class ConcurrentOperationsTest {
                 String filePath = filePaths[i];
                 String fileContent = fileContents[i];
 
-                createAndWriteFile(filePath, fileContent);
+                createAndWriteFile(filePath, fileContent, hdfs);
 
                 try {
                     Thread.sleep(10);
