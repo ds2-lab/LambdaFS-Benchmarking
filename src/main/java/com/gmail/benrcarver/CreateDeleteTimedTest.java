@@ -33,7 +33,7 @@ public class CreateDeleteTimedTest {
     private static final String DIRECTORY_OPTION = "directory";
     private static final String NUM_FILES_OPTION = "num_files";
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         Options options = new Options();
 
         Option numFilesOption = new Option("n", NUM_FILES_OPTION,

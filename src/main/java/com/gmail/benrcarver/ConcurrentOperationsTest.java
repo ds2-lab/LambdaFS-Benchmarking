@@ -84,7 +84,7 @@ public class ConcurrentOperationsTest {
             Path path = new Path("hdfs://10.241.64.14:9000/" + filePath);
 
             try {
-                FSDataInputStream inputStream = hdfs.open(filePath);
+                FSDataInputStream inputStream = hdfs.open(path);
                 BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
                 String line = null;
                 while ((line = br.readLine()) != null)
