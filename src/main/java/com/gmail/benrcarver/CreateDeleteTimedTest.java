@@ -20,6 +20,18 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class CreateDeleteTimedTest {
+    /**
+     * The default number of files to create.
+     */
+    private static final int DEFAULT_NUM_FILES = 5;
+
+    /**
+     * The default directory in which the files will be created.
+     */
+    private static final String DEFAULT_TARGET_DIRECTORY = "/testDirectory2/";
+
+    private static final String DIRECTORY_OPTION = "directory";
+    private static final String NUM_FILES_OPTION = "num_files";
 
     public static void main(String[] args) {
         Options options = new Options();
