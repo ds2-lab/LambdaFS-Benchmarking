@@ -93,7 +93,7 @@ public class CreateDeleteTimedTest {
             System.out.println("Created BufferedWriter object.");
 
             br.write(fileContent);
-            System.out.println("Wrote \"" + fileContents + "\" using BufferedWriter.");
+            System.out.println("Wrote \"" + fileContent + "\" using BufferedWriter.");
 
             br.close();
             System.out.println("Closed BufferedWriter.");
