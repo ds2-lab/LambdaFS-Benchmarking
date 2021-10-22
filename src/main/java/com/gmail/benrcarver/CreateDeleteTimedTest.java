@@ -116,7 +116,7 @@ public class CreateDeleteTimedTest {
             System.out.println("Closed BufferedWriter.");
 
             // Just pause a bit here to try to get the connection establishment to occur.
-            Thread.sleep(100);
+            Thread.sleep(25);
         }
 
         Instant createFinished = Instant.now();
@@ -150,7 +150,7 @@ public class CreateDeleteTimedTest {
         if (failedDeletions.size() > 0) {
             for (String path : failedDeletions)
                 System.out.println("Failed to delete: " + path);
-            
+
             throw new IOException("There " + (failedDeletions.size() == 1 ? "was one failed deletion" :
                     "were " + failedDeletions.size() + " failed deletions."));
         }
