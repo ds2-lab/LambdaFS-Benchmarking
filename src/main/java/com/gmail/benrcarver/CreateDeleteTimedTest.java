@@ -56,7 +56,6 @@ public class CreateDeleteTimedTest {
         } catch (ParseException e) {
             System.out.println(e.getMessage());
             formatter.printHelp("utility-name", options);
-
             System.exit(1);
         }
 
@@ -127,11 +126,13 @@ public class CreateDeleteTimedTest {
         System.out.println("Finished creating all " + numFilesToCreate + " files. Create phase took: "
             + humanReadableFormat(createDuration));
 
+        List<String> failedDeletions = new ArrayList<String>();
         for (int i = 0; i < numFilesToCreate; i++) {
             Path filePath = filePaths[i];
             boolean success = hdfs.delete(filePath, true);
             if (!success) {
                 System.out.println("ERROR: Deletion of file" + filePath + " failed!");
+                failedDeletions.add(filePath.toString());
             }
         }
 
@@ -145,6 +146,14 @@ public class CreateDeleteTimedTest {
 
         hdfs.close();
         System.out.println("Closed DistributedFileSystem object.");
+
+        if (failedDeletions.size() > 0) {
+            for (String path : failedDeletions)
+                System.out.println("Failed to delete: " + path);
+            
+            throw new IOException("There " + (failedDeletions.size() == 1 ? "was one failed deletion" :
+                    "were " + failedDeletions.size() + " failed deletions."));
+        }
     }
 
     public static String humanReadableFormat(Duration duration) {
