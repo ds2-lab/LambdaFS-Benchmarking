@@ -20,11 +20,10 @@ import java.util.concurrent.TimeUnit;
 public class InteractiveTest {
     private static final Scanner scanner = new Scanner(System.in);
     private static DistributedFileSystem hdfs;
-    private static Configuration configuration;
 
     public static void main(String[] args) throws InterruptedException {
         System.out.println("Starting HdfsTest now.");
-        configuration = new Configuration();
+        Configuration configuration = Utils.getConfiguration();
         try {
             configuration.addResource(new File("/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml").toURI().toURL());
         } catch (MalformedURLException ex) {

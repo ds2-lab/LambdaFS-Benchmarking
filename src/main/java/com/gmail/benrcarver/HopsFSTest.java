@@ -52,7 +52,7 @@ public class HopsFSTest {
 
     private static void testLatencyBenchmark(String connectionUrl, String dataSource, String query, int id, int numQueries) {
         System.out.println("Starting HdfsTest now.");
-        Configuration configuration = new Configuration();
+        Configuration configuration = Utils.getConfiguration();
         System.out.println("Created configuration.");
         DistributedFileSystem dfs = new DistributedFileSystem();
         System.out.println("Created DistributedFileSystem object.");
@@ -159,7 +159,7 @@ public class HopsFSTest {
         System.out.println("=-=-==-=-==-=-==-=-==-=-==-=-==-=-==-=-==-=-=");
 
         System.out.println("Starting HdfsTest now.");
-        Configuration configuration = new Configuration();
+        Configuration configuration = Utils.getConfiguration();
         System.out.println("Created configuration.");
         DistributedFileSystem hdfs = new DistributedFileSystem();
         System.out.println("Created DistributedFileSystem object.");

@@ -68,7 +68,7 @@ public class ClientINodeCacheTest {
             numFilesToCreate = Integer.parseInt(cmd.getOptionValue(NUM_FILES_OPTION));
 
         System.out.println("Starting HdfsTest now.");
-        Configuration configuration = new Configuration();
+        Configuration configuration = Utils.getConfiguration();
         System.out.println("Created configuration.");
         DistributedFileSystem hdfs = new DistributedFileSystem();
         System.out.println("Created DistributedFileSystem object.");

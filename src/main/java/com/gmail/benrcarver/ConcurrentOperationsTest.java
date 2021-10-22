@@ -174,7 +174,7 @@ public class ConcurrentOperationsTest {
      */
     public static DistributedFileSystem connect(String endpoint) {
         System.out.println("Starting HdfsTest now.");
-        Configuration configuration = new Configuration();
+        Configuration configuration = Utils.getConfiguration();
         System.out.println("Created configuration.");
         DistributedFileSystem hdfs = new DistributedFileSystem();
         System.out.println("Created DistributedFileSystem object.");

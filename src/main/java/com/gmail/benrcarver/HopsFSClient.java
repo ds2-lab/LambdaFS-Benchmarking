@@ -65,7 +65,7 @@ public class HopsFSClient extends BenchmarkClient {
         ArrayList<Double> times = new ArrayList<>();
 
         // Step 1: Connect to HopsFS
-        Configuration configuration = new Configuration();
+        Configuration configuration = Utils.getConfiguration();
         DistributedFileSystem dfs = new DistributedFileSystem();
 
         dfs.initialize(new URI(this.rpcEndpointUri), configuration);
