@@ -126,6 +126,8 @@ public class CreateDeleteTimedTest {
         System.out.println("\nFinished creating all " + numFilesToCreate + " files. Create phase took: "
             + humanReadableFormat(createDuration) + ".\n");
 
+        System.out.println("Beginning delete phase now.\n");
+
         List<String> failedDeletions = new ArrayList<String>();
         for (int i = 0; i < numFilesToCreate; i++) {
             Path filePath = filePaths[i];
