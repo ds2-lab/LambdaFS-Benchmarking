@@ -96,15 +96,15 @@ public class CreateDeleteTimedTest {
 
         Instant testStart = Instant.now();
 
-        System.out.println("Creating and writing to files now...");
+        System.out.println("\nCreating and writing to files now...\n");
         for (int i = 0; i < numFilesToCreate; i++) {
             Path filePath = filePaths[i];
             String fileContent = fileContents[i];
 
-            System.out.println("Creating file \"" + filePath + "\" with contents \"" + fileContent + "\"...");
+            System.out.println("\nCreating file \"" + filePath + "\" with contents \"" + fileContent + "\"...\n");
 
             FSDataOutputStream outputStream = hdfs.create(filePath);
-            System.out.println("Called create() successfully.");
+            System.out.println("\nCalled create() successfully.\n");
 
             BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
             System.out.println("Created BufferedWriter object.");
@@ -123,15 +123,15 @@ public class CreateDeleteTimedTest {
 
         Duration createDuration = Duration.between(testStart, createFinished);
 
-        System.out.println("Finished creating all " + numFilesToCreate + " files. Create phase took: "
-            + humanReadableFormat(createDuration));
+        System.out.println("\nFinished creating all " + numFilesToCreate + " files. Create phase took: "
+            + humanReadableFormat(createDuration) + ".\n");
 
         List<String> failedDeletions = new ArrayList<String>();
         for (int i = 0; i < numFilesToCreate; i++) {
             Path filePath = filePaths[i];
             boolean success = hdfs.delete(filePath, true);
             if (!success) {
-                System.out.println("ERROR: Deletion of file" + filePath + " failed!");
+                System.out.println("\n\nERROR: Deletion of file" + filePath + " failed!\n\n");
                 failedDeletions.add(filePath.toString());
             }
         }
@@ -140,12 +140,12 @@ public class CreateDeleteTimedTest {
         Duration deleteDuration = Duration.between(createFinished, deleteFinished);
         Duration totalTimeElapsed = Duration.between(testStart, deleteFinished);
 
-        System.out.println("Finished deleting all " + numFilesToCreate + " files. Delete phase took " +
+        System.out.println("\nFinished deleting all " + numFilesToCreate + " files. Delete phase took " +
                 humanReadableFormat(deleteDuration));
         System.out.println("Total time elapsed: " + totalTimeElapsed);
 
         hdfs.close();
-        System.out.println("Closed DistributedFileSystem object.");
+        System.out.println("Closed DistributedFileSystem object.\n");
 
         if (failedDeletions.size() > 0) {
             for (String path : failedDeletions)
