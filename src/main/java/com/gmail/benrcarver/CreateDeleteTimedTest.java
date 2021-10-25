@@ -28,7 +28,7 @@ public class CreateDeleteTimedTest {
     /**
      * The default directory in which the files will be created.
      */
-    private static final String DEFAULT_TARGET_DIRECTORY = "/testDirectory2/";
+    private static final String DEFAULT_TARGET_DIRECTORY = "/cdtt/";
 
     private static final String DIRECTORY_OPTION = "directory";
     private static final String NUM_FILES_OPTION = "num_files";
@@ -90,7 +90,7 @@ public class CreateDeleteTimedTest {
         Path[] filePaths = new Path[numFilesToCreate];
         String[] fileContents = new String[numFilesToCreate];
         for (int i = 0; i < numFilesToCreate; i++) {
-            filePaths[i] = new Path("hdfs://10.241.64.14:9000" + targetDirectoryPath + "testFile-" + i + ".txt");
+            filePaths[i] = new Path("hdfs://10.241.64.14:9000" + targetDirectoryPath + "cdttFile" + i + ".txt");
             fileContents[i] = "Hello World from " + targetDirectoryPath + "testFile-" + i + ".txt!";
         }
 
