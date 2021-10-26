@@ -144,6 +144,9 @@ public class CreateDeleteTimedTest {
 
         System.out.println("\nFinished deleting all " + numFilesToCreate + " files. Delete phase took " +
                 humanReadableFormat(deleteDuration));
+        System.out.println("\n==========================================");
+        System.out.println("Create phase: " + humanReadableFormat(createDuration));
+        System.out.println("Delete phase: " + humanReadableFormat(deleteDuration));
         System.out.println("Total time elapsed: " + totalTimeElapsed);
 
         hdfs.close();
