@@ -48,6 +48,9 @@ public class InteractiveTest {
             int op = getNextOperation();
 
             switch(op) {
+                case -1:
+                    hdfs.printOperationsPerformed();
+                    break;
                 case 0:
                     hdfs.printDebugInformation();
                     break;

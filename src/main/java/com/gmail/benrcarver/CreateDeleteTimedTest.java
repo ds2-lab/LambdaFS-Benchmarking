@@ -2,6 +2,7 @@ package com.gmail.benrcarver;
 
 import com.google.gson.JsonObject;
 import org.apache.commons.cli.*;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -124,7 +125,7 @@ public class CreateDeleteTimedTest {
         Duration createDuration = Duration.between(testStart, createFinished);
 
         System.out.println("\nFinished creating all " + numFilesToCreate + " files. Create phase took: "
-            + humanReadableFormat(createDuration) + ".\n");
+            + DurationFormatUtils.formatDurationHMS(createDuration.toMillis()) + ".\n");
 
         System.out.println("Beginning delete phase now.\n");
 
@@ -143,10 +144,10 @@ public class CreateDeleteTimedTest {
         Duration totalTimeElapsed = Duration.between(testStart, deleteFinished);
 
         System.out.println("\nFinished deleting all " + numFilesToCreate + " files. Delete phase took " +
-                humanReadableFormat(deleteDuration));
+                DurationFormatUtils.formatDurationHMS(deleteDuration.toMillis()));
         System.out.println("\n==========================================");
-        System.out.println("Create phase: " + humanReadableFormat(createDuration));
-        System.out.println("Delete phase: " + humanReadableFormat(deleteDuration));
+        System.out.println("Create phase: " + DurationFormatUtils.formatDurationHMS((createDuration.toMillis())));
+        System.out.println("Delete phase: " + DurationFormatUtils.formatDurationHMS((deleteDuration.toMillis())));
         System.out.println("Total time elapsed: " + totalTimeElapsed);
 
         hdfs.close();
