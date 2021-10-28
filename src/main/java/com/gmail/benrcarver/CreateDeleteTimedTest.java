@@ -127,6 +127,9 @@ public class CreateDeleteTimedTest {
         System.out.println("\nFinished creating all " + numFilesToCreate + " files. Create phase took: "
             + DurationFormatUtils.formatDurationHMS(createDuration.toMillis()) + ".\n");
 
+        hdfs.printDebugInformation();
+        hdfs.printOperationsPerformed();
+
         System.out.println("Beginning delete phase now.\n");
 
         List<String> failedDeletions = new ArrayList<String>();
@@ -150,6 +153,8 @@ public class CreateDeleteTimedTest {
         System.out.println("Delete phase: " + DurationFormatUtils.formatDurationHMS((deleteDuration.toMillis())));
         System.out.println("Total time elapsed: " + totalTimeElapsed);
 
+        hdfs.printDebugInformation();
+        hdfs.printOperationsPerformed();
         hdfs.close();
         System.out.println("Closed DistributedFileSystem object.\n");
 
