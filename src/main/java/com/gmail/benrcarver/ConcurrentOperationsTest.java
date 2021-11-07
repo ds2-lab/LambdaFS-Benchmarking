@@ -8,6 +8,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.hdfs.serverless.metrics.OperationPerformed;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.*;
@@ -18,6 +19,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 public class ConcurrentOperationsTest {
@@ -25,9 +27,57 @@ public class ConcurrentOperationsTest {
 
     private Writer[] writers;
 
+    private ConcurrentLinkedQueue<String> filesCreated;
+
+    private ConcurrentLinkedQueue<OperationPerformed> operationsPerformed;
+
     public ConcurrentOperationsTest(Reader[] readers, Writer[] writers) {
         this.readers = readers;
         this.writers = writers;
+        this.filesCreated = new ConcurrentLinkedQueue<>();
+        this.operationsPerformed = new ConcurrentLinkedQueue<OperationPerformed>();
+    }
+
+    /**
+     * Add the list of operations to the queue.
+     */
+    public void addOperationsPerformed(List<OperationPerformed> ops) {
+        this.operationsPerformed.addAll(ops);
+    }
+
+    public void cleanUpWrittenFiles() {
+        System.out.println("Cleaning up " + filesCreated.size() + " file(s) created during test.");
+
+        DistributedFileSystem hdfs = connect("hdfs://10.241.64.14:9000");
+
+        while (filesCreated.size() > 0) {
+            String targetPath = filesCreated.poll();
+
+            System.out.println("Deleting file: " + targetPath);
+
+            Path filePath = new Path("hdfs://10.241.64.14:9000/" + targetPath);
+
+            try {
+                boolean success = hdfs.delete(filePath, true);
+                System.out.println("\t Delete was successful: " + success);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        hdfs.printDebugInformation();
+        hdfs.printOperationsPerformed();
+
+        hdfs.close();
+
+        hdfs.close();
+    }
+
+    /**
+     * Add a file to the `filesCreated` queue.
+     */
+    public void addFileWritten(String filePath) {
+        this.filesCreated.add(filePath);
     }
 
     public void doTest() {
@@ -44,6 +94,8 @@ public class ConcurrentOperationsTest {
             writerThreads[i] = writerThread;
         }
 
+
+        Instant startTime = Instant.now();
         int maxLength = Math.max(readerThreads.length, writerThreads.length);
         for (int i = 0; i < maxLength; i++) {
             if (i < readerThreads.length)
@@ -70,15 +122,32 @@ public class ConcurrentOperationsTest {
                 }
             }
         }
+
+        Instant endTime = Instant.now();
+        Duration testDuration = Duration.between(startTime, endTime);
+        System.out.println("\n\n\nTEST COMPLETED. TIME ELAPSED: " + testDuration.toString()
+                + ". CLEANING UP FILES NOW.");
+        cleanUpWrittenFiles();
+
+        List<OperationPerformed> opsPerformedList = new ArrayList<OperationPerformed>(operationsPerformed);
+        Collections.sort(opsPerformedList, OperationPerformed.BY_START_TIME);
+
+        System.out.println("====================== Operations Performed ======================");
+        System.out.println("Number performed: " + operationsPerformed.size());
+        for (OperationPerformed operationPerformed : opsPerformedList)
+            System.out.println(operationPerformed.toString());
+        System.out.println("==================================================================");
     }
 
-    public static class Reader implements Runnable {
+    public class Reader implements Runnable {
         private final String[] filePaths;
         private final int id;
+        private final ConcurrentOperationsTest testObject;
 
-        public Reader(int id, String[] filePaths) {
+        public Reader(int id, String[] filePaths, ConcurrentOperationsTest testObject) {
             this.filePaths = filePaths;
             this.id = id;
+            this.testObject = testObject;
         }
 
         private void readFile(String filePath, DistributedFileSystem hdfs) {
@@ -112,20 +181,29 @@ public class ConcurrentOperationsTest {
                     ex.printStackTrace();
                 }
             }
+
+            hdfs.printDebugInformation();
+            hdfs.printOperationsPerformed();
+            List<OperationPerformed> ops = hdfs.getOperationsPerformed();
+            this.testObject.addOperationsPerformed(ops);
+
+            hdfs.close();
         }
     }
 
-    public static class Writer implements Runnable {
+    public class Writer implements Runnable {
         private final String[] filePaths;
         private final String[] fileContents;
         private final int id;
+        private final ConcurrentOperationsTest testObject;
 
-        public Writer(int id, String[] filePaths, String[] fileContents) {
+        public Writer(int id, String[] filePaths, String[] fileContents, ConcurrentOperationsTest testObject) {
             assert(filePaths.length == fileContents.length);
 
             this.filePaths = filePaths;
             this.fileContents = fileContents;
             this.id = id;
+            this.testObject = testObject;
         }
 
         private void createAndWriteFile(String filePath, String fileContent, DistributedFileSystem hdfs) {
@@ -146,6 +224,8 @@ public class ConcurrentOperationsTest {
 
                 br.close();
                 System.out.println("[Writer " + id + "] Closed BufferedWriter.");
+
+                this.testObject.addFileWritten(filePath);
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -167,6 +247,13 @@ public class ConcurrentOperationsTest {
                     ex.printStackTrace();
                 }
             }
+
+            hdfs.printDebugInformation();
+            hdfs.printOperationsPerformed();
+            List<OperationPerformed> ops = hdfs.getOperationsPerformed();
+            this.testObject.addOperationsPerformed(ops);
+
+            hdfs.close();
         }
     }
 
