@@ -212,7 +212,7 @@ public class ConcurrentOperationsTest {
     }
 }
 
-public class Writer implements Runnable {
+class Writer implements Runnable {
     private final String[] filePaths;
     private final String[] fileContents;
     private final int id;
@@ -278,7 +278,7 @@ public class Writer implements Runnable {
     }
 }
 
-public class Reader implements Runnable {
+class Reader implements Runnable {
     private final String[] filePaths;
     private final int id;
     private final ConcurrentOperationsTest testObject;
