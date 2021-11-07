@@ -139,124 +139,6 @@ public class ConcurrentOperationsTest {
         System.out.println("==================================================================");
     }
 
-    public class Reader implements Runnable {
-        private final String[] filePaths;
-        private final int id;
-        private final ConcurrentOperationsTest testObject;
-
-        public Reader(int id, String[] filePaths, ConcurrentOperationsTest testObject) {
-            this.filePaths = filePaths;
-            this.id = id;
-            this.testObject = testObject;
-        }
-
-        private void readFile(String filePath, DistributedFileSystem hdfs) {
-            Path path = new Path("hdfs://10.241.64.14:9000/" + filePath);
-
-            try {
-                FSDataInputStream inputStream = hdfs.open(path);
-                BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
-                String line = null;
-                while ((line = br.readLine()) != null)
-                    System.out.println("[Reader " + id + "] " + line);
-
-                inputStream.close();
-                br.close();
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-        }
-
-        @Override
-        public void run() {
-            DistributedFileSystem hdfs = connect("hdfs://10.241.64.14:9000");
-
-            for (int i = 0; i < filePaths.length; i++) {
-                String filePath = filePaths[i];
-                readFile(filePath, hdfs);
-
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
-                }
-            }
-
-            hdfs.printDebugInformation();
-            hdfs.printOperationsPerformed();
-            List<OperationPerformed> ops = hdfs.getOperationsPerformed();
-            this.testObject.addOperationsPerformed(ops);
-
-            hdfs.close();
-        }
-    }
-
-    public class Writer implements Runnable {
-        private final String[] filePaths;
-        private final String[] fileContents;
-        private final int id;
-        private final ConcurrentOperationsTest testObject;
-
-        public Writer(int id, String[] filePaths, String[] fileContents, ConcurrentOperationsTest testObject) {
-            assert(filePaths.length == fileContents.length);
-
-            this.filePaths = filePaths;
-            this.fileContents = fileContents;
-            this.id = id;
-            this.testObject = testObject;
-        }
-
-        private void createAndWriteFile(String filePath, String fileContent, DistributedFileSystem hdfs) {
-            Path path = new Path("hdfs://10.241.64.14:9000/" + filePath);
-
-            try {
-                System.out.println("[Writer " + id + "] Creating file \"" + path + "\" with contents \""
-                        + fileContent + "\"...");
-
-                FSDataOutputStream outputStream = hdfs.create(path);
-                System.out.println("[Writer " + id + "] Called create() successfully.");
-
-                BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
-                System.out.println("[Writer " + id + "] Created BufferedWriter object.");
-
-                br.write(fileContent);
-                System.out.println("[Writer " + id + "] Wrote \"" + fileContent + "\" using BufferedWriter.");
-
-                br.close();
-                System.out.println("[Writer " + id + "] Closed BufferedWriter.");
-
-                this.testObject.addFileWritten(filePath);
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-        }
-
-        @Override
-        public void run() {
-            DistributedFileSystem hdfs = connect("hdfs://10.241.64.14:9000");
-
-            for (int i = 0; i < filePaths.length; i++) {
-                String filePath = filePaths[i];
-                String fileContent = fileContents[i];
-
-                createAndWriteFile(filePath, fileContent, hdfs);
-
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
-                }
-            }
-
-            hdfs.printDebugInformation();
-            hdfs.printOperationsPerformed();
-            List<OperationPerformed> ops = hdfs.getOperationsPerformed();
-            this.testObject.addOperationsPerformed(ops);
-
-            hdfs.close();
-        }
-    }
-
     /**
      * Connect to the HopsFS cluster.
      */
@@ -326,5 +208,123 @@ public class ConcurrentOperationsTest {
                 new ConcurrentOperationsTest(readers.toArray(new Reader[0]), writers.toArray(new Writer[0]));
 
         concurrentOperationsTest.doTest();
+    }
+}
+
+public class Writer implements Runnable {
+    private final String[] filePaths;
+    private final String[] fileContents;
+    private final int id;
+    private final ConcurrentOperationsTest testObject;
+
+    public Writer(int id, String[] filePaths, String[] fileContents, ConcurrentOperationsTest testObject) {
+        assert(filePaths.length == fileContents.length);
+
+        this.filePaths = filePaths;
+        this.fileContents = fileContents;
+        this.id = id;
+        this.testObject = testObject;
+    }
+
+    private void createAndWriteFile(String filePath, String fileContent, DistributedFileSystem hdfs) {
+        Path path = new Path("hdfs://10.241.64.14:9000/" + filePath);
+
+        try {
+            System.out.println("[Writer " + id + "] Creating file \"" + path + "\" with contents \""
+                    + fileContent + "\"...");
+
+            FSDataOutputStream outputStream = hdfs.create(path);
+            System.out.println("[Writer " + id + "] Called create() successfully.");
+
+            BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
+            System.out.println("[Writer " + id + "] Created BufferedWriter object.");
+
+            br.write(fileContent);
+            System.out.println("[Writer " + id + "] Wrote \"" + fileContent + "\" using BufferedWriter.");
+
+            br.close();
+            System.out.println("[Writer " + id + "] Closed BufferedWriter.");
+
+            this.testObject.addFileWritten(filePath);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    @Override
+    public void run() {
+        DistributedFileSystem hdfs = ConcurrentOperationsTest.connect("hdfs://10.241.64.14:9000");
+
+        for (int i = 0; i < filePaths.length; i++) {
+            String filePath = filePaths[i];
+            String fileContent = fileContents[i];
+
+            createAndWriteFile(filePath, fileContent, hdfs);
+
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        hdfs.printDebugInformation();
+        hdfs.printOperationsPerformed();
+        List<OperationPerformed> ops = hdfs.getOperationsPerformed();
+        this.testObject.addOperationsPerformed(ops);
+
+        hdfs.close();
+    }
+}
+
+public class Reader implements Runnable {
+    private final String[] filePaths;
+    private final int id;
+    private final ConcurrentOperationsTest testObject;
+
+    public Reader(int id, String[] filePaths, ConcurrentOperationsTest testObject) {
+        this.filePaths = filePaths;
+        this.id = id;
+        this.testObject = testObject;
+    }
+
+    private void readFile(String filePath, DistributedFileSystem hdfs) {
+        Path path = new Path("hdfs://10.241.64.14:9000/" + filePath);
+
+        try {
+            FSDataInputStream inputStream = hdfs.open(path);
+            BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
+            String line = null;
+            while ((line = br.readLine()) != null)
+                System.out.println("[Reader " + id + "] " + line);
+
+            inputStream.close();
+            br.close();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    @Override
+    public void run() {
+        DistributedFileSystem hdfs = ConcurrentOperationsTest.connect("hdfs://10.241.64.14:9000");
+
+        for (int i = 0; i < filePaths.length; i++) {
+            String filePath = filePaths[i];
+            readFile(filePath, hdfs);
+
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        hdfs.printDebugInformation();
+        hdfs.printOperationsPerformed();
+        List<OperationPerformed> ops = hdfs.getOperationsPerformed();
+        this.testObject.addOperationsPerformed(ops);
+
+        hdfs.close();
     }
 }
