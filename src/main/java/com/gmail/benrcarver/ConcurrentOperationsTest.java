@@ -216,6 +216,7 @@ public class ConcurrentOperationsTest {
 
         for (Object readerObject : readerObjects) {
             Map<String, Object> readerMap = (Map<String, Object>)readerObject;
+            System.out.println("Reader: " + readerMap.toString());
             int id = (Integer)readerMap.get("id");
             List<String> paths = (List<String>)readerMap.get("paths");
 
@@ -225,6 +226,7 @@ public class ConcurrentOperationsTest {
 
         for (Object writerObject : readerObjects) {
             Map<String, Object> writerMap = (Map<String, Object>)writerObject;
+            System.out.println("Reader: " + writerMap.toString());
             int id = (Integer)writerMap.get("id");
             List<String> paths = (List<String>)writerMap.get("paths");
             List<String> contents = (List<String>)writerMap.get("contents");
