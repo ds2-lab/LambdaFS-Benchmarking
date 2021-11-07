@@ -72,7 +72,7 @@ public class ConcurrentOperationsTest {
         }
     }
 
-    public class Reader implements Runnable {
+    public static class Reader implements Runnable {
         private final String[] filePaths;
         private final int id;
 
@@ -115,7 +115,7 @@ public class ConcurrentOperationsTest {
         }
     }
 
-    public class Writer implements Runnable {
+    public static class Writer implements Runnable {
         private final String[] filePaths;
         private final String[] fileContents;
         private final int id;
@@ -207,5 +207,35 @@ public class ConcurrentOperationsTest {
         Map<String, Object> obj = yaml.load(inputStream);
 
         System.out.println(obj);
+
+        Object[] readerObjects= (Object[])obj.get("readers");
+        Object[] writerObjects = (Object[])obj.get("writers");
+
+        List<Reader> readers = new ArrayList<Reader>();
+        List<Writer> writers = new ArrayList<Writer>();
+
+        for (Object readerObject : readerObjects) {
+            Map<String, Object> readerMap = (Map<String, Object>)readerObject;
+            int id = (Integer)readerMap.get("id");
+            String[] paths = (String[])readerMap.get("paths");
+
+            Reader reader = new Reader(id, paths);
+            readers.add(reader);
+        }
+
+        for (Object writerObject : readerObjects) {
+            Map<String, Object> writerMap = (Map<String, Object>)writerObject;
+            int id = (Integer)writerMap.get("id");
+            String[] paths = (String[])writerMap.get("paths");
+            String[] contents = (String[])writerMap.get("contents");
+
+            Writer writer = new Writer(id, paths, contents);
+            writers.add(writer);
+        }
+
+        ConcurrentOperationsTest concurrentOperationsTest =
+                new ConcurrentOperationsTest(readers.toArray(new Reader[0]), writers.toArray(new Writer[0]));
+
+        concurrentOperationsTest.doTest();
     }
 }
