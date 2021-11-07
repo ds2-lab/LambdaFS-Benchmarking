@@ -329,6 +329,10 @@ class Reader implements Runnable {
         List<OperationPerformed> ops = hdfs.getOperationsPerformed();
         this.testObject.addOperationsPerformed(ops);
 
-        hdfs.close();
+        try {
+            hdfs.close();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
     }
 }
