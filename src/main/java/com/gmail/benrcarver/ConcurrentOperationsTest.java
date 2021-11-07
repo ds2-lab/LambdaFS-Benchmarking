@@ -224,7 +224,7 @@ public class ConcurrentOperationsTest {
             readers.add(reader);
         }
 
-        for (Object writerObject : readerObjects) {
+        for (Object writerObject : writerObjects) {
             Map<String, Object> writerMap = (Map<String, Object>)writerObject;
             System.out.println("Reader: " + writerMap.toString());
             int id = (Integer)writerMap.get("id");
