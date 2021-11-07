@@ -23,15 +23,15 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 public class ConcurrentOperationsTest {
-    private Reader[] readers;
+    private List<Reader> readers;
 
-    private Writer[] writers;
+    private List<Writer> writers;
 
     private ConcurrentLinkedQueue<String> filesCreated;
 
     private ConcurrentLinkedQueue<OperationPerformed> operationsPerformed;
 
-    public ConcurrentOperationsTest(Reader[] readers, Writer[] writers) {
+    public ConcurrentOperationsTest(List<Reader> readers, List<Writer>  writers) {
         this.readers = readers;
         this.writers = writers;
         this.filesCreated = new ConcurrentLinkedQueue<>();
@@ -81,16 +81,16 @@ public class ConcurrentOperationsTest {
     }
 
     public void doTest() {
-        Thread[] readerThreads = new Thread[readers.length];
-        Thread[] writerThreads = new Thread[writers.length];
+        Thread[] readerThreads = new Thread[readers.size()];
+        Thread[] writerThreads = new Thread[writers.size()];
 
-        for (int i = 0; i < readers.length; i++) {
-            Thread readerThread = new Thread(readers[i]);
+        for (int i = 0; i < readers.size(); i++) {
+            Thread readerThread = new Thread(readers.get(i));
             readerThreads[i] = readerThread;
         }
 
-        for (int i = 0; i < writers.length; i++) {
-            Thread writerThread = new Thread(writers[i]);
+        for (int i = 0; i < writers.size(); i++) {
+            Thread writerThread = new Thread(writers.get(i));
             writerThreads[i] = writerThread;
         }
 
@@ -101,7 +101,7 @@ public class ConcurrentOperationsTest {
             if (i < readerThreads.length)
                 readerThreads[i].start();
 
-            if (i < writers.length)
+            if (i < writers.size())
                 writerThreads[i].start();
         }
 
@@ -114,7 +114,7 @@ public class ConcurrentOperationsTest {
                 }
             }
 
-            if (i < writers.length) {
+            if (i < writers.size()) {
                 try {
                     writerThreads[i].join();
                 } catch (InterruptedException ex) {
@@ -183,13 +183,16 @@ public class ConcurrentOperationsTest {
         List<Reader> readers = new ArrayList<Reader>();
         List<Writer> writers = new ArrayList<Writer>();
 
+        ConcurrentOperationsTest concurrentOperationsTest =
+                new ConcurrentOperationsTest(readers, writers);
+
         for (Object readerObject : readerObjects) {
             Map<String, Object> readerMap = (Map<String, Object>)readerObject;
             System.out.println("Reader: " + readerMap.toString());
             int id = (Integer)readerMap.get("id");
             List<String> paths = (List<String>)readerMap.get("paths");
 
-            Reader reader = new Reader(id, paths.toArray(new String[0]));
+            Reader reader = new Reader(id, paths.toArray(new String[0]), concurrentOperationsTest);
             readers.add(reader);
         }
 
@@ -200,12 +203,10 @@ public class ConcurrentOperationsTest {
             List<String> paths = (List<String>)writerMap.get("paths");
             List<String> contents = (List<String>)writerMap.get("contents");
 
-            Writer writer = new Writer(id, paths.toArray(new String[0]), contents.toArray(new String[0]));
+            Writer writer = new Writer(id, paths.toArray(new String[0]), contents.toArray(new String[0]),
+                    concurrentOperationsTest);
             writers.add(writer);
         }
-
-        ConcurrentOperationsTest concurrentOperationsTest =
-                new ConcurrentOperationsTest(readers.toArray(new Reader[0]), writers.toArray(new Writer[0]));
 
         concurrentOperationsTest.doTest();
     }
