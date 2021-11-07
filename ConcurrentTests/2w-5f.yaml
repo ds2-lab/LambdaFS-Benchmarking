@@ -1,0 +1,27 @@
+writers:
+  - id: 0
+    paths:
+      - "/writers/write0.txt"
+      - "/writers/write1.txt"
+      - "/writers/write2.txt"
+      - "/writers/write3.txt"
+      - "/writers/write4.txt"
+    contents:
+      - "Writer-0 File-0 Writer-0 File-0 Writer-0 File-0 Writer-0 File-0 Writer-0 File-0 Writer-0 File-0 Writer-0 File-0"
+      - "Writer-0 File-1 Writer-0 File-1 Writer-0 File-1 Writer-0 File-1 Writer-0 File-1 Writer-0 File-1 Writer-0 File-1"
+      - "Writer-0 File-2 Writer-0 File-2 Writer-0 File-2 Writer-0 File-2 Writer-0 File-2 Writer-0 File-2 Writer-0 File-2"
+      - "Writer-0 File-3 Writer-0 File-3 Writer-0 File-3 Writer-0 File-3 Writer-0 File-3 Writer-0 File-3 Writer-0 File-3"
+      - "Writer-0 File-4 Writer-0 File-4 Writer-0 File-4 Writer-0 File-4 Writer-0 File-4 Writer-0 File-4 Writer-0 File-4"
+  - id: 1
+    paths:
+      - "/writers/write5.txt"
+      - "/writers/write6.txt"
+      - "/writers/write7.txt"
+      - "/writers/write8.txt"
+      - "/writers/write9.txt"
+    contents:
+      - "Writer-1 File-5 Writer-1 File-5 Writer-1 File-5 Writer-1 File-5 Writer-1 File-5 Writer-1 File-5 Writer-1 File-5"
+      - "Writer-1 File-6 Writer-1 File-6 Writer-1 File-6 Writer-1 File-6 Writer-1 File-6 Writer-1 File-6 Writer-1 File-6"
+      - "Writer-1 File-7 Writer-1 File-7 Writer-1 File-7 Writer-1 File-7 Writer-1 File-7 Writer-1 File-7 Writer-1 File-7"
+      - "Writer-1 File-8 Writer-1 File-8 Writer-1 File-8 Writer-1 File-8 Writer-1 File-8 Writer-1 File-8 Writer-1 File-8"
+      - "Writer-1 File-9 Writer-1 File-9 Writer-1 File-9 Writer-1 File-9 Writer-1 File-9 Writer-1 File-9 Writer-1 File-9"

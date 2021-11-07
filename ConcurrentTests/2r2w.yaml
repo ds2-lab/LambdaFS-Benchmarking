@@ -1,0 +1,18 @@
+readers:
+  - id: 0
+    paths:
+      - "/readers/read1.txt"
+  - id: 1
+    paths:
+      - "/readers/read2.txt"
+writers:
+  - id: 0
+    paths:
+      - "/writers/write1.txt"
+    contents:
+      - "Aliquam nec magna ac metus porttitor porta non vitae elit. Suspendisse mollis porta lorem, a dictum erat volutpat id. Etiam viverra condimentum mi. Vivamus auctor tortor purus, vel sollicitudin magna elementum eu."
+  - id: 1
+    paths:
+      - "/writers/write2.txt"
+    contents:
+      - "Cras molestie leo id metus posuere accumsan. Proin blandit velit bibendum augue aliquet, eget pharetra erat ullamcorper. Suspendisse non nunc lorem. In iaculis ante a est eleifend, sed sagittis lorem malesuada. Nunc non sagittis ligula, sit amet convallis massa."

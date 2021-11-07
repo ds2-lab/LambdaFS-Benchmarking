@@ -1,0 +1,15 @@
+readers:
+  - id: 0
+    paths:
+      - "/readers/read1.txt"
+      - "/readers/read2.txt"
+      - "/readers/read3.txt"
+      - "/readers/read4.txt"
+      - "/readers/read5.txt"
+  - id: 1
+    paths:
+      - "/readers/read1.txt"
+      - "/readers/read2.txt"
+      - "/readers/read3.txt"
+      - "/readers/read4.txt"
+      - "/readers/read5.txt"

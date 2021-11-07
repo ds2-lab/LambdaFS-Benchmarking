@@ -180,8 +180,17 @@ public class ConcurrentOperationsTest {
 
         System.out.println(obj);
 
-        List<Object> readerObjects= (List<Object>)obj.get("readers");
-        List<Object> writerObjects = (List<Object>)obj.get("writers");
+        List<Object> readerObjects;
+        if (obj.containsKey("readers"))
+            readerObjects = (List<Object>)obj.get("readers");
+        else
+            readerObjects = new ArrayList<>();
+
+        List<Object> writerObjects;
+        if (obj.containsKey("writers"))
+            writerObjects = (List<Object>)obj.get("writers");
+        else
+            writerObjects = new ArrayList<>();
 
         List<Reader> readers = new ArrayList<Reader>();
         List<Writer> writers = new ArrayList<Writer>();

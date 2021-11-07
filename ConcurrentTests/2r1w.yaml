@@ -1,0 +1,13 @@
+readers:
+  - id: 0
+    paths:
+      - "/readers/read1.txt"
+  - id: 1
+    paths:
+      - "/readers/read2.txt"
+writers:
+  - id: 0
+    paths:
+      - "/writers/write1.txt"
+    contents:
+      - "Hello from Writer 0"

@@ -1,0 +1,42 @@
+readers:
+  - id: 0
+    paths:
+      - "/readers/read1.txt"
+  - id: 1
+    paths:
+      - "/readers/read2.txt"
+  - id: 2
+    paths:
+      - "/readers/read3.txt"
+  - id: 3
+    paths:
+      - "/readers/read4.txt"
+  - id: 4
+    paths:
+      - "/readers/read5.txt"
+writers:
+  - id: 0
+    paths:
+      - "/writers/write1.txt"
+    contents:
+      - "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas iaculis eu nisi gravida lacinia. Praesent euismod malesuada sagittis. Curabitur porttitor, massa et ultricies euismod, sapien est luctus ipsum, at commodo ipsum leo non lectus."
+  - id: 1
+    paths:
+      - "/writers/write2.txt"
+    contents:
+      - "Suspendisse nisl justo, euismod in consequat eget, iaculis in ex. Donec sodales non dui in malesuada. Cras sed ex sit amet urna dictum consequat et ac mauris. Ut vel dapibus magna, ac viverra nisl."
+  - id: 2
+    paths:
+      - "/writers/write1.txt"
+    contents:
+      - "Aliquam nec magna ac metus porttitor porta non vitae elit. Suspendisse mollis porta lorem, a dictum erat volutpat id. Etiam viverra condimentum mi. Vivamus auctor tortor purus, vel sollicitudin magna elementum eu."
+  - id: 3
+    paths:
+      - "/writers/write2.txt"
+    contents:
+      - "Cras molestie leo id metus posuere accumsan. Proin blandit velit bibendum augue aliquet, eget pharetra erat ullamcorper. Suspendisse non nunc lorem. In iaculis ante a est eleifend, sed sagittis lorem malesuada. Nunc non sagittis ligula, sit amet convallis massa."
+  - id: 4
+    paths:
+      - "/writers/write2.txt"
+    contents:
+      - "Vestibulum aliquet sem id consequat malesuada. Ut sodales purus mi, ac condimentum justo facilisis quis. Vestibulum scelerisque ex eget urna accumsan, at gravida quam vehicula. Etiam maximus fringilla sem quis dapibus."
