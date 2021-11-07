@@ -79,6 +79,10 @@ public class InteractiveTest {
                     listOperation();
                     break;
                 case 7:
+                    System.out.println("APPEND selected!");
+                    appendOperation();
+                    break;
+                case 8:
                     System.out.println("Exiting now... goodbye!");
                     try {
                         hdfs.close();
@@ -164,6 +168,28 @@ public class InteractiveTest {
         }
     }
 
+    private static void appendOperation() {
+        System.out.print("File path:\n> ");
+        String fileName = scanner.nextLine();
+        System.out.print("Content to append:\n> ");
+        String fileContents = scanner.nextLine();
+
+        Path filePath = new Path("hdfs://10.241.64.14:9000/" + fileName);
+
+        try {
+            FSDataOutputStream outputStream = hdfs.append(filePath);
+            System.out.println("\t Called append() successfully.");
+            BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
+            System.out.println("\t Created BufferedWriter object.");
+            br.write(fileContents);
+            System.out.println("\t Appended \"" + fileContents + "\" to file using BufferedWriter.");
+            br.close();
+            System.out.println("\t Closed BufferedWriter.");
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
     private static void readOperation() {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
@@ -216,7 +242,7 @@ public class InteractiveTest {
     private static void printMenu() {
         System.out.println("\n\n====== MENU ======");
         System.out.println("Operations:");
-        System.out.println("(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Exit.");
+        System.out.println("(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Append\n(8) Exit.");
         System.out.println("==================");
         System.out.println("\nWhat would you like to do?");
         System.out.print("> ");
