@@ -45,7 +45,7 @@ public class ConcurrentOperationsTest {
         this.operationsPerformed.addAll(ops);
     }
 
-    public void cleanUpWrittenFiles() {
+    public void cleanUpWrittenFiles() throws IOException {
         System.out.println("Cleaning up " + filesCreated.size() + " file(s) created during test.");
 
         DistributedFileSystem hdfs = connect("hdfs://10.241.64.14:9000");
@@ -67,8 +67,6 @@ public class ConcurrentOperationsTest {
 
         hdfs.printDebugInformation();
         hdfs.printOperationsPerformed();
-
-        hdfs.close();
 
         hdfs.close();
     }
@@ -127,7 +125,12 @@ public class ConcurrentOperationsTest {
         Duration testDuration = Duration.between(startTime, endTime);
         System.out.println("\n\n\nTEST COMPLETED. TIME ELAPSED: " + testDuration.toString()
                 + ". CLEANING UP FILES NOW.");
-        cleanUpWrittenFiles();
+        try {
+            cleanUpWrittenFiles();
+        } catch (IOException ex) {
+            System.out.println("Encountered IOException while cleaning up the written files.");
+            ex.printStackTrace();
+        }
 
         List<OperationPerformed> opsPerformedList = new ArrayList<OperationPerformed>(operationsPerformed);
         Collections.sort(opsPerformedList, OperationPerformed.BY_START_TIME);
