@@ -208,8 +208,8 @@ public class ConcurrentOperationsTest {
 
         System.out.println(obj);
 
-        Object[] readerObjects= (Object[])obj.get("readers");
-        Object[] writerObjects = (Object[])obj.get("writers");
+        List<Object> readerObjects= (List<Object>)obj.get("readers");
+        List<Object> writerObjects = (List<Object>)obj.get("writers");
 
         List<Reader> readers = new ArrayList<Reader>();
         List<Writer> writers = new ArrayList<Writer>();
@@ -217,19 +217,19 @@ public class ConcurrentOperationsTest {
         for (Object readerObject : readerObjects) {
             Map<String, Object> readerMap = (Map<String, Object>)readerObject;
             int id = (Integer)readerMap.get("id");
-            String[] paths = (String[])readerMap.get("paths");
+            List<String> paths = (List<String>)readerMap.get("paths");
 
-            Reader reader = new Reader(id, paths);
+            Reader reader = new Reader(id, paths.toArray(new String[0]));
             readers.add(reader);
         }
 
         for (Object writerObject : readerObjects) {
             Map<String, Object> writerMap = (Map<String, Object>)writerObject;
             int id = (Integer)writerMap.get("id");
-            String[] paths = (String[])writerMap.get("paths");
-            String[] contents = (String[])writerMap.get("contents");
+            List<String> paths = (List<String>)writerMap.get("paths");
+            List<String> contents = (List<String>)writerMap.get("contents");
 
-            Writer writer = new Writer(id, paths, contents);
+            Writer writer = new Writer(id, paths.toArray(new String[0]), contents.toArray(new String[0]));
             writers.add(writer);
         }
 
