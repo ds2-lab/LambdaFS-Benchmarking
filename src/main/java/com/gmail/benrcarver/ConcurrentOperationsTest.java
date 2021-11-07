@@ -8,6 +8,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -189,7 +190,22 @@ public class ConcurrentOperationsTest {
         return hdfs;
     }
 
-    public static void main(String[] args) {
+    public static void oneReaderOneWriter() {
+        Reader[] readers = new Reader[1];
+        Writer[] writers = new Writer[1];
+    }
 
+    public static void main(String[] args) throws FileNotFoundException {
+        String testYaml = args[0];
+
+        System.out.println("Test YAML file: " + testYaml);
+
+        Yaml yaml = new Yaml();
+        InputStream inputStream = new FileInputStream(new File(testYaml));
+        //ConcurrentOperationsTest.class.getResourceAsStream(testYaml);
+
+        Map<String, Object> obj = yaml.load(inputStream);
+
+        System.out.println(obj);
     }
 }
