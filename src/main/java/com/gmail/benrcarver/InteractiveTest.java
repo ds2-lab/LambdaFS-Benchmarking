@@ -107,16 +107,13 @@ public class InteractiveTest {
         System.out.print("Subtree root directory:\n> ");
         String subtreeRoot = scanner.nextLine();
 
-        System.out.println("Subtree depth:\n> ");
+        System.out.print("Subtree depth:\n> ");
         int subtreeDepth = Integer.parseInt(scanner.nextLine());
 
-        System.out.println("Max subdirs:\n> ");
+        System.out.print("Max subdirs:\n> ");
         int maxSubDirs = Integer.parseInt(scanner.nextLine());
 
-        System.out.println("Directory creation probability:\n> ");
-        float dirCreateProba = Float.parseFloat(scanner.nextLine());
-
-        System.out.println("Files per directory:\n> ");
+        System.out.print("Files per directory:\n> ");
         int filesPerDirectory = Integer.parseInt(scanner.nextLine());
 
         System.out.print("File contents:\n> ");
@@ -150,6 +147,7 @@ public class InteractiveTest {
                 String basePath = basePathBuilder.toString();
 
                 Stack<String> stack = createChildDirectories(basePath, subDirs);
+                directoriesCreated += stack.size();
                 currentDepthStacks.add(stack);
             }
 
