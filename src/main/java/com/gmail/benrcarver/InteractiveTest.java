@@ -14,6 +14,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -98,6 +100,83 @@ public class InteractiveTest {
         }
     }
 
+    private static void createSubtree() {
+        System.out.print("Subtree root directory:\n> ");
+        String subtreeRoot = scanner.nextLine();
+
+        System.out.println("Subtree depth:\n> ");
+        int subtreeDepth = Integer.parseInt(scanner.nextLine());
+
+        System.out.println("Max subdirs:\n> ");
+        int maxSubDirs = Integer.parseInt(scanner.nextLine());
+
+        System.out.println("Directory creation probability:\n> ");
+        float dirCreateProba = Float.parseFloat(scanner.nextLine());
+
+        System.out.println("Files per directory:\n> ");
+        int filesPerDirectory = Integer.parseInt(scanner.nextLine());
+
+        System.out.print("File contents:\n> ");
+        String fileContents = scanner.nextLine();
+
+        Random rng = new Random();
+
+        int directoriesCreated = 0;
+        int filesCreated = 0;
+
+        Instant start = Instant.now();
+
+        int currentDepth = 0;
+
+        mkdir(subtreeRoot);
+        directoriesCreated++;
+
+        Stack<String> directoryStack = new Stack<String>();
+        TreeNode tree = new TreeNode(subtreeRoot, new ArrayList<TreeNode>());
+        directoryStack.push(subtreeRoot);
+
+        while (currentDepth <= subtreeDepth) {
+            List<Stack<String>> currentDepthStacks = new ArrayList<>();
+            while (!directoryStack.empty()) {
+                String directory = directoryStack.pop();
+                int subDirs = rng.nextInt(maxSubDirs + 1);
+
+                StringBuilder basePathBuilder = new StringBuilder(subtreeRoot);
+                for (int i = 0; i <= currentDepth; i++)
+                    basePathBuilder.append("/directory");
+                String basePath = basePathBuilder.toString();
+
+                Stack<String> stack = createChildDirectories(basePath, subDirs);
+                currentDepthStacks.add(stack);
+            }
+
+            for (Stack<String> stack : currentDepthStacks)
+                directoryStack.addAll(stack);
+
+            currentDepth++;
+        }
+
+        Instant end = Instant.now();
+        Duration subtreeCreationDuration = Duration.between(start, end);
+
+        System.out.println("=== Subtree Creation Completed ===");
+        System.out.println("Time elapsed: " + subtreeCreationDuration.toString());
+        System.out.println("Directories created: " + directoriesCreated);
+        System.out.println("Files created: " + filesCreated);
+        System.out.println("==================================");
+    }
+
+    private static Stack<String> createChildDirectories(String basePath, int subDirs) {
+        Stack<String> directoryStack = new Stack<String>();
+        for (int i = 0; i < subDirs; i++) {
+            String path = basePath + i;
+            // mkdir(path);
+            directoryStack.push(path);
+        }
+
+        return directoryStack;
+    }
+
     private static void createFileOperation() {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
@@ -153,19 +232,27 @@ public class InteractiveTest {
         }
     }
 
-    private static void mkdirOperation() {
-        System.out.print("New directory path:\n> ");
-        String newDirectoryName = scanner.nextLine();
-
-        Path filePath = new Path("hdfs://10.241.64.14:9000/" + newDirectoryName);
+    /**
+     * Create a new directory with the given path.
+     * @param path The path of the new directory.
+     */
+    private static void mkdir(String path) {
+        Path filePath = new Path("hdfs://10.241.64.14:9000/" + path);
 
         try {
-            System.out.println("\t Attempting to create new directory: \"" + newDirectoryName + "\"");
+            System.out.println("\t Attempting to create new directory: \"" + path + "\"");
             boolean directoryCreated = hdfs.mkdirs(filePath);
             System.out.println("\t Directory created successfully: " + directoryCreated);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+    }
+
+    private static void mkdirOperation() {
+        System.out.print("New directory path:\n> ");
+        String newDirectoryName = scanner.nextLine();
+
+        mkdir(newDirectoryName);
     }
 
     private static void appendOperation() {
