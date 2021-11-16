@@ -154,10 +154,7 @@ public class InteractiveTest {
                 TreeNode directory = directoryStack.pop();
                 int subDirs = rng.nextInt(maxSubDirs + 1);
 
-                StringBuilder basePathBuilder = new StringBuilder(directory.getPath());
-                for (int i = 0; i <= currentDepth; i++)
-                    basePathBuilder.append("/directory");
-                String basePath = basePathBuilder.toString();
+                String basePath = directory.getPath() + "/dir";
 
                 Stack<TreeNode> stack = createChildDirectories(basePath, subDirs);
                 directory.addChildren(stack);
