@@ -50,12 +50,21 @@ public class InteractiveTest {
             int op = getNextOperation();
 
             switch(op) {
-                case -1:
+                case -2:
                     hdfs.printOperationsPerformed();
                     break;
-                case 0:
+                case -1:
                     hdfs.printDebugInformation();
                     break;
+                case 0:
+                    System.out.println("Exiting now... goodbye!");
+                    try {
+                        hdfs.close();
+                    } catch (IOException ex) {
+                        System.out.println("Encountered exception while closing file system...");
+                        ex.printStackTrace();
+                    }
+                    System.exit(0);
                 case 1:
                     System.out.println("CREATE FILE selected!");
                     createFileOperation();
@@ -85,14 +94,8 @@ public class InteractiveTest {
                     appendOperation();
                     break;
                 case 8:
-                    System.out.println("Exiting now... goodbye!");
-                    try {
-                        hdfs.close();
-                    } catch (IOException ex) {
-                        System.out.println("Encountered exception while closing file system...");
-                        ex.printStackTrace();
-                    }
-                    System.exit(0);
+                    System.out.println("CREATE SUBTREE selected!");
+                    createSubtree();
                 default:
                     System.out.println("ERROR: Unknown or invalid operation specified: " + op);
                     break;
@@ -329,7 +332,7 @@ public class InteractiveTest {
     private static void printMenu() {
         System.out.println("\n\n====== MENU ======");
         System.out.println("Operations:");
-        System.out.println("(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Append\n(8) Exit.");
+        System.out.println("(0) Exit (1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.");
         System.out.println("==================");
         System.out.println("\nWhat would you like to do?");
         System.out.print("> ");
