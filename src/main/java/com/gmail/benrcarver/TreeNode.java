@@ -1,19 +1,28 @@
 package com.gmail.benrcarver;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
 public class TreeNode {
-    final String name;
+    final String path;
     final List<TreeNode> children;
 
-    public TreeNode(String name, List<TreeNode> children) {
-        this.name = name;
+    public TreeNode(String path, List<TreeNode> children) {
+        this.path = path;
         this.children = children;
     }
 
-    public void addChild(TreeNode child) {
-        this.children.add(child);
+    public void addChildren(Collection<TreeNode> nodes) {
+        this.children.addAll(nodes);
+    }
+
+    public void addChild(TreeNode node) {
+        this.children.add(node);
+    }
+
+    public String getPath() {
+        return this.path;
     }
 
     public String toString() {
@@ -24,7 +33,7 @@ public class TreeNode {
 
     private void print(StringBuilder buffer, String prefix, String childrenPrefix) {
         buffer.append(prefix);
-        buffer.append(name);
+        buffer.append(path);
         buffer.append('\n');
         for (Iterator<TreeNode> it = children.iterator(); it.hasNext();) {
             TreeNode next = it.next();

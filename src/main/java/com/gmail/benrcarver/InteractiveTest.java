@@ -105,7 +105,7 @@ public class InteractiveTest {
 
     private static void createSubtree() {
         System.out.print("Subtree root directory:\n> ");
-        String subtreeRoot = scanner.nextLine();
+        String subtreeRootPath = scanner.nextLine();
 
         System.out.print("Subtree depth:\n> ");
         int subtreeDepth = Integer.parseInt(scanner.nextLine());
@@ -119,6 +119,18 @@ public class InteractiveTest {
         System.out.print("File contents:\n> ");
         String fileContents = scanner.nextLine();
 
+        double totalPossibleDirectories = (Math.pow(maxSubDirs, subtreeDepth + 1) - 1) / (maxSubDirs - 1);
+        System.out.println("\nThis could create a maximum of " + totalPossibleDirectories + " directories.");
+        System.out.print("Is this okay? [y/N]\n >");
+
+        String resp = scanner.nextLine();
+
+        // If they answered anything other than 'y', then abort.
+        if (!resp.toLowerCase().equals("y")) {
+            System.out.println("\nAborting.");
+            return;
+        }
+
         Random rng = new Random();
 
         int directoriesCreated = 0;
@@ -128,31 +140,33 @@ public class InteractiveTest {
 
         int currentDepth = 0;
 
-        mkdir(subtreeRoot);
+        mkdir(subtreeRootPath);
         directoriesCreated++;
 
-        Stack<String> directoryStack = new Stack<String>();
-        TreeNode tree = new TreeNode(subtreeRoot, new ArrayList<TreeNode>());
+        Stack<TreeNode> directoryStack = new Stack<TreeNode>();
+        TreeNode subtreeRoot = new TreeNode(subtreeRootPath, new ArrayList<TreeNode>());
         directoryStack.push(subtreeRoot);
 
         while (currentDepth <= subtreeDepth) {
-            List<Stack<String>> currentDepthStacks = new ArrayList<>();
+            List<Stack<TreeNode>> currentDepthStacks = new ArrayList<>();
             while (!directoryStack.empty()) {
-                String directory = directoryStack.pop();
+                TreeNode directory = directoryStack.pop();
                 int subDirs = rng.nextInt(maxSubDirs + 1);
 
-                StringBuilder basePathBuilder = new StringBuilder(subtreeRoot);
+                StringBuilder basePathBuilder = new StringBuilder(directory.getPath());
                 for (int i = 0; i <= currentDepth; i++)
                     basePathBuilder.append("/directory");
                 String basePath = basePathBuilder.toString();
 
-                Stack<String> stack = createChildDirectories(basePath, subDirs);
+                Stack<TreeNode> stack = createChildDirectories(basePath, subDirs);
+                directory.addChildren(stack);
                 directoriesCreated += stack.size();
                 currentDepthStacks.add(stack);
             }
 
-            for (Stack<String> stack : currentDepthStacks)
+            for (Stack<TreeNode> stack : currentDepthStacks) {
                 directoryStack.addAll(stack);
+            }
 
             currentDepth++;
         }
@@ -163,16 +177,20 @@ public class InteractiveTest {
         System.out.println("=== Subtree Creation Completed ===");
         System.out.println("Time elapsed: " + subtreeCreationDuration.toString());
         System.out.println("Directories created: " + directoriesCreated);
-        System.out.println("Files created: " + filesCreated);
+        System.out.println("Files created: " + filesCreated + "\n");
+
+        System.out.println(subtreeRoot.toString());
+
         System.out.println("==================================");
     }
 
-    private static Stack<String> createChildDirectories(String basePath, int subDirs) {
-        Stack<String> directoryStack = new Stack<String>();
+    private static Stack<TreeNode> createChildDirectories(String basePath, int subDirs) {
+        Stack<TreeNode> directoryStack = new Stack<TreeNode>();
         for (int i = 0; i < subDirs; i++) {
             String path = basePath + i;
             // mkdir(path);
-            directoryStack.push(path);
+            TreeNode node = new TreeNode(path, new ArrayList<TreeNode>());
+            directoryStack.push(node);
         }
 
         return directoryStack;
