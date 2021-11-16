@@ -114,11 +114,11 @@ public class InteractiveTest {
         System.out.print("Max subdirs:\n> ");
         int maxSubDirs = Integer.parseInt(scanner.nextLine());
 
-        System.out.print("Files per directory:\n> ");
-        int filesPerDirectory = Integer.parseInt(scanner.nextLine());
-
-        System.out.print("File contents:\n> ");
-        String fileContents = scanner.nextLine();
+//        System.out.print("Files per directory:\n> ");
+//        int filesPerDirectory = Integer.parseInt(scanner.nextLine());
+//
+//        System.out.print("File contents:\n> ");
+//        String fileContents = scanner.nextLine();
 
         double totalPossibleDirectories = (Math.pow(maxSubDirs, subtreeDepth + 1) - 1) / (maxSubDirs - 1);
         System.out.println("\nThis could create a maximum of " + totalPossibleDirectories + " directories.");
@@ -141,7 +141,7 @@ public class InteractiveTest {
 
         int currentDepth = 0;
 
-        // mkdir(subtreeRootPath);
+        mkdir(subtreeRootPath);
         directoriesCreated++;
 
         Stack<TreeNode> directoryStack = new Stack<TreeNode>();
@@ -187,7 +187,7 @@ public class InteractiveTest {
         Stack<TreeNode> directoryStack = new Stack<TreeNode>();
         for (int i = 0; i < subDirs; i++) {
             String path = basePath + i;
-            // mkdir(path);
+            mkdir(path);
             TreeNode node = new TreeNode(path, new ArrayList<TreeNode>());
             directoryStack.push(node);
         }
