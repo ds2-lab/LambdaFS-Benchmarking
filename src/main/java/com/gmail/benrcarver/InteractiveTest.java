@@ -96,6 +96,7 @@ public class InteractiveTest {
                 case 8:
                     System.out.println("CREATE SUBTREE selected!");
                     createSubtree();
+                    break;
                 default:
                     System.out.println("ERROR: Unknown or invalid operation specified: " + op);
                     break;
@@ -140,7 +141,7 @@ public class InteractiveTest {
 
         int currentDepth = 0;
 
-        mkdir(subtreeRootPath);
+        // mkdir(subtreeRootPath);
         directoriesCreated++;
 
         Stack<TreeNode> directoryStack = new Stack<TreeNode>();
@@ -179,6 +180,7 @@ public class InteractiveTest {
         System.out.println("Directories created: " + directoriesCreated);
         System.out.println("Files created: " + filesCreated + "\n");
 
+        System.out.println("subtreeRoot children: " + subtreeRoot.children.size());
         System.out.println(subtreeRoot.toString());
 
         System.out.println("==================================");

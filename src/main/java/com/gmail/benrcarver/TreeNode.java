@@ -26,7 +26,7 @@ public class TreeNode {
     }
 
     public String toString() {
-        StringBuilder buffer = new StringBuilder(50);
+        StringBuilder buffer = new StringBuilder(100);
         print(buffer, "", "");
         return buffer.toString();
     }
