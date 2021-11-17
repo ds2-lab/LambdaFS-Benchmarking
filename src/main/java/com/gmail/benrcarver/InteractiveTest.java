@@ -97,6 +97,9 @@ public class InteractiveTest {
                     System.out.println("CREATE SUBTREE selected!");
                     createSubtree();
                     break;
+                case 9:
+                    System.out.println("PING selected!");
+                    pingOperation();
                 default:
                     System.out.println("ERROR: Unknown or invalid operation specified: " + op);
                     break;
@@ -299,6 +302,19 @@ public class InteractiveTest {
         }
     }
 
+    private static void pingOperation() {
+        System.out.print("Target deployment:\n> ");
+        int targetDeployment = scanner.nextInt();
+
+        try {
+            hdfs.ping(targetDeployment);
+        } catch (IOException ex) {
+            System.out.println("Encountered IOException while pinging NameNode deployment " +
+                    targetDeployment + ".");
+            ex.printStackTrace();
+        }
+    }
+
     private static void readOperation() {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
@@ -337,8 +353,7 @@ public class InteractiveTest {
         while (true) {
             try {
                 String input = scanner.nextLine();
-                int op = Integer.parseInt(input);
-                return op;
+                return Integer.parseInt(input);
             } catch (NumberFormatException ex) {
                 System.out.println("\t Invalid input! Please enter an integer.");
             } catch (Exception ex) {
@@ -351,7 +366,7 @@ public class InteractiveTest {
     private static void printMenu() {
         System.out.println("\n\n====== MENU ======");
         System.out.println("Operations:");
-        System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.");
+        System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping");
         System.out.println("==================");
         System.out.println("\nWhat would you like to do?");
         System.out.print("> ");
