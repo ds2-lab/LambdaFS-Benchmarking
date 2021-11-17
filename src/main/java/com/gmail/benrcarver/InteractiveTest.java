@@ -152,11 +152,10 @@ public class InteractiveTest {
             List<Stack<TreeNode>> currentDepthStacks = new ArrayList<>();
             while (!directoryStack.empty()) {
                 TreeNode directory = directoryStack.pop();
-                int subDirs = rng.nextInt(maxSubDirs + 1);
 
                 String basePath = directory.getPath() + "/dir";
 
-                Stack<TreeNode> stack = createChildDirectories(basePath, subDirs);
+                Stack<TreeNode> stack = createChildDirectories(basePath, maxSubDirs);
                 directory.addChildren(stack);
                 directoriesCreated += stack.size();
                 currentDepthStacks.add(stack);
@@ -347,7 +346,7 @@ public class InteractiveTest {
     private static void printMenu() {
         System.out.println("\n\n====== MENU ======");
         System.out.println("Operations:");
-        System.out.println("(0) Exit (1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.");
+        System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.");
         System.out.println("==================");
         System.out.println("\nWhat would you like to do?");
         System.out.print("> ");
