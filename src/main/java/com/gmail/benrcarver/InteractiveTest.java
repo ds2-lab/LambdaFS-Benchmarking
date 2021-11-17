@@ -150,6 +150,10 @@ public class InteractiveTest {
         directoryStack.push(subtreeRoot);
 
         while (currentDepth <= subtreeDepth) {
+            System.out.println("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
+            System.out.println("CURRENT DEPTH: " + currentDepth);
+            System.out.println("DIRECTORIES CREATED: " + directoriesCreated);
+            System.out.println("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
             List<Stack<TreeNode>> currentDepthStacks = new ArrayList<>();
             while (!directoryStack.empty()) {
                 TreeNode directory = directoryStack.pop();
