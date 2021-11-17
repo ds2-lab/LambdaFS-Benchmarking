@@ -120,7 +120,8 @@ public class InteractiveTest {
 //        System.out.print("File contents:\n> ");
 //        String fileContents = scanner.nextLine();
 
-        double totalPossibleDirectories = (Math.pow(maxSubDirs, subtreeDepth + 1) - 1) / (maxSubDirs - 1);
+        int height = subtreeDepth + 1;
+        double totalPossibleDirectories = (Math.pow(maxSubDirs, height + 1) - 1) / (maxSubDirs - 1);
         System.out.println("\nThis could create a maximum of " + totalPossibleDirectories + " directories.");
         System.out.print("Is this okay? [y/N]\n >");
 
