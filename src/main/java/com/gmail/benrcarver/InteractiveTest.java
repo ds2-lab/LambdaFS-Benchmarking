@@ -100,6 +100,7 @@ public class InteractiveTest {
                 case 9:
                     System.out.println("PING selected!");
                     pingOperation();
+                    break;
                 default:
                     System.out.println("ERROR: Unknown or invalid operation specified: " + op);
                     break;
