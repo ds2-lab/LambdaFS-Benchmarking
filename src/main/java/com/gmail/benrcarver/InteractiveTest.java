@@ -101,6 +101,10 @@ public class InteractiveTest {
                     System.out.println("PING selected!");
                     pingOperation();
                     break;
+                case 10:
+                    System.out.println("PREWARM selected!");
+                    pingOperation();
+                    break;
                 default:
                     System.out.println("ERROR: Unknown or invalid operation specified: " + op);
                     break;
@@ -303,6 +307,18 @@ public class InteractiveTest {
         }
     }
 
+    private static void prewarmOperation() {
+        System.out.print("Invocations per deployment:\n> ");
+        int pingsPerDeployment = scanner.nextInt();
+
+        try {
+            hdfs.prewarm(pingsPerDeployment);
+        } catch (IOException ex) {
+            System.out.println("Encountered IOException while pre-warming NNs:", ex);
+            ex.printStackTrace();
+        }
+    }
+
     private static void pingOperation() {
         System.out.print("Target deployment:\n> ");
         int targetDeployment = scanner.nextInt();
@@ -367,7 +383,7 @@ public class InteractiveTest {
     private static void printMenu() {
         System.out.println("\n\n====== MENU ======");
         System.out.println("Operations:");
-        System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping");
+        System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm");
         System.out.println("==================");
         System.out.println("\nWhat would you like to do?");
         System.out.print("> ");
