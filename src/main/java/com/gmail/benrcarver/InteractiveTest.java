@@ -314,7 +314,7 @@ public class InteractiveTest {
         try {
             hdfs.prewarm(pingsPerDeployment);
         } catch (IOException ex) {
-            System.out.println("Encountered IOException while pre-warming NNs:", ex);
+            System.out.println("Encountered IOException while pre-warming NNs.");
             ex.printStackTrace();
         }
     }
