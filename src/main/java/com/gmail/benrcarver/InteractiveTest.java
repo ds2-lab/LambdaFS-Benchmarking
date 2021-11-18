@@ -103,7 +103,7 @@ public class InteractiveTest {
                     break;
                 case 10:
                     System.out.println("PREWARM selected!");
-                    pingOperation();
+                    prewarmOperation();
                     break;
                 default:
                     System.out.println("ERROR: Unknown or invalid operation specified: " + op);
