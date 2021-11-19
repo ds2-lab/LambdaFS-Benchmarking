@@ -133,12 +133,12 @@ public class InteractiveTest {
         int maxLength = Integer.parseInt(scanner.nextLine());
 
         // If 'y', create the files one-by-one. If 'n', we'll use a configurable number of threads.
-        System.out.print("Sequentially create files? [Y/n]\n >");
+        System.out.print("Sequentially create files? [Y/n]\n>");
         String resp = scanner.nextLine();
 
         int numThreads = 1;
         // If they answered anything other than 'y', then abort.
-        if (!resp.toLowerCase().equals("n")) {
+        if (resp.equalsIgnoreCase("n")) {
             System.out.print("Number of threads:\n> ");
             numThreads = Integer.parseInt(scanner.nextLine());
         }
