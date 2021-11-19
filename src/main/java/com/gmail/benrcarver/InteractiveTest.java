@@ -23,7 +23,7 @@ public class InteractiveTest {
     private static final Scanner scanner = new Scanner(System.in);
     private static DistributedFileSystem hdfs;
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, IOException {
         System.out.println("Starting HdfsTest now.");
         Configuration configuration = Utils.getConfiguration();
         try {
@@ -119,7 +119,7 @@ public class InteractiveTest {
     /**
      * Write a bunch of files to a target directory.
      */
-    private static void writeFilesToDirectory() throws InterruptedException {
+    private static void writeFilesToDirectory() throws InterruptedException, IOException {
         System.out.print("Target directory:\n> ");
         String targetDirectory = scanner.nextLine();
 
@@ -149,6 +149,8 @@ public class InteractiveTest {
         for (int i = 0; i < targetPaths.length; i++) {
             targetPaths[i] = targetDirectory + "/" + targetPaths[i];
         }
+
+        Utils.write("./output/writeToDirectoryPaths-" + Instant.now().toEpochMilli()+ ".txt", targetPaths);
 
         Instant start;
         Instant end;

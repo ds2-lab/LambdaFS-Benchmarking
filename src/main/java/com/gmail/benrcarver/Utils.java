@@ -2,7 +2,11 @@ package com.gmail.benrcarver;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
+
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.Arrays;
 
@@ -18,6 +22,17 @@ public class Utils {
             ex.printStackTrace();
         }
         return configuration;
+    }
+
+    public static void write(String filename, Object[] x) throws IOException {
+        BufferedWriter outputWriter = null;
+        outputWriter = new BufferedWriter(new FileWriter(filename));
+        for (Object o : x) {
+            outputWriter.write(o.toString());
+            outputWriter.newLine();
+        }
+        outputWriter.flush();
+        outputWriter.close();
     }
 
     /**
