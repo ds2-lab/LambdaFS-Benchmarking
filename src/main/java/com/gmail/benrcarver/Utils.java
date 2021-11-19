@@ -3,12 +3,11 @@ package com.gmail.benrcarver;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class Utils {
     /**
@@ -22,6 +21,27 @@ public class Utils {
             ex.printStackTrace();
         }
         return configuration;
+    }
+
+    /**
+     * Read a file containing HopsFS file paths. Return a list containing those paths.
+     * @param path Path to file on local FS containing HopsFS file paths.
+     * @return List of HopsFS file paths read in from the specified local file.
+     */
+    public static List<String> getFilePathsFromFile(String path) {
+        List<String> filePaths = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(path))) {
+            String line = br.readLine();
+
+            while (line != null) {
+                filePaths.add(line);
+                line = br.readLine();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return filePaths;
     }
 
     public static void write(String filename, Object[] x) throws IOException {

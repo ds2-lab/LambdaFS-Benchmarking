@@ -13,6 +13,7 @@ import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
@@ -109,11 +110,75 @@ public class InteractiveTest {
                     System.out.println("WRITE FILES TO DIRECTORY selected!");
                     writeFilesToDirectory();
                     break;
+                case 12:
+                    System.out.println("READ FILES selected!");
+                    readFilesOperation();
+                    break;
                 default:
                     System.out.println("ERROR: Unknown or invalid operation specified: " + op);
                     break;
             }
         }
+    }
+
+    private static void readFilesOperation() throws InterruptedException {
+        System.out.print("Path to local file containing HopsFS/HDFS paths:\n> ");
+        String localFilePath = scanner.nextLine();
+
+        System.out.print("Reads per file:\n> ");
+        int readsPerFile = Integer.parseInt(scanner.nextLine());
+
+        System.out.print("Number of threads:\n> ");
+        int numThreads = Integer.parseInt(scanner.nextLine());
+
+        readFiles(localFilePath, readsPerFile, numThreads);
+    }
+
+    /**
+     * Specify a file on the local filesystem containing a bunch of HopsFS file paths. Read the local file in order
+     * to get all the HopsFS file paths, then read those files a configurable number of times.
+     * @param path Path to file containing a bunch of HopsFS files.
+     * @param readsPerFile Number of times each file should be read.
+     * @param numThreads Number of threads to use when performing the reads concurrently.
+     */
+    private static void readFiles(String path, int readsPerFile, int numThreads) throws InterruptedException {
+        List<String> paths = Utils.getFilePathsFromFile(path);
+        int n = paths.size();
+
+        int filesPerArray = (int)Math.ceil((double)n/numThreads);
+
+        System.out.println("Assigning each thread " + filesPerArray + " files (plus remainder for last thread.");
+
+        String[][] pathsPerThread = (String[][]) Utils.splitArray(paths.toArray(new Object[0]), filesPerArray);
+
+        Thread[] threads = new Thread[numThreads];
+
+        for (int i = 0; i < numThreads; i++) {
+            final int idx = i;
+            final String[] pathsForThread = pathsPerThread[i];
+            Thread thread = new Thread(() -> {
+                for (String filePath : pathsForThread) {
+                    for (int j = 0; j < readsPerFile; j++)
+                        readFile(filePath);
+                }
+            });
+            threads[i] = thread;
+        }
+
+        System.out.println("Starting threads.");
+        Instant start = Instant.now();
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
+        System.out.println("Joining threads.");
+        for (Thread thread : threads) {
+            thread.join();
+        }
+        Instant end = Instant.now();
+
+        System.out.println("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " +
+                Duration.between(start, end).toString());
     }
 
     /**
@@ -445,7 +510,14 @@ public class InteractiveTest {
     private static void readOperation() {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
+        readFile(fileName);
+    }
 
+    /**
+     * Read the HopsFS/HDFS file at the given path.
+     * @param fileName The path to the file to read.
+     */
+    private static void readFile(String fileName) {
         Path filePath = new Path("hdfs://10.241.64.14:9000/" + fileName);
 
         try {
@@ -493,7 +565,9 @@ public class InteractiveTest {
     private static void printMenu() {
         System.out.println("\n\n====== MENU ======");
         System.out.println("Operations:");
-        System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm\n(11) Write Files to Directory");
+        System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
+                "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
+                "\n(11) Write Files to Directory\n(12) Read files");
         System.out.println("==================");
         System.out.println("\nWhat would you like to do?");
         System.out.print("> ");
