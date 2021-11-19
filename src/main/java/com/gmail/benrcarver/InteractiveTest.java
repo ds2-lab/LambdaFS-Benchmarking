@@ -105,11 +105,94 @@ public class InteractiveTest {
                     System.out.println("PREWARM selected!");
                     prewarmOperation();
                     break;
+                case 11:
+                    System.out.println("WRITE FILES TO DIRECTORY selected!");
+                    writeFilesToDirectory();
+                    break;
                 default:
                     System.out.println("ERROR: Unknown or invalid operation specified: " + op);
                     break;
             }
         }
+    }
+
+    /**
+     * Write a bunch of files to a target directory.
+     */
+    private static void writeFilesToDirectory() throws InterruptedException {
+        System.out.print("Target directory:\n> ");
+        String targetDirectory = scanner.nextLine();
+
+        System.out.print("Number of files:\n> ");
+        int n = Integer.parseInt(scanner.nextLine());
+
+        System.out.print("Min string length:\n> ");
+        int minLength = Integer.parseInt(scanner.nextLine());
+
+        System.out.print("Max string length:\n> ");
+        int maxLength = Integer.parseInt(scanner.nextLine());
+
+        // If 'y', create the files one-by-one. If 'n', we'll use a configurable number of threads.
+        System.out.print("Sequentially create files? [Y/n]\n >");
+        String resp = scanner.nextLine();
+
+        int numThreads = 1;
+        // If they answered anything other than 'y', then abort.
+        if (!resp.toLowerCase().equals("n")) {
+            System.out.print("Number of threads:\n> ");
+            numThreads = Integer.parseInt(scanner.nextLine());
+        }
+
+        // Generate the file contents and file names.
+        final String[] content = Utils.getVariableLengthRandomStrings(n, minLength, maxLength);
+        final String[] targetPaths = Utils.getFixedLengthRandomStrings(n, 15);
+        for (int i = 0; i < targetPaths.length; i++) {
+            targetPaths[i] = targetDirectory + "/" + targetPaths[i];
+        }
+
+        Instant start;
+        Instant end;
+        if (numThreads == 1) {
+            start = Instant.now();
+
+            createFiles(targetPaths, content);
+
+            end = Instant.now();
+        } else {
+            int filesPerArray = (int)Math.ceil((double)n/numThreads);
+
+            System.out.println("Assigning each thread " + filesPerArray + " files (plus remainder for last thread.");
+
+            final String[][] contentPerArray = (String[][]) Utils.splitArray(content, filesPerArray);
+            final String[][] targetPathsPerArray = (String[][]) Utils.splitArray(targetPaths, filesPerArray);
+
+            assert targetPathsPerArray != null;
+            assert contentPerArray != null;
+
+            Thread[] threads = new Thread[numThreads];
+
+            for (int i = 0; i < numThreads; i++) {
+                final int idx = i;
+                Thread thread = new Thread(() -> createFiles(targetPathsPerArray[idx], contentPerArray[idx]));
+                threads[i] = thread;
+            }
+
+            System.out.println("Starting threads.");
+            start = Instant.now();
+            for (Thread thread : threads) {
+                thread.start();
+            }
+
+            System.out.println("Joining threads.");
+            for (Thread thread : threads) {
+                thread.join();
+            }
+            end = Instant.now();
+        }
+
+        Duration duration = Duration.between(start, end);
+        System.out.println("\n\n===============================");
+        System.out.println("Time elapsed: " + duration.toString());
     }
 
     private static void createSubtree() {
@@ -213,15 +296,40 @@ public class InteractiveTest {
         System.out.print("File contents:\n> ");
         String fileContents = scanner.nextLine();
 
-        Path filePath = new Path("hdfs://10.241.64.14:9000/" + fileName);
+        createFile(fileName, fileContents);
+    }
+
+    /**
+     * Create files using the names and contents provide by the two parameters.
+     *
+     * The two argument lists must have the same length.
+     *
+     * @param names File names.
+     * @param content File contents.
+     */
+    private static void createFiles(String[] names, String[] content) {
+        assert(names.length == content.length);
+
+        for (int i = 0; i < names.length; i++) {
+            createFile(names[i], content[i]);
+        }
+    }
+
+    /**
+     * Create a new file with the given name and contents.
+     * @param name The name of the file.
+     * @param contents The content to be written to the file.
+     */
+    private static void createFile(String name, String contents) {
+        Path filePath = new Path("hdfs://10.241.64.14:9000/" + name);
 
         try {
             FSDataOutputStream outputStream = hdfs.create(filePath);
             System.out.println("\t Called create() successfully.");
             BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
             System.out.println("\t Created BufferedWriter object.");
-            br.write(fileContents);
-            System.out.println("\t Wrote \"" + fileContents + "\" using BufferedWriter.");
+            br.write(contents);
+            System.out.println("\t Wrote \"" + contents + "\" using BufferedWriter.");
             br.close();
             System.out.println("\t Closed BufferedWriter.");
         } catch (IOException ex) {
@@ -309,7 +417,7 @@ public class InteractiveTest {
 
     private static void prewarmOperation() {
         System.out.print("Invocations per deployment:\n> ");
-        int pingsPerDeployment = scanner.nextInt();
+        int pingsPerDeployment = Integer.parseInt(scanner.nextLine());
 
         try {
             hdfs.prewarm(pingsPerDeployment);
@@ -321,7 +429,7 @@ public class InteractiveTest {
 
     private static void pingOperation() {
         System.out.print("Target deployment:\n> ");
-        int targetDeployment = scanner.nextInt();
+        int targetDeployment = Integer.parseInt(scanner.nextLine());
 
         try {
             hdfs.ping(targetDeployment);
@@ -383,7 +491,7 @@ public class InteractiveTest {
     private static void printMenu() {
         System.out.println("\n\n====== MENU ======");
         System.out.println("Operations:");
-        System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm");
+        System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm\n(11) Write Files to Directory");
         System.out.println("==================");
         System.out.println("\nWhat would you like to do?");
         System.out.print("> ");
