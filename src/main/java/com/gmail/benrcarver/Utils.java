@@ -68,7 +68,7 @@ public class Utils {
         // then we check in how many arrays we can split our input array
         int chunks = arrayToSplit.length / chunkSize + (rest > 0 ? 1 : 0); // we may have to add an additional array for the 'rest'
         // now we know how many arrays we need and create our result array
-        Object[][] arrays = new Object[chunks][];
+        String[][] arrays = new String[chunks][];
         // we create our resulting arrays by copying the corresponding
         // part from the input array. If we have a rest (rest>0), then
         // the last array will have less elements than the others. This
