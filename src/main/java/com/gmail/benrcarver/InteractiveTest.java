@@ -109,11 +109,11 @@ public class InteractiveTest {
                     break;
                 case 11:
                     System.out.println("WRITE FILES TO DIRECTORY selected!");
-                    writeFilesToDirectory(hdfs);
+                    writeFilesToDirectory(hdfs, configuration);
                     break;
                 case 12:
                     System.out.println("READ FILES selected!");
-                    readFilesOperation();
+                    readFilesOperation(configuration);
                     break;
                 default:
                     System.out.println("ERROR: Unknown or invalid operation specified: " + op);
@@ -122,7 +122,7 @@ public class InteractiveTest {
         }
     }
 
-    private static void readFilesOperation() throws InterruptedException {
+    private static void readFilesOperation(final Configuration configuration) throws InterruptedException {
         System.out.print("Path to local file containing HopsFS/HDFS paths:\n> ");
         String localFilePath = scanner.nextLine();
 
@@ -132,7 +132,7 @@ public class InteractiveTest {
         System.out.print("Number of threads:\n> ");
         int numThreads = Integer.parseInt(scanner.nextLine());
 
-        readFiles(localFilePath, readsPerFile, numThreads);
+        readFiles(localFilePath, readsPerFile, numThreads, configuration);
     }
 
     /**
@@ -142,7 +142,8 @@ public class InteractiveTest {
      * @param readsPerFile Number of times each file should be read.
      * @param numThreads Number of threads to use when performing the reads concurrently.
      */
-    private static void readFiles(String path, int readsPerFile, int numThreads) throws InterruptedException {
+    private static void readFiles(String path, int readsPerFile, int numThreads, final Configuration configuration)
+            throws InterruptedException {
         List<String> paths = Utils.getFilePathsFromFile(path);
         int n = paths.size();
 
@@ -202,7 +203,8 @@ public class InteractiveTest {
      *
      * @param sharedHdfs Passed by main thread. We only use this if we're doing single-threaded.
      */
-    private static void writeFilesToDirectory(DistributedFileSystem sharedHdfs) throws InterruptedException, IOException {
+    private static void writeFilesToDirectory(DistributedFileSystem sharedHdfs, final Configuration configuration)
+            throws InterruptedException, IOException {
         System.out.print("Target directory:\n> ");
         String targetDirectory = scanner.nextLine();
 
@@ -295,7 +297,7 @@ public class InteractiveTest {
         System.out.println("Time elapsed: " + duration.toString());
     }
 
-    private static void createSubtree(DistributedFileSystem hdfs6) {
+    private static void createSubtree(DistributedFileSystem hdfs) {
         System.out.print("Subtree root directory:\n> ");
         String subtreeRootPath = scanner.nextLine();
 
@@ -351,7 +353,7 @@ public class InteractiveTest {
 
                 String basePath = directory.getPath() + "/dir";
 
-                Stack<TreeNode> stack = createChildDirectories(basePath, maxSubDirs);
+                Stack<TreeNode> stack = createChildDirectories(basePath, maxSubDirs, hdfs);
                 directory.addChildren(stack);
                 directoriesCreated += stack.size();
                 currentDepthStacks.add(stack);
@@ -378,11 +380,11 @@ public class InteractiveTest {
         System.out.println("==================================");
     }
 
-    private static Stack<TreeNode> createChildDirectories(String basePath, int subDirs) {
+    private static Stack<TreeNode> createChildDirectories(String basePath, int subDirs, DistributedFileSystem hdfs) {
         Stack<TreeNode> directoryStack = new Stack<TreeNode>();
         for (int i = 0; i < subDirs; i++) {
             String path = basePath + i;
-            mkdir(path);
+            mkdir(path, hdfs);
             TreeNode node = new TreeNode(path, new ArrayList<TreeNode>());
             directoryStack.push(node);
         }
