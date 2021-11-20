@@ -58,7 +58,7 @@ public class Utils {
     /**
      * https://stackoverflow.com/a/39788851/5937661
      */
-    public static Object[][] splitArray(Object[] arrayToSplit, int chunkSize){
+    public static String[][] splitArray(String[] arrayToSplit, int chunkSize){
         if(chunkSize<=0){
             return null;  // just in case :)
         }

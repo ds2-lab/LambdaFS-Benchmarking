@@ -149,7 +149,7 @@ public class InteractiveTest {
 
         System.out.println("Assigning each thread " + filesPerArray + " files (plus remainder for last thread.");
 
-        String[][] pathsPerThread = (String[][]) Utils.splitArray(paths.toArray(new String[0]), filesPerArray);
+        String[][] pathsPerThread = Utils.splitArray(paths.toArray(new String[0]), filesPerArray);
 
         Thread[] threads = new Thread[numThreads];
 
@@ -230,8 +230,8 @@ public class InteractiveTest {
 
             System.out.println("Assigning each thread " + filesPerArray + " files (plus remainder for last thread.");
 
-            final String[][] contentPerArray = (String[][]) Utils.splitArray(content, filesPerArray);
-            final String[][] targetPathsPerArray = (String[][]) Utils.splitArray(targetPaths, filesPerArray);
+            final String[][] contentPerArray = Utils.splitArray(content, filesPerArray);
+            final String[][] targetPathsPerArray = Utils.splitArray(targetPaths, filesPerArray);
 
             assert targetPathsPerArray != null;
             assert contentPerArray != null;
