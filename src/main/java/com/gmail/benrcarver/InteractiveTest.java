@@ -378,6 +378,7 @@ public class InteractiveTest {
         assert(names.length == content.length);
 
         for (int i = 0; i < names.length; i++) {
+            System.out.println("Writing file " + i + "/" + names.length);
             createFile(names[i], content[i]);
         }
     }
