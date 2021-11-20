@@ -8,18 +8,17 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.hdfs.serverless.metrics.OperationPerformed;
 
+import java.util.concurrent.ArrayBlockingQueue;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 public class InteractiveTest {
     private static final Scanner scanner = new Scanner(System.in);
@@ -159,6 +158,9 @@ public class InteractiveTest {
         // count down. So, they all cannot start until they are all connected.
         final CountDownLatch latch = new CountDownLatch(numThreads);
 
+        final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
+                new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
+
         for (int i = 0; i < numThreads; i++) {
             final String[] pathsForThread = pathsPerThread[i];
             Thread thread = new Thread(() -> {
@@ -178,6 +180,8 @@ public class InteractiveTest {
                     for (int j = 0; j < readsPerFile; j++)
                         readFile(filePath, hdfs);
                 }
+
+                operationsPerformed.add(hdfs.getOperationsPerformed());
             });
             threads[i] = thread;
         }
@@ -196,6 +200,10 @@ public class InteractiveTest {
 
         System.out.println("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " +
                 Duration.between(start, end).toString());
+
+        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
+            sharedHdfs.addOperationPerformeds(opsPerformed);
+        }
     }
 
     /**
@@ -260,6 +268,9 @@ public class InteractiveTest {
 
             Thread[] threads = new Thread[numThreads];
 
+            final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
+                    new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
+
             for (int i = 0; i < numThreads; i++) {
                 final int idx = i;
                 Thread thread = new Thread(() -> {
@@ -275,6 +286,8 @@ public class InteractiveTest {
 
                     latch.countDown();
                     createFiles(targetPathsPerArray[idx], contentPerArray[idx], hdfs);
+
+                    operationsPerformed.add(hdfs.getOperationsPerformed());
                 });
                 threads[i] = thread;
             }
@@ -290,6 +303,10 @@ public class InteractiveTest {
                 thread.join();
             }
             end = Instant.now();
+
+            for (List<OperationPerformed> opsPerformed : operationsPerformed) {
+                sharedHdfs.addOperationPerformeds(opsPerformed);
+            }
         }
 
         Duration duration = Duration.between(start, end);
