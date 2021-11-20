@@ -112,7 +112,7 @@ public class InteractiveTest {
                     break;
                 case 12:
                     System.out.println("READ FILES selected!");
-                    readFilesOperation(configuration);
+                    readFilesOperation(configuration, hdfs);
                     break;
                 default:
                     System.out.println("ERROR: Unknown or invalid operation specified: " + op);
@@ -121,7 +121,8 @@ public class InteractiveTest {
         }
     }
 
-    private static void readFilesOperation(final Configuration configuration) throws InterruptedException {
+    private static void readFilesOperation(final Configuration configuration, DistributedFileSystem sharedHdfs)
+            throws InterruptedException {
         System.out.print("Path to local file containing HopsFS/HDFS paths:\n> ");
         String localFilePath = scanner.nextLine();
 
@@ -131,7 +132,7 @@ public class InteractiveTest {
         System.out.print("Number of threads:\n> ");
         int numThreads = Integer.parseInt(scanner.nextLine());
 
-        readFiles(localFilePath, readsPerFile, numThreads, configuration);
+        readFiles(localFilePath, readsPerFile, numThreads, configuration, sharedHdfs);
     }
 
     /**
@@ -141,8 +142,8 @@ public class InteractiveTest {
      * @param readsPerFile Number of times each file should be read.
      * @param numThreads Number of threads to use when performing the reads concurrently.
      */
-    private static void readFiles(String path, int readsPerFile, int numThreads, final Configuration configuration)
-            throws InterruptedException {
+    private static void readFiles(String path, int readsPerFile, int numThreads, final Configuration configuration,
+                                  DistributedFileSystem sharedHdfs) throws InterruptedException {
         List<String> paths = Utils.getFilePathsFromFile(path);
         int n = paths.size();
 
@@ -202,6 +203,8 @@ public class InteractiveTest {
                 Duration.between(start, end).toString());
 
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
+            System.out.println("Adding list of " + opsPerformed.size() +
+                    " operations performed to master/shared HDFS object.");
             sharedHdfs.addOperationPerformeds(opsPerformed);
         }
     }
@@ -305,6 +308,8 @@ public class InteractiveTest {
             end = Instant.now();
 
             for (List<OperationPerformed> opsPerformed : operationsPerformed) {
+                System.out.println("Adding list of " + opsPerformed.size() +
+                        " operations performed to master/shared HDFS object.");
                 sharedHdfs.addOperationPerformeds(opsPerformed);
             }
         }
