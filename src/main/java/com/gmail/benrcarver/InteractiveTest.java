@@ -18,11 +18,12 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class InteractiveTest {
     private static final Scanner scanner = new Scanner(System.in);
-    private static DistributedFileSystem hdfs;
+    //private static DistributedFileSystem hdfs;
 
     public static void main(String[] args) throws InterruptedException, IOException {
         System.out.println("Starting HdfsTest now.");
@@ -33,7 +34,7 @@ public class InteractiveTest {
             ex.printStackTrace();
         }
         System.out.println("Created configuration.");
-        hdfs = new DistributedFileSystem();
+        DistributedFileSystem hdfs = new DistributedFileSystem();
         System.out.println("Created DistributedFileSystem object.");
 
         try {
@@ -68,47 +69,47 @@ public class InteractiveTest {
                     System.exit(0);
                 case 1:
                     System.out.println("CREATE FILE selected!");
-                    createFileOperation();
+                    createFileOperation(hdfs);
                     break;
                 case 2:
                     System.out.println("MAKE DIRECTORY selected!");
-                    mkdirOperation();;
+                    mkdirOperation(hdfs);;
                     break;
                 case 3:
                     System.out.println("READ FILE selected!");
-                    readOperation();
+                    readOperation(hdfs);
                     break;
                 case 4:
                     System.out.println("RENAME selected!");
-                    renameOperation();
+                    renameOperation(hdfs);
                     break;
                 case 5:
                     System.out.println("DELETE selected!");
-                    deleteOperation();
+                    deleteOperation(hdfs);
                     break;
                 case 6:
                     System.out.println("LIST selected!");
-                    listOperation();
+                    listOperation(hdfs);
                     break;
                 case 7:
                     System.out.println("APPEND selected!");
-                    appendOperation();
+                    appendOperation(hdfs);
                     break;
                 case 8:
                     System.out.println("CREATE SUBTREE selected!");
-                    createSubtree();
+                    createSubtree(hdfs);
                     break;
                 case 9:
                     System.out.println("PING selected!");
-                    pingOperation();
+                    pingOperation(hdfs);
                     break;
                 case 10:
                     System.out.println("PREWARM selected!");
-                    prewarmOperation();
+                    prewarmOperation(hdfs);
                     break;
                 case 11:
                     System.out.println("WRITE FILES TO DIRECTORY selected!");
-                    writeFilesToDirectory();
+                    writeFilesToDirectory(hdfs);
                     break;
                 case 12:
                     System.out.println("READ FILES selected!");
@@ -153,13 +154,28 @@ public class InteractiveTest {
 
         Thread[] threads = new Thread[numThreads];
 
+        // Used to synchronize threads; they each connect to HopsFS and then
+        // count down. So, they all cannot start until they are all connected.
+        final CountDownLatch latch = new CountDownLatch(numThreads);
+
         for (int i = 0; i < numThreads; i++) {
-            final int idx = i;
             final String[] pathsForThread = pathsPerThread[i];
             Thread thread = new Thread(() -> {
+                DistributedFileSystem hdfs = new DistributedFileSystem();
+
+                try {
+                    hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
+                } catch (URISyntaxException | IOException ex) {
+                    System.out.println("\n\nERROR: Encountered exception while initializing DistributedFileSystem object.");
+                    ex.printStackTrace();
+                    System.exit(1);
+                }
+
+                latch.countDown();
+
                 for (String filePath : pathsForThread) {
                     for (int j = 0; j < readsPerFile; j++)
-                        readFile(filePath);
+                        readFile(filePath, hdfs);
                 }
             });
             threads[i] = thread;
@@ -183,8 +199,10 @@ public class InteractiveTest {
 
     /**
      * Write a bunch of files to a target directory.
+     *
+     * @param sharedHdfs Passed by main thread. We only use this if we're doing single-threaded.
      */
-    private static void writeFilesToDirectory() throws InterruptedException, IOException {
+    private static void writeFilesToDirectory(DistributedFileSystem sharedHdfs) throws InterruptedException, IOException {
         System.out.print("Target directory:\n> ");
         String targetDirectory = scanner.nextLine();
 
@@ -222,7 +240,7 @@ public class InteractiveTest {
         if (numThreads == 1) {
             start = Instant.now();
 
-            createFiles(targetPaths, content);
+            createFiles(targetPaths, content, sharedHdfs);
 
             end = Instant.now();
         } else {
@@ -236,11 +254,26 @@ public class InteractiveTest {
             assert targetPathsPerArray != null;
             assert contentPerArray != null;
 
+            final CountDownLatch latch = new CountDownLatch(numThreads);
+
             Thread[] threads = new Thread[numThreads];
 
             for (int i = 0; i < numThreads; i++) {
                 final int idx = i;
-                Thread thread = new Thread(() -> createFiles(targetPathsPerArray[idx], contentPerArray[idx]));
+                Thread thread = new Thread(() -> {
+                    DistributedFileSystem hdfs = new DistributedFileSystem();
+
+                    try {
+                        hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
+                    } catch (URISyntaxException | IOException ex) {
+                        System.out.println("\n\nERROR: Encountered exception while initializing DistributedFileSystem object.");
+                        ex.printStackTrace();
+                        System.exit(1);
+                    }
+
+                    latch.countDown();
+                    createFiles(targetPathsPerArray[idx], contentPerArray[idx], hdfs);
+                });
                 threads[i] = thread;
             }
 
@@ -262,7 +295,7 @@ public class InteractiveTest {
         System.out.println("Time elapsed: " + duration.toString());
     }
 
-    private static void createSubtree() {
+    private static void createSubtree(DistributedFileSystem hdfs6) {
         System.out.print("Subtree root directory:\n> ");
         String subtreeRootPath = scanner.nextLine();
 
@@ -300,7 +333,7 @@ public class InteractiveTest {
 
         int currentDepth = 0;
 
-        mkdir(subtreeRootPath);
+        mkdir(subtreeRootPath, hdfs);
         directoriesCreated++;
 
         Stack<TreeNode> directoryStack = new Stack<TreeNode>();
@@ -357,13 +390,13 @@ public class InteractiveTest {
         return directoryStack;
     }
 
-    private static void createFileOperation() {
+    private static void createFileOperation(DistributedFileSystem hdfs) {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
         System.out.print("File contents:\n> ");
         String fileContents = scanner.nextLine();
 
-        createFile(fileName, fileContents);
+        createFile(fileName, fileContents, hdfs);
     }
 
     /**
@@ -374,12 +407,12 @@ public class InteractiveTest {
      * @param names File names.
      * @param content File contents.
      */
-    private static void createFiles(String[] names, String[] content) {
+    private static void createFiles(String[] names, String[] content, DistributedFileSystem hdfs) {
         assert(names.length == content.length);
 
         for (int i = 0; i < names.length; i++) {
             System.out.println("Writing file " + i + "/" + names.length);
-            createFile(names[i], content[i]);
+            createFile(names[i], content[i], hdfs);
         }
     }
 
@@ -388,7 +421,7 @@ public class InteractiveTest {
      * @param name The name of the file.
      * @param contents The content to be written to the file.
      */
-    private static void createFile(String name, String contents) {
+    private static void createFile(String name, String contents, DistributedFileSystem hdfs) {
         Path filePath = new Path("hdfs://10.241.64.14:9000/" + name);
 
         try {
@@ -405,7 +438,7 @@ public class InteractiveTest {
         }
     }
 
-    private static void renameOperation() {
+    private static void renameOperation(DistributedFileSystem hdfs) {
         System.out.print("Original file path:\n> ");
         String originalFileName = scanner.nextLine();
         System.out.print("Renamed file path:\n> ");
@@ -424,7 +457,7 @@ public class InteractiveTest {
         }
     }
 
-    private static void listOperation() {
+    private static void listOperation(DistributedFileSystem hdfs) {
         System.out.print("Target directory:\n> ");
         String targetDirectory = scanner.nextLine();
 
@@ -442,7 +475,7 @@ public class InteractiveTest {
      * Create a new directory with the given path.
      * @param path The path of the new directory.
      */
-    private static void mkdir(String path) {
+    private static void mkdir(String path, DistributedFileSystem hdfs) {
         Path filePath = new Path("hdfs://10.241.64.14:9000/" + path);
 
         try {
@@ -454,14 +487,14 @@ public class InteractiveTest {
         }
     }
 
-    private static void mkdirOperation() {
+    private static void mkdirOperation(DistributedFileSystem hdfs) {
         System.out.print("New directory path:\n> ");
         String newDirectoryName = scanner.nextLine();
 
-        mkdir(newDirectoryName);
+        mkdir(newDirectoryName, hdfs);
     }
 
-    private static void appendOperation() {
+    private static void appendOperation(DistributedFileSystem hdfs) {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
         System.out.print("Content to append:\n> ");
@@ -483,7 +516,7 @@ public class InteractiveTest {
         }
     }
 
-    private static void prewarmOperation() {
+    private static void prewarmOperation(DistributedFileSystem hdfs) {
         System.out.print("Invocations per deployment:\n> ");
         int pingsPerDeployment = Integer.parseInt(scanner.nextLine());
 
@@ -495,7 +528,7 @@ public class InteractiveTest {
         }
     }
 
-    private static void pingOperation() {
+    private static void pingOperation(DistributedFileSystem hdfs) {
         System.out.print("Target deployment:\n> ");
         int targetDeployment = Integer.parseInt(scanner.nextLine());
 
@@ -508,17 +541,17 @@ public class InteractiveTest {
         }
     }
 
-    private static void readOperation() {
+    private static void readOperation(DistributedFileSystem hdfs) {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
-        readFile(fileName);
+        readFile(fileName, hdfs);
     }
 
     /**
      * Read the HopsFS/HDFS file at the given path.
      * @param fileName The path to the file to read.
      */
-    private static void readFile(String fileName) {
+    private static void readFile(String fileName, DistributedFileSystem hdfs) {
         Path filePath = new Path("hdfs://10.241.64.14:9000/" + fileName);
 
         try {
@@ -535,7 +568,7 @@ public class InteractiveTest {
         }
     }
 
-    private static void deleteOperation() {
+    private static void deleteOperation(DistributedFileSystem hdfs) {
         System.out.print("File or directory path:\n> ");
         String targetPath = scanner.nextLine();
 
