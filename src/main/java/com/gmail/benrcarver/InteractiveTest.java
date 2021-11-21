@@ -646,15 +646,15 @@ public class InteractiveTest {
     }
 
     private static void printMenu() {
-        LOG.debug("");
-        LOG.debug("====== MENU ======");
-        LOG.debug("Operations:");
+        System.out.println("");
+        System.out.println("====== MENU ======");
+        System.out.println("Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
                 "\n(11) Write Files to Directory\n(12) Read files");
-        LOG.debug("==================");
-        LOG.debug("");
-        LOG.debug("What would you like to do?");
+        System.out.println("==================");
+        System.out.println("");
+        System.out.println("What would you like to do?");
         System.out.print("> ");
     }
 }
