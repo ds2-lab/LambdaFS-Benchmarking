@@ -61,6 +61,7 @@ public class InteractiveTest {
                     LOG.debug("Writing statistics packages to files...");
                     LOG.debug("");
                     hdfs.dumpStatisticsPackages(true);
+                    break;
                 case -2:
                     LOG.debug("Printing operations performed...");
                     LOG.debug("");
