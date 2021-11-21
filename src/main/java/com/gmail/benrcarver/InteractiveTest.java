@@ -582,11 +582,20 @@ public class InteractiveTest {
             FSDataInputStream inputStream = hdfs.open(filePath);
             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
             String line = null;
+            long readStart = System.nanoTime();
             while ((line = br.readLine()) != null)
                 System.out.println(line);
-
+            long readEnd = System.nanoTime();
             inputStream.close();
             br.close();
+            long readDuration = readEnd - readStart;
+
+            System.out.println("Read contents of file \"" + fileName + "\" from DataNode in " +
+                    (readDuration / 1000000.0) + " milliseconds.");
+
+            OperationPerformed operationPerformed = new OperationPerformed(
+                    "ReadBlocksFromDataNode", UUID.randomUUID().toString(), readStart, readEnd, 999, true, true, 0);
+            hdfs.addOperationPerformed(operationPerformed);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
