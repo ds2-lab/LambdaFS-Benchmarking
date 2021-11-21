@@ -2,6 +2,8 @@ package com.gmail.benrcarver;
 
 import com.google.gson.JsonObject;
 import org.apache.commons.cli.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -21,26 +23,30 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 public class InteractiveTest {
+    public static final Log LOG = LogFactory.getLog(InteractiveTest.class);
+
     private static final Scanner scanner = new Scanner(System.in);
     //private static DistributedFileSystem hdfs;
 
     public static void main(String[] args) throws InterruptedException, IOException {
-        System.out.println("Starting HdfsTest now.");
+        LOG.debug("Starting HdfsTest now.");
         Configuration configuration = Utils.getConfiguration();
         try {
             configuration.addResource(new File("/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml").toURI().toURL());
         } catch (MalformedURLException ex) {
             ex.printStackTrace();
         }
-        System.out.println("Created configuration.");
+        LOG.debug("Created configuration.");
         DistributedFileSystem hdfs = new DistributedFileSystem();
-        System.out.println("Created DistributedFileSystem object.");
+        LOG.debug("Created DistributedFileSystem object.");
 
         try {
             hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
-            System.out.println("Called initialize() successfully.");
+            LOG.debug("Called initialize() successfully.");
         } catch (URISyntaxException | IOException ex) {
-            System.out.println("\n\nERROR: Encountered exception while initializing DistributedFileSystem object.");
+            LOG.error("");
+            LOG.error("");
+            LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
             ex.printStackTrace();
             System.exit(1);
         }
@@ -51,71 +57,79 @@ public class InteractiveTest {
             int op = getNextOperation();
 
             switch(op) {
+                case -3:
+                    LOG.debug("Writing statistics packages to files...");
+                    LOG.debug("");
+                    hdfs.dumpStatisticsPackages(true);
                 case -2:
+                    LOG.debug("Printing operations performed...");
+                    LOG.debug("");
                     hdfs.printOperationsPerformed();
                     break;
                 case -1:
+                    LOG.debug("Printing TCP debug information...");
+                    LOG.debug("");
                     hdfs.printDebugInformation();
                     break;
                 case 0:
-                    System.out.println("Exiting now... goodbye!");
+                    LOG.debug("Exiting now... goodbye!");
                     try {
                         hdfs.close();
                     } catch (IOException ex) {
-                        System.out.println("Encountered exception while closing file system...");
+                        LOG.debug("Encountered exception while closing file system...");
                         ex.printStackTrace();
                     }
                     System.exit(0);
                 case 1:
-                    System.out.println("CREATE FILE selected!");
+                    LOG.debug("CREATE FILE selected!");
                     createFileOperation(hdfs);
                     break;
                 case 2:
-                    System.out.println("MAKE DIRECTORY selected!");
+                    LOG.debug("MAKE DIRECTORY selected!");
                     mkdirOperation(hdfs);;
                     break;
                 case 3:
-                    System.out.println("READ FILE selected!");
+                    LOG.debug("READ FILE selected!");
                     readOperation(hdfs);
                     break;
                 case 4:
-                    System.out.println("RENAME selected!");
+                    LOG.debug("RENAME selected!");
                     renameOperation(hdfs);
                     break;
                 case 5:
-                    System.out.println("DELETE selected!");
+                    LOG.debug("DELETE selected!");
                     deleteOperation(hdfs);
                     break;
                 case 6:
-                    System.out.println("LIST selected!");
+                    LOG.debug("LIST selected!");
                     listOperation(hdfs);
                     break;
                 case 7:
-                    System.out.println("APPEND selected!");
+                    LOG.debug("APPEND selected!");
                     appendOperation(hdfs);
                     break;
                 case 8:
-                    System.out.println("CREATE SUBTREE selected!");
+                    LOG.debug("CREATE SUBTREE selected!");
                     createSubtree(hdfs);
                     break;
                 case 9:
-                    System.out.println("PING selected!");
+                    LOG.debug("PING selected!");
                     pingOperation(hdfs);
                     break;
                 case 10:
-                    System.out.println("PREWARM selected!");
+                    LOG.debug("PREWARM selected!");
                     prewarmOperation(hdfs);
                     break;
                 case 11:
-                    System.out.println("WRITE FILES TO DIRECTORY selected!");
+                    LOG.debug("WRITE FILES TO DIRECTORY selected!");
                     writeFilesToDirectory(hdfs, configuration);
                     break;
                 case 12:
-                    System.out.println("READ FILES selected!");
+                    LOG.debug("READ FILES selected!");
                     readFilesOperation(configuration, hdfs);
                     break;
                 default:
-                    System.out.println("ERROR: Unknown or invalid operation specified: " + op);
+                    LOG.debug("ERROR: Unknown or invalid operation specified: " + op);
                     break;
             }
         }
@@ -149,7 +163,7 @@ public class InteractiveTest {
 
         int filesPerArray = (int)Math.ceil((double)n/numThreads);
 
-        System.out.println("Assigning each thread " + filesPerArray + " files (plus remainder for last thread.");
+        LOG.debug("Assigning each thread " + filesPerArray + " files (plus remainder for last thread.");
 
         String[][] pathsPerThread = Utils.splitArray(paths.toArray(new String[0]), filesPerArray);
 
@@ -170,7 +184,7 @@ public class InteractiveTest {
                 try {
                     hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
                 } catch (URISyntaxException | IOException ex) {
-                    System.out.println("\n\nERROR: Encountered exception while initializing DistributedFileSystem object.");
+                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
                     ex.printStackTrace();
                     System.exit(1);
                 }
@@ -187,23 +201,23 @@ public class InteractiveTest {
             threads[i] = thread;
         }
 
-        System.out.println("Starting threads.");
+        LOG.debug("Starting threads.");
         Instant start = Instant.now();
         for (Thread thread : threads) {
             thread.start();
         }
 
-        System.out.println("Joining threads.");
+        LOG.debug("Joining threads.");
         for (Thread thread : threads) {
             thread.join();
         }
         Instant end = Instant.now();
 
-        System.out.println("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " +
+        LOG.debug("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " +
                 Duration.between(start, end).toString());
 
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            System.out.println("Adding list of " + opsPerformed.size() +
+            LOG.debug("Adding list of " + opsPerformed.size() +
                     " operations performed to master/shared HDFS object.");
             sharedHdfs.addOperationPerformeds(opsPerformed);
         }
@@ -259,7 +273,7 @@ public class InteractiveTest {
         } else {
             int filesPerArray = (int)Math.ceil((double)n/numThreads);
 
-            System.out.println("Assigning each thread " + filesPerArray + " files (plus remainder for last thread.");
+            LOG.debug("Assigning each thread " + filesPerArray + " files (plus remainder for last thread.");
 
             final String[][] contentPerArray = Utils.splitArray(content, filesPerArray);
             final String[][] targetPathsPerArray = Utils.splitArray(targetPaths, filesPerArray);
@@ -282,7 +296,7 @@ public class InteractiveTest {
                     try {
                         hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
                     } catch (URISyntaxException | IOException ex) {
-                        System.out.println("\n\nERROR: Encountered exception while initializing DistributedFileSystem object.");
+                        LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
                         ex.printStackTrace();
                         System.exit(1);
                     }
@@ -295,28 +309,30 @@ public class InteractiveTest {
                 threads[i] = thread;
             }
 
-            System.out.println("Starting threads.");
+            LOG.debug("Starting threads.");
             start = Instant.now();
             for (Thread thread : threads) {
                 thread.start();
             }
 
-            System.out.println("Joining threads.");
+            LOG.debug("Joining threads.");
             for (Thread thread : threads) {
                 thread.join();
             }
             end = Instant.now();
 
             for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-                System.out.println("Adding list of " + opsPerformed.size() +
+                LOG.debug("Adding list of " + opsPerformed.size() +
                         " operations performed to master/shared HDFS object.");
                 sharedHdfs.addOperationPerformeds(opsPerformed);
             }
         }
 
         Duration duration = Duration.between(start, end);
-        System.out.println("\n\n===============================");
-        System.out.println("Time elapsed: " + duration.toString());
+        LOG.debug("");
+        LOG.debug("");
+        LOG.debug("===============================");
+        LOG.debug("Time elapsed: " + duration.toString());
     }
 
     private static void createSubtree(DistributedFileSystem hdfs) {
@@ -337,14 +353,14 @@ public class InteractiveTest {
 
         int height = subtreeDepth + 1;
         double totalPossibleDirectories = (Math.pow(maxSubDirs, height + 1) - 1) / (maxSubDirs - 1);
-        System.out.println("\nThis could create a maximum of " + totalPossibleDirectories + " directories.");
+        LOG.debug("\nThis could create a maximum of " + totalPossibleDirectories + " directories.");
         System.out.print("Is this okay? [y/N]\n >");
 
         String resp = scanner.nextLine();
 
         // If they answered anything other than 'y', then abort.
         if (!resp.toLowerCase().equals("y")) {
-            System.out.println("\nAborting.");
+            LOG.debug("\nAborting.");
             return;
         }
 
@@ -365,10 +381,10 @@ public class InteractiveTest {
         directoryStack.push(subtreeRoot);
 
         while (currentDepth <= subtreeDepth) {
-            System.out.println("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
-            System.out.println("CURRENT DEPTH: " + currentDepth);
-            System.out.println("DIRECTORIES CREATED: " + directoriesCreated);
-            System.out.println("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
+            LOG.debug("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
+            LOG.debug("CURRENT DEPTH: " + currentDepth);
+            LOG.debug("DIRECTORIES CREATED: " + directoriesCreated);
+            LOG.debug("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
             List<Stack<TreeNode>> currentDepthStacks = new ArrayList<>();
             while (!directoryStack.empty()) {
                 TreeNode directory = directoryStack.pop();
@@ -391,15 +407,15 @@ public class InteractiveTest {
         Instant end = Instant.now();
         Duration subtreeCreationDuration = Duration.between(start, end);
 
-        System.out.println("=== Subtree Creation Completed ===");
-        System.out.println("Time elapsed: " + subtreeCreationDuration.toString());
-        System.out.println("Directories created: " + directoriesCreated);
-        System.out.println("Files created: " + filesCreated + "\n");
+        LOG.debug("=== Subtree Creation Completed ===");
+        LOG.debug("Time elapsed: " + subtreeCreationDuration.toString());
+        LOG.debug("Directories created: " + directoriesCreated);
+        LOG.debug("Files created: " + filesCreated + "\n");
 
-        System.out.println("subtreeRoot children: " + subtreeRoot.children.size());
-        System.out.println(subtreeRoot.toString());
+        LOG.debug("subtreeRoot children: " + subtreeRoot.children.size());
+        LOG.debug(subtreeRoot.toString());
 
-        System.out.println("==================================");
+        LOG.debug("==================================");
     }
 
     private static Stack<TreeNode> createChildDirectories(String basePath, int subDirs, DistributedFileSystem hdfs) {
@@ -435,7 +451,7 @@ public class InteractiveTest {
         assert(names.length == content.length);
 
         for (int i = 0; i < names.length; i++) {
-            System.out.println("Writing file " + i + "/" + names.length);
+            LOG.debug("Writing file " + i + "/" + names.length);
             createFile(names[i], content[i], hdfs);
         }
     }
@@ -450,13 +466,13 @@ public class InteractiveTest {
 
         try {
             FSDataOutputStream outputStream = hdfs.create(filePath);
-            System.out.println("\t Called create() successfully.");
+            LOG.debug("\t Called create() successfully.");
             BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
-            System.out.println("\t Created BufferedWriter object.");
+            LOG.debug("\t Created BufferedWriter object.");
             br.write(contents);
-            System.out.println("\t Wrote \"" + contents + "\" using BufferedWriter.");
+            LOG.debug("\t Wrote \"" + contents + "\" using BufferedWriter.");
             br.close();
-            System.out.println("\t Closed BufferedWriter.");
+            LOG.debug("\t Closed BufferedWriter.");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -472,10 +488,10 @@ public class InteractiveTest {
         Path filePathRename = new Path("hdfs://10.241.64.14:9000/" + renamedFileName);
 
         try {
-            System.out.println("\t Original file path: \"" + originalFileName + "\"");
-            System.out.println("\t New file path: \"" + renamedFileName + "\"");
+            LOG.debug("\t Original file path: \"" + originalFileName + "\"");
+            LOG.debug("\t New file path: \"" + renamedFileName + "\"");
             hdfs.rename(filePath, filePathRename);
-            System.out.println("\t Finished rename operation.");
+            LOG.debug("\t Finished rename operation.");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -488,7 +504,7 @@ public class InteractiveTest {
         try {
             FileStatus[] fileStatus = hdfs.listStatus(new Path("hdfs://10.241.64.14:9000/" + targetDirectory));
             for(FileStatus status : fileStatus){
-                System.out.println(status.getPath().toString());
+                LOG.debug(status.getPath().toString());
             }
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -503,9 +519,9 @@ public class InteractiveTest {
         Path filePath = new Path("hdfs://10.241.64.14:9000/" + path);
 
         try {
-            System.out.println("\t Attempting to create new directory: \"" + path + "\"");
+            LOG.debug("\t Attempting to create new directory: \"" + path + "\"");
             boolean directoryCreated = hdfs.mkdirs(filePath);
-            System.out.println("\t Directory created successfully: " + directoryCreated);
+            LOG.debug("\t Directory created successfully: " + directoryCreated);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -528,13 +544,13 @@ public class InteractiveTest {
 
         try {
             FSDataOutputStream outputStream = hdfs.append(filePath);
-            System.out.println("\t Called append() successfully.");
+            LOG.debug("\t Called append() successfully.");
             BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
-            System.out.println("\t Created BufferedWriter object.");
+            LOG.debug("\t Created BufferedWriter object.");
             br.write(fileContents);
-            System.out.println("\t Appended \"" + fileContents + "\" to file using BufferedWriter.");
+            LOG.debug("\t Appended \"" + fileContents + "\" to file using BufferedWriter.");
             br.close();
-            System.out.println("\t Closed BufferedWriter.");
+            LOG.debug("\t Closed BufferedWriter.");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -547,7 +563,7 @@ public class InteractiveTest {
         try {
             hdfs.prewarm(pingsPerDeployment);
         } catch (IOException ex) {
-            System.out.println("Encountered IOException while pre-warming NNs.");
+            LOG.debug("Encountered IOException while pre-warming NNs.");
             ex.printStackTrace();
         }
     }
@@ -559,7 +575,7 @@ public class InteractiveTest {
         try {
             hdfs.ping(targetDeployment);
         } catch (IOException ex) {
-            System.out.println("Encountered IOException while pinging NameNode deployment " +
+            LOG.debug("Encountered IOException while pinging NameNode deployment " +
                     targetDeployment + ".");
             ex.printStackTrace();
         }
@@ -584,13 +600,13 @@ public class InteractiveTest {
             String line = null;
             long readStart = System.nanoTime();
             while ((line = br.readLine()) != null)
-                System.out.println(line);
+                LOG.debug(line);
             long readEnd = System.nanoTime();
             inputStream.close();
             br.close();
             long readDuration = readEnd - readStart;
 
-            System.out.println("Read contents of file \"" + fileName + "\" from DataNode in " +
+            LOG.debug("Read contents of file \"" + fileName + "\" from DataNode in " +
                     (readDuration / 1000000.0) + " milliseconds.");
 
             OperationPerformed operationPerformed = new OperationPerformed(
@@ -609,7 +625,7 @@ public class InteractiveTest {
 
         try {
             boolean success = hdfs.delete(filePath, true);
-            System.out.println("\t Delete was successful: " + success);
+            LOG.debug("\t Delete was successful: " + success);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -621,7 +637,7 @@ public class InteractiveTest {
                 String input = scanner.nextLine();
                 return Integer.parseInt(input);
             } catch (NumberFormatException ex) {
-                System.out.println("\t Invalid input! Please enter an integer.");
+                LOG.debug("\t Invalid input! Please enter an integer.");
             } catch (Exception ex) {
                 ex.printStackTrace();
                 System.exit(1);
@@ -630,13 +646,15 @@ public class InteractiveTest {
     }
 
     private static void printMenu() {
-        System.out.println("\n\n====== MENU ======");
-        System.out.println("Operations:");
+        LOG.debug("");
+        LOG.debug("====== MENU ======");
+        LOG.debug("Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
                 "\n(11) Write Files to Directory\n(12) Read files");
-        System.out.println("==================");
-        System.out.println("\nWhat would you like to do?");
+        LOG.debug("==================");
+        LOG.debug("");
+        LOG.debug("What would you like to do?");
         System.out.print("> ");
     }
 }
