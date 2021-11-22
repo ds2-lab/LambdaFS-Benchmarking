@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import io.hops.transaction.context.TransactionsStats;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -20,6 +21,7 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 
 public class InteractiveTest {
@@ -176,6 +178,8 @@ public class InteractiveTest {
 
         final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
+        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
+                = new ArrayBlockingQueue<>(numThreads);
 
         for (int i = 0; i < numThreads; i++) {
             final String[] pathsForThread = pathsPerThread[i];
@@ -198,6 +202,7 @@ public class InteractiveTest {
                 }
 
                 operationsPerformed.add(hdfs.getOperationsPerformed());
+                statisticsPackages.add(hdfs.getStatisticsPackages());
             });
             threads[i] = thread;
         }
@@ -221,6 +226,12 @@ public class InteractiveTest {
             LOG.debug("Adding list of " + opsPerformed.size() +
                     " operations performed to master/shared HDFS object.");
             sharedHdfs.addOperationPerformeds(opsPerformed);
+        }
+
+        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
+            LOG.debug("Adding list of " + statPackages.size() +
+                    " statistics packages to master/shared HDFS object.");
+            sharedHdfs.mergeStatisticsPackages(statPackages, true);
         }
     }
 
@@ -289,6 +300,9 @@ public class InteractiveTest {
             final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
                     new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
 
+            final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
+                    = new ArrayBlockingQueue<>(numThreads);
+
             for (int i = 0; i < numThreads; i++) {
                 final int idx = i;
                 Thread thread = new Thread(() -> {
@@ -306,6 +320,7 @@ public class InteractiveTest {
                     createFiles(targetPathsPerArray[idx], contentPerArray[idx], hdfs);
 
                     operationsPerformed.add(hdfs.getOperationsPerformed());
+                    statisticsPackages.add(hdfs.getStatisticsPackages());
                 });
                 threads[i] = thread;
             }
@@ -326,6 +341,12 @@ public class InteractiveTest {
                 LOG.debug("Adding list of " + opsPerformed.size() +
                         " operations performed to master/shared HDFS object.");
                 sharedHdfs.addOperationPerformeds(opsPerformed);
+            }
+
+            for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
+                LOG.debug("Adding list of " + statPackages.size() +
+                        " statistics packages to master/shared HDFS object.");
+                sharedHdfs.mergeStatisticsPackages(statPackages, true);
             }
         }
 
@@ -600,8 +621,12 @@ public class InteractiveTest {
             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
             String line = null;
             long readStart = System.nanoTime();
+
+            LOG.debug("");
+            LOG.debug("CONTENTS OF FILE '" + fileName + "': ");
             while ((line = br.readLine()) != null)
                 LOG.debug(line);
+            LOG.debug("");
             long readEnd = System.nanoTime();
             inputStream.close();
             br.close();
