@@ -525,9 +525,10 @@ public class InteractiveTest {
 
         try {
             FileStatus[] fileStatus = hdfs.listStatus(new Path("hdfs://10.241.64.14:9000/" + targetDirectory));
-            for(FileStatus status : fileStatus){
+            LOG.debug("Directory '" + targetDirectory + "' contains " + fileStatus.length + " files.");
+            for(FileStatus status : fileStatus)
                 LOG.debug(status.getPath().toString());
-            }
+            LOG.debug("Directory '" + targetDirectory + "' contains " + fileStatus.length + " files.");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
