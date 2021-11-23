@@ -637,7 +637,8 @@ public class InteractiveTest {
                     (readDuration / 1000000.0) + " milliseconds.");
 
             OperationPerformed operationPerformed = new OperationPerformed(
-                    "ReadBlocksFromDataNode", UUID.randomUUID().toString(), readStart, readEnd, 999, true, true, 0, 0, 0);
+                    "ReadBlocksFromDataNode", UUID.randomUUID().toString(), readStart, readEnd, readStart, readEnd,
+                    readStart, readEnd, 999, true, true, 0, 0, 0);
             hdfs.addOperationPerformed(operationPerformed);
         } catch (IOException ex) {
             ex.printStackTrace();
