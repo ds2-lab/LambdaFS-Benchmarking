@@ -154,6 +154,8 @@ public class InteractiveTest {
             BufferedWriter opsPerformedWriter = new BufferedWriter(new FileWriter(filePath));
             List<OperationPerformed> operationsPerformed = hdfs.getOperationsPerformed();
 
+            opsPerformedWriter.write(OperationPerformed.getHeader());
+            opsPerformedWriter.newLine();
             for (OperationPerformed op : operationsPerformed) {
                 op.write(opsPerformedWriter);
             }
