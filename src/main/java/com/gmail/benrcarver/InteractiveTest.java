@@ -67,7 +67,7 @@ public class InteractiveTest {
                 case -2:
                     LOG.debug("Printing operations performed...");
                     LOG.debug("");
-                    hdfs.printOperationsPerformed();
+                    printOperationsPerformed(hdfs);
                     break;
                 case -1:
                     LOG.debug("Printing TCP debug information...");
@@ -134,6 +134,28 @@ public class InteractiveTest {
                 default:
                     LOG.debug("ERROR: Unknown or invalid operation specified: " + op);
                     break;
+            }
+        }
+    }
+
+    /**
+     * Print the operations performed. Optionally write them to a CSV.
+     */
+    private static void printOperationsPerformed(DistributedFileSystem hdfs) throws IOException {
+        System.out.print("Write to CSV?\n> ");
+        String input = scanner.nextLine();
+
+        hdfs.printOperationsPerformed();
+
+        if (input.equalsIgnoreCase("y")) {
+            System.out.print("File path?\n> ");
+            String filePath = scanner.nextLine();
+
+            BufferedWriter opsPerformedWriter = new BufferedWriter(new FileWriter(filePath));
+            List<OperationPerformed> operationsPerformed = hdfs.getOperationsPerformed();
+
+            for (OperationPerformed op : operationsPerformed) {
+                op.write(opsPerformedWriter);
             }
         }
     }
