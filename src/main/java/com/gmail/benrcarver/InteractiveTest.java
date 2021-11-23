@@ -643,24 +643,23 @@ public class InteractiveTest {
             FSDataInputStream inputStream = hdfs.open(filePath);
             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
             String line = null;
-            long readStart = System.nanoTime();
+            long readStart = System.currentTimeMillis();
 
             LOG.debug("");
             LOG.debug("CONTENTS OF FILE '" + fileName + "': ");
             while ((line = br.readLine()) != null)
                 LOG.debug(line);
             LOG.debug("");
-            long readEnd = System.nanoTime();
+            long readEnd = System.currentTimeMillis();
             inputStream.close();
             br.close();
             long readDuration = readEnd - readStart;
 
-            LOG.debug("Read contents of file \"" + fileName + "\" from DataNode in " +
-                    (readDuration / 1000000.0) + " milliseconds.");
+            LOG.debug("Read contents of file \"" + fileName + "\" from DataNode in " + readDuration + " milliseconds.");
 
             OperationPerformed operationPerformed = new OperationPerformed(
-                    "ReadBlocksFromDataNode", UUID.randomUUID().toString(), readStart, readEnd, readStart, readEnd,
-                    readStart, readEnd, 999, true, true, 0, 0, 0);
+                    "ReadBlocksFromDataNode", UUID.randomUUID().toString(), readStart, readEnd,
+                    readStart, readEnd, readStart, readEnd, 999, true, true, 0L, 0, 0);
             hdfs.addOperationPerformed(operationPerformed);
         } catch (IOException ex) {
             ex.printStackTrace();
