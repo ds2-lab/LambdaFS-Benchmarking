@@ -157,6 +157,7 @@ public class InteractiveTest {
             for (OperationPerformed op : operationsPerformed) {
                 op.write(opsPerformedWriter);
             }
+            opsPerformedWriter.close();
         }
     }
 
