@@ -4,6 +4,8 @@ import com.google.gson.JsonObject;
 import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import io.hops.metrics.TransactionEvent;
+import io.hops.metrics.TransactionAttempt;
 import io.hops.transaction.context.TransactionsStats;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -142,16 +144,16 @@ public class InteractiveTest {
      * Print the operations performed. Optionally write them to a CSV.
      */
     private static void printOperationsPerformed(DistributedFileSystem hdfs) throws IOException {
-        System.out.print("Write to CSV?\n> ");
+        System.out.print("Write to CSV? (no extension) \n> ");
         String input = scanner.nextLine();
 
         hdfs.printOperationsPerformed();
 
         if (input.equalsIgnoreCase("y")) {
             System.out.print("File path?\n> ");
-            String filePath = scanner.nextLine();
+            String baseFilePath = scanner.nextLine();
 
-            BufferedWriter opsPerformedWriter = new BufferedWriter(new FileWriter(filePath));
+            BufferedWriter opsPerformedWriter = new BufferedWriter(new FileWriter(baseFilePath + ".csv"));
             List<OperationPerformed> operationsPerformed = hdfs.getOperationsPerformed();
 
             opsPerformedWriter.write(OperationPerformed.getHeader());
@@ -160,6 +162,18 @@ public class InteractiveTest {
                 op.write(opsPerformedWriter);
             }
             opsPerformedWriter.close();
+
+            BufferedWriter txEventsWriter = new BufferedWriter(new FileWriter(baseFilePath + "-txevents.csv"));
+            HashMap<String, List<TransactionEvent>> transactionEvents = hdfs.getTransactionEvents();
+
+            for (Map.Entry<String, List<TransactionEvent>> entry : transactionEvents.entrySet()) {
+                String requestId = entry.getKey();
+                List<TransactionEvent> txEvents = entry.getValue();
+
+                for (TransactionEvent transactionEvent : txEvents) {
+                    transactionEvent.write(txEventsWriter);
+                }
+            }
         }
     }
 
@@ -205,6 +219,8 @@ public class InteractiveTest {
                 new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
         final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
                 = new ArrayBlockingQueue<>(numThreads);
+        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
+                = new ArrayBlockingQueue<>(numThreads);
 
         for (int i = 0; i < numThreads; i++) {
             final String[] pathsForThread = pathsPerThread[i];
@@ -228,6 +244,7 @@ public class InteractiveTest {
 
                 operationsPerformed.add(hdfs.getOperationsPerformed());
                 statisticsPackages.add(hdfs.getStatisticsPackages());
+                transactionEvents.add(hdfs.getTransactionEvents());
             });
             threads[i] = thread;
         }
@@ -257,6 +274,11 @@ public class InteractiveTest {
             LOG.debug("Adding list of " + statPackages.size() +
                     " statistics packages to master/shared HDFS object.");
             sharedHdfs.mergeStatisticsPackages(statPackages, true);
+        }
+
+        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
+            LOG.debug("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
+            sharedHdfs.mergeTransactionEvents(transactionEvents, true);
         }
     }
 
@@ -324,8 +346,9 @@ public class InteractiveTest {
 
             final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
                     new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
-
             final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
+                    = new ArrayBlockingQueue<>(numThreads);
+            final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
                     = new ArrayBlockingQueue<>(numThreads);
 
             for (int i = 0; i < numThreads; i++) {
@@ -346,6 +369,7 @@ public class InteractiveTest {
 
                     operationsPerformed.add(hdfs.getOperationsPerformed());
                     statisticsPackages.add(hdfs.getStatisticsPackages());
+                    transactionEvents.add(hdfs.getTransactionEvents());
                 });
                 threads[i] = thread;
             }
@@ -372,6 +396,11 @@ public class InteractiveTest {
                 LOG.debug("Adding list of " + statPackages.size() +
                         " statistics packages to master/shared HDFS object.");
                 sharedHdfs.mergeStatisticsPackages(statPackages, true);
+            }
+
+            for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
+                LOG.debug("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
+                sharedHdfs.mergeTransactionEvents(transactionEvents, true);
             }
         }
 
