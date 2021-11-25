@@ -8,7 +8,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.hdfs.serverless.metrics.OperationPerformed;
+import io.hops.metrics.OperationPerformed;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.*;
