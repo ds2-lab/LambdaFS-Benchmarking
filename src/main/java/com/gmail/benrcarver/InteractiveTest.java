@@ -174,6 +174,8 @@ public class InteractiveTest {
                     transactionEvent.write(txEventsWriter);
                 }
             }
+
+            txEventsWriter.close();
         }
     }
 
