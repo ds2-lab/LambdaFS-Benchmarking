@@ -278,7 +278,7 @@ public class InteractiveTest {
 
         for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
             LOG.debug("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
-            sharedHdfs.mergeTransactionEvents(transactionEvents, true);
+            sharedHdfs.mergeTransactionEvents(txEvents, true);
         }
     }
 
@@ -400,7 +400,7 @@ public class InteractiveTest {
 
             for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
                 LOG.debug("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
-                sharedHdfs.mergeTransactionEvents(transactionEvents, true);
+                sharedHdfs.mergeTransactionEvents(txEvents, true);
             }
         }
 
