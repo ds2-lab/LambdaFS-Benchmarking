@@ -144,13 +144,13 @@ public class InteractiveTest {
      * Print the operations performed. Optionally write them to a CSV.
      */
     private static void printOperationsPerformed(DistributedFileSystem hdfs) throws IOException {
-        System.out.print("Write to CSV? (no extension) \n> ");
+        System.out.print("Write to CSV? \n> ");
         String input = scanner.nextLine();
 
         hdfs.printOperationsPerformed();
 
         if (input.equalsIgnoreCase("y")) {
-            System.out.print("File path?\n> ");
+            System.out.print("File path? (no extension)\n> ");
             String baseFilePath = scanner.nextLine();
 
             BufferedWriter opsPerformedWriter = new BufferedWriter(new FileWriter(baseFilePath + ".csv"));
@@ -166,10 +166,13 @@ public class InteractiveTest {
             BufferedWriter txEventsWriter = new BufferedWriter(new FileWriter(baseFilePath + "-txevents.csv"));
             HashMap<String, List<TransactionEvent>> transactionEvents = hdfs.getTransactionEvents();
 
+            LOG.debug("Writing " + transactionEvents.size() + " transaction event lists to CSV.");
+
             for (Map.Entry<String, List<TransactionEvent>> entry : transactionEvents.entrySet()) {
                 String requestId = entry.getKey();
                 List<TransactionEvent> txEvents = entry.getValue();
 
+                LOG.debug("Adding " + txEvents.size() + " transaction events to CSV.");
                 for (TransactionEvent transactionEvent : txEvents) {
                     transactionEvent.write(txEventsWriter);
                 }
