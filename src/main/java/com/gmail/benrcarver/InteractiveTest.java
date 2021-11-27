@@ -168,6 +168,9 @@ public class InteractiveTest {
 
             LOG.debug("Writing " + transactionEvents.size() + " transaction event lists to CSV.");
 
+            txEventsWriter.write(TransactionEvent.getHeader());
+            txEventsWriter.newLine();
+
             for (Map.Entry<String, List<TransactionEvent>> entry : transactionEvents.entrySet()) {
                 String requestId = entry.getKey();
                 List<TransactionEvent> txEvents = entry.getValue();
