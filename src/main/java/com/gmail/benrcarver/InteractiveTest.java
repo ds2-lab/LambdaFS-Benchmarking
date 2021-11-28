@@ -699,7 +699,7 @@ public class InteractiveTest {
 
             OperationPerformed operationPerformed = new OperationPerformed(
                     "ReadBlocksFromDataNode", UUID.randomUUID().toString(), readStart, readEnd,
-                    readStart, readEnd, readStart, readEnd, 999, true, true, 0L, 0, 0);
+                    readStart, readEnd, readStart, readEnd, 999, false, true, "TCP", 0L, 0, 0);
             hdfs.addOperationPerformed(operationPerformed);
         } catch (IOException ex) {
             ex.printStackTrace();
