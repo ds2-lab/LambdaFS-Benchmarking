@@ -253,6 +253,8 @@ public class InteractiveTest {
                 operationsPerformed.add(hdfs.getOperationsPerformed());
                 statisticsPackages.add(hdfs.getStatisticsPackages());
                 transactionEvents.add(hdfs.getTransactionEvents());
+
+                hdfs.close();
             });
             threads[i] = thread;
         }
@@ -378,6 +380,8 @@ public class InteractiveTest {
                     operationsPerformed.add(hdfs.getOperationsPerformed());
                     statisticsPackages.add(hdfs.getStatisticsPackages());
                     transactionEvents.add(hdfs.getTransactionEvents());
+
+                    hdfs.close();
                 });
                 threads[i] = thread;
             }
