@@ -254,7 +254,11 @@ public class InteractiveTest {
                 statisticsPackages.add(hdfs.getStatisticsPackages());
                 transactionEvents.add(hdfs.getTransactionEvents());
 
-                hdfs.close();
+                try {
+                    hdfs.close();
+                } catch (IOException ex) {
+                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+                }
             });
             threads[i] = thread;
         }
@@ -381,7 +385,11 @@ public class InteractiveTest {
                     statisticsPackages.add(hdfs.getStatisticsPackages());
                     transactionEvents.add(hdfs.getTransactionEvents());
 
-                    hdfs.close();
+                    try {
+                        hdfs.close();
+                    } catch (IOException ex) {
+                        LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+                    }
                 });
                 threads[i] = thread;
             }
