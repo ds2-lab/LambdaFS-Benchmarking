@@ -61,6 +61,10 @@ public class InteractiveTest {
             int op = getNextOperation();
 
             switch(op) {
+                case -4:
+                    LOG.debug("Clearing statistics packages...");
+                    clearStatisticsPackages(hdfs);
+                    break;
                 case -3:
                     LOG.debug("Writing statistics packages to files...");
                     LOG.debug("");
@@ -137,6 +141,17 @@ public class InteractiveTest {
                     LOG.debug("ERROR: Unknown or invalid operation specified: " + op);
                     break;
             }
+        }
+    }
+
+    private static void clearStatisticsPackages(DistributedFileSystem hdfs) {
+        System.out.print("Are you sure? (y/N)\n> ");
+        String input = scanner.nextLine();
+
+        if (input.equalsIgnoreCase("y")) {
+            hdfs.clearStatisticsPackages();
+        } else {
+            LOG.debug("NOT clearing statistics packages.");
         }
     }
 
@@ -749,7 +764,10 @@ public class InteractiveTest {
     private static void printMenu() {
         System.out.println("");
         System.out.println("====== MENU ======");
-        System.out.println("Operations:");
+        System.out.println("Debug Operations:");
+        System.out.println("(-4) Clear statistics\n(-3) Output statistics packages to CSV\n" +
+                "(-2) Output operations performed + write to file\n(-1) Print TCP debug information.");
+        System.out.println("\nStandard Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
                 "\n(11) Write Files to Directory\n(12) Read files");
