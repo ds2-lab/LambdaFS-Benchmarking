@@ -149,7 +149,7 @@ public class InteractiveTest {
         String input = scanner.nextLine();
 
         if (input.equalsIgnoreCase("y")) {
-            hdfs.clearStatistics();
+            hdfs.clearStatistics(true, true, true);
         } else {
             LOG.debug("NOT clearing statistics packages.");
         }
