@@ -226,13 +226,14 @@ public class InteractiveTest {
 
     /**
      * Delete the files listed in the file specified by the path argument.
-     * @param path Text file containing HopsFS file paths to delete.
+     * @param localPath Text file containing HopsFS file paths to delete.
      */
-    private static void deleteFiles(String path, DistributedFileSystem sharedHdfs) {
-        List<String> paths = Utils.getFilePathsFromFile(path);
+    private static void deleteFiles(String localPath, DistributedFileSystem sharedHdfs) {
+        List<String> paths = Utils.getFilePathsFromFile(localPath);
 
-        for (String filePath : paths) {
+        for (String path : paths) {
             try {
+                Path filePath = new Path("hdfs://10.241.64.14:9000/" + path);
                 boolean success = sharedHdfs.delete(filePath, true);
                 LOG.debug("\t Delete was successful: " + success);
             } catch (IOException ex) {
