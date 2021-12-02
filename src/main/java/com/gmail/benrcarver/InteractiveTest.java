@@ -137,6 +137,10 @@ public class InteractiveTest {
                     LOG.debug("READ FILES selected!");
                     readFilesOperation(configuration, hdfs);
                     break;
+                case 13:
+                    LOG.debug("DELETE FILES selected!");
+                    deleteFilesOperation(hdfs);
+                    break;
                 default:
                     LOG.debug("ERROR: Unknown or invalid operation specified: " + op);
                     break;
@@ -212,6 +216,29 @@ public class InteractiveTest {
         int numThreads = Integer.parseInt(scanner.nextLine());
 
         readFiles(localFilePath, readsPerFile, numThreads, configuration, sharedHdfs);
+    }
+
+    private static void deleteFilesOperation(DistributedFileSystem sharedHdfs) {
+        System.out.print("Path to file containing HopsFS paths? \n> ");
+        String input = scanner.nextLine();
+        deleteFiles(input, sharedHdfs);
+    }
+
+    /**
+     * Delete the files listed in the file specified by the path argument.
+     * @param path Text file containing HopsFS file paths to delete.
+     */
+    private static void deleteFiles(String path, DistributedFileSystem sharedHdfs) {
+        List<String> paths = Utils.getFilePathsFromFile(path);
+
+        for (String filePath : paths) {
+            try {
+                boolean success = sharedHdfs.delete(filePath, true);
+                LOG.debug("\t Delete was successful: " + success);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -770,7 +797,7 @@ public class InteractiveTest {
         System.out.println("\nStandard Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
-                "\n(11) Write Files to Directory\n(12) Read files");
+                "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files");
         System.out.println("==================");
         System.out.println("");
         System.out.println("What would you like to do?");
