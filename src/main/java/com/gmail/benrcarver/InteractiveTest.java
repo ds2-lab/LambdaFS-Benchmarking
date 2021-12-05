@@ -254,11 +254,20 @@ public class InteractiveTest {
         List<String> paths = Utils.getFilePathsFromFile(path);
         int n = paths.size();
 
-        int filesPerArray = (int)Math.ceil((double)n/numThreads);
+        int filesPerArray = (int)Math.floor((double)n/numThreads);
+        int remainder = n % numThreads;
 
-        LOG.debug("Assigning each thread " + filesPerArray + " files (plus remainder for last thread.");
+        if (remainder != 0) {
+            LOG.debug("Assigning all but last thread " + filesPerArray +
+                    " files. The last thread will be assigned " + remainder + " files.");
+        } else {
+            LOG.debug("Assigning each thread " + filesPerArray + " files.");
+        }
 
         String[][] pathsPerThread = Utils.splitArray(paths.toArray(new String[0]), filesPerArray);
+
+        assert pathsPerThread != null;
+        LOG.debug("pathsPerThread.length: " + pathsPerThread.length);
 
         Thread[] threads = new Thread[numThreads];
 
@@ -387,9 +396,15 @@ public class InteractiveTest {
 
             end = Instant.now();
         } else {
-            int filesPerArray = (int)Math.ceil((double)n/numThreads);
+            int filesPerArray = (int)Math.floor((double)n/numThreads);
+            int remainder = n % numThreads;
 
-            LOG.debug("Assigning each thread " + filesPerArray + " files (plus remainder for last thread.");
+            if (remainder != 0) {
+                LOG.debug("Assigning all but last thread " + filesPerArray +
+                        " files. The last thread will be assigned " + remainder + " files.");
+            } else {
+                LOG.debug("Assigning each thread " + filesPerArray + " files.");
+            }
 
             final String[][] contentPerArray = Utils.splitArray(content, filesPerArray);
             final String[][] targetPathsPerArray = Utils.splitArray(targetPaths, filesPerArray);
