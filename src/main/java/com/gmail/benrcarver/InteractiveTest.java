@@ -153,7 +153,7 @@ public class InteractiveTest {
         }
     }
 
-    private static void writeFilesToDirectories(DistributedFileSystem hdfs, final Configuration configuration) throws IOException {
+    private static void writeFilesToDirectories(DistributedFileSystem hdfs, final Configuration configuration) throws IOException, InterruptedException {
         System.out.print("Manually input (comma-separated list) [1], or specify file containing directories [2]? \n>");
         int choice = Integer.parseInt(scanner.nextLine());
 
@@ -459,7 +459,7 @@ public class InteractiveTest {
      */
     private static void writeFilesInternal(int n, int minLength, int maxLength, int numThreads,
                                            List<String> targetDirectories, DistributedFileSystem sharedHdfs,
-                                           Configuration configuration) throws IOException {
+                                           Configuration configuration) throws IOException, InterruptedException {
         // Generate the file contents and file names.
         final String[] content = Utils.getVariableLengthRandomStrings(n, minLength, maxLength);
         final String[] targetFiles = Utils.getFixedLengthRandomStrings(n, 15);
