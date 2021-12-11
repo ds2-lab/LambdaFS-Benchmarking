@@ -15,6 +15,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import io.hops.metrics.OperationPerformed;
 
+import javax.swing.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.io.*;
 import java.net.MalformedURLException;
@@ -141,11 +142,75 @@ public class InteractiveTest {
                     LOG.debug("DELETE FILES selected!");
                     deleteFilesOperation(hdfs);
                     break;
+                case 14:
+                    LOG.debug("WRITE FILES TO DIRECTORIES selected!");
+                    writeFilesToDirectories(hdfs, configuration);
+
                 default:
                     LOG.debug("ERROR: Unknown or invalid operation specified: " + op);
                     break;
             }
         }
+    }
+
+    private static void writeFilesToDirectories(DistributedFileSystem hdfs, final Configuration configuration) throws IOException {
+        System.out.print("Manually input (comma-separated list) [1], or specify file containing directories [2]? \n>");
+        int choice = Integer.parseInt(scanner.nextLine());
+
+        List<String> directories = null;
+        if (choice == 1) {
+            System.out.print("Please enter the directories as a comma-separated list:\n> ");
+            String listOfDirectories = scanner.nextLine();
+            directories = Arrays.asList(listOfDirectories.split(","));
+
+            if (directories.size() == 1)
+                LOG.debug("1 directory specified.");
+            else
+                LOG.debug(directories.size() + " directories specified.");
+        }
+        else if (choice == 2) {
+            System.out.print("Please provide path to file containing HopsFS directories:\n> ");
+            String filePath = scanner.nextLine();
+            directories = Utils.getFilePathsFromFile(filePath);
+
+            if (directories.size() == 1)
+                LOG.debug("1 directory specified in file.");
+            else
+                LOG.debug(directories.size() + " directories specified in file.");
+        }
+        else {
+            LOG.error("Invalid option specified (" + choice + "). Please enter \"1\" or \"2\" for this prompt.");
+        }
+
+        System.out.print("Number of threads? \n>");
+        int numberOfThreads = Integer.parseInt(scanner.nextLine());
+
+        int n = 10;
+        System.out.print("Number of files per directory (default " + n + "):\n> ");
+        try {
+            n = Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException ex) {
+            LOG.debug("Defaulting to " + n + ".");
+        }
+
+        int minLength = 5;
+        System.out.print("Min string length (default " + minLength + "):\n> ");
+        try {
+            minLength = Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException ex) {
+            LOG.debug("Defaulting to " + minLength + ".");
+        }
+
+        int maxLength = 10;
+        System.out.print("Max string length (default " + maxLength + "):\n> ");
+        try {
+            maxLength = Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException ex) {
+            LOG.debug("Defaulting to " + maxLength + ".");
+        }
+
+        assert directories != null;
+        writeFilesInternal(numberOfThreads, minLength, maxLength, numberOfThreads, directories, hdfs, configuration);
     }
 
     private static void clearStatisticsPackages(DistributedFileSystem hdfs) {
@@ -378,11 +443,33 @@ public class InteractiveTest {
             numThreads = Integer.parseInt(scanner.nextLine());
         }
 
+        writeFilesInternal(n, minLength, maxLength, numThreads, Collections.singletonList(targetDirectory), sharedHdfs, configuration);
+    }
+
+    /**
+     * Write a bunch of files to a bunch of directories.
+     *
+     * @param n Number of files per directory.
+     * @param minLength Minimum length of randomly-generated file contents.
+     * @param maxLength Maximum length of randomly-generated file contents.
+     * @param numThreads The number of threads to use when performing the operation.
+     * @param targetDirectories The target directories.
+     * @param sharedHdfs Shared/master DistributedFileSystem instance.
+     * @param configuration Configuration for per-thread DistributedFileSystem objects.
+     */
+    private static void writeFilesInternal(int n, int minLength, int maxLength, int numThreads,
+                                           List<String> targetDirectories, DistributedFileSystem sharedHdfs,
+                                           Configuration configuration) throws IOException {
         // Generate the file contents and file names.
         final String[] content = Utils.getVariableLengthRandomStrings(n, minLength, maxLength);
-        final String[] targetPaths = Utils.getFixedLengthRandomStrings(n, 15);
-        for (int i = 0; i < targetPaths.length; i++) {
-            targetPaths[i] = targetDirectory + "/" + targetPaths[i];
+        final String[] targetFiles = Utils.getFixedLengthRandomStrings(n, 15);
+        final String[] targetPaths = new String[n * targetDirectories.size()];
+        int counter = 0;
+
+        for (String targetDirectory : targetDirectories) {
+            for (int i = 0; i < targetFiles.length; i++) {
+                targetPaths[counter++] = targetDirectory + "/" + targetFiles[i];
+            }
         }
 
         Utils.write("./output/writeToDirectoryPaths-" + Instant.now().toEpochMilli()+ ".txt", targetPaths);
@@ -813,7 +900,7 @@ public class InteractiveTest {
         System.out.println("\nStandard Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
-                "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files");
+                "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories");
         System.out.println("==================");
         System.out.println("");
         System.out.println("What would you like to do?");
