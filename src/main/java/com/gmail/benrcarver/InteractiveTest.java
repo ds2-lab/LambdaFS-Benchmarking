@@ -461,11 +461,12 @@ public class InteractiveTest {
                                            List<String> targetDirectories, DistributedFileSystem sharedHdfs,
                                            Configuration configuration) throws IOException, InterruptedException {
         // Generate the file contents and file names.
-        LOG.debug("Generating " + n + " files for each directory.");
-        final String[] targetPaths = new String[n * targetDirectories.size()];
+        int totalNumberOfFiles = n * targetDirectories.size();
+        LOG.debug("Generating " + n + " files for each directory (total of " + totalNumberOfFiles + " files.");
+        final String[] targetPaths = new String[totalNumberOfFiles];
         int counter = 0;
 
-        String[] content = Utils.getVariableLengthRandomStrings(n * targetDirectories.size(), minLength, maxLength);
+        String[] content = Utils.getVariableLengthRandomStrings(totalNumberOfFiles, minLength, maxLength);
 
         for (String targetDirectory : targetDirectories) {
             String[] targetFiles = Utils.getFixedLengthRandomStrings(n, 15);
@@ -474,6 +475,8 @@ public class InteractiveTest {
                 targetPaths[counter++] = targetDirectory + "/" + targetFiles[i];
             }
         }
+
+        LOG.debug("Generated a total of " + totalNumberOfFiles + " file(s).");
 
         Utils.write("./output/writeToDirectoryPaths-" + Instant.now().toEpochMilli()+ ".txt", targetPaths);
 
@@ -486,8 +489,8 @@ public class InteractiveTest {
 
             end = Instant.now();
         } else {
-            int filesPerArray = (int)Math.floor((double)n/numThreads);
-            int remainder = n % numThreads;
+            int filesPerArray = (int)Math.floor((double)totalNumberOfFiles / numThreads);
+            int remainder = totalNumberOfFiles % numThreads;
 
             if (remainder != 0) {
                 LOG.debug("Assigning all but last thread " + filesPerArray +
