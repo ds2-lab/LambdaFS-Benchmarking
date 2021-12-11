@@ -210,7 +210,7 @@ public class InteractiveTest {
         }
 
         assert directories != null;
-        writeFilesInternal(numberOfThreads, minLength, maxLength, numberOfThreads, directories, hdfs, configuration);
+        writeFilesInternal(n, minLength, maxLength, numberOfThreads, directories, hdfs, configuration);
     }
 
     private static void clearStatisticsPackages(DistributedFileSystem hdfs) {
@@ -461,12 +461,15 @@ public class InteractiveTest {
                                            List<String> targetDirectories, DistributedFileSystem sharedHdfs,
                                            Configuration configuration) throws IOException, InterruptedException {
         // Generate the file contents and file names.
-        final String[] content = Utils.getVariableLengthRandomStrings(n, minLength, maxLength);
-        final String[] targetFiles = Utils.getFixedLengthRandomStrings(n, 15);
+        LOG.debug("Generating " + n + " files for each directory.");
         final String[] targetPaths = new String[n * targetDirectories.size()];
         int counter = 0;
 
+        String[] content = Utils.getVariableLengthRandomStrings(n * targetDirectories.size(), minLength, maxLength);
+
         for (String targetDirectory : targetDirectories) {
+            String[] targetFiles = Utils.getFixedLengthRandomStrings(n, 15);
+
             for (int i = 0; i < targetFiles.length; i++) {
                 targetPaths[counter++] = targetDirectory + "/" + targetFiles[i];
             }
