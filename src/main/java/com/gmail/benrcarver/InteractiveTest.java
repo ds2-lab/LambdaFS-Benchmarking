@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class InteractiveTest {
     public static final Log LOG = LogFactory.getLog(InteractiveTest.class);
@@ -391,9 +392,13 @@ public class InteractiveTest {
             thread.join();
         }
         Instant end = Instant.now();
+        Duration duration = Duration.between(start, end);
 
         LOG.debug("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " +
-                Duration.between(start, end).toString());
+                duration.toString());
+        float durationSeconds = duration.getSeconds() + TimeUnit.NANOSECONDS.toSeconds(duration.getNano());
+        int totalReads = n * readsPerFile;
+        LOG.debug("Throughput: " + (totalReads / durationSeconds) + " ops/sec.");
 
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
             LOG.debug("Adding list of " + opsPerformed.size() +
@@ -465,6 +470,7 @@ public class InteractiveTest {
         LOG.debug("Generating " + n + " files for each directory (total of " + totalNumberOfFiles + " files.");
         final String[] targetPaths = new String[totalNumberOfFiles];
         int counter = 0;
+        double filesPerSec = 0.0;
 
         String[] content = Utils.getVariableLengthRandomStrings(totalNumberOfFiles, minLength, maxLength);
 
@@ -576,10 +582,13 @@ public class InteractiveTest {
         }
 
         Duration duration = Duration.between(start, end);
+        float durationSeconds = duration.getSeconds() + TimeUnit.NANOSECONDS.toSeconds(duration.getNano());
+        filesPerSec = totalNumberOfFiles / durationSeconds;
         LOG.debug("");
         LOG.debug("");
         LOG.debug("===============================");
         LOG.debug("Time elapsed: " + duration.toString());
+        LOG.debug("Aggregate throughput: " + filesPerSec + " ops/sec.");
     }
 
     private static void createSubtree(DistributedFileSystem hdfs) {
