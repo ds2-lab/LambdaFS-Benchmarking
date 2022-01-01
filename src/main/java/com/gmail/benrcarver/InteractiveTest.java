@@ -394,11 +394,13 @@ public class InteractiveTest {
         Instant end = Instant.now();
         Duration duration = Duration.between(start, end);
 
+        double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
         LOG.debug("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + duration.toString());
+        LOG.debug("durationSeconds: " + durationSeconds);
         LOG.debug("duration.getSeconds(): " + duration.getSeconds());
         LOG.debug("duration.getNano(): " + duration.getNano());
-        float totalReads = (float)n * (float)readsPerFile;
-        float throughput = (totalReads / (float)durationSeconds);
+        double totalReads = (double)n * (double)readsPerFile;
+        double throughput = (totalReads / durationSeconds);
         LOG.debug("Throughput: " + throughput + " ops/sec.");
 
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
