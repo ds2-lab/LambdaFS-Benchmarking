@@ -395,8 +395,9 @@ public class InteractiveTest {
         Duration duration = Duration.between(start, end);
 
         LOG.debug("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + duration.toString());
-        float durationSeconds = (float)duration.getSeconds() + (float)TimeUnit.NANOSECONDS.toSeconds(duration.getNano());
         LOG.debug("durationSeconds = " + durationSeconds);
+        LOG.debug("duration.getSeconds(): " + duration.getSeconds());
+        LOG.debug("duration.getNano(): " + duration.getNano());
         float totalReads = (float)n * (float)readsPerFile;
         float throughput = (totalReads / (float)durationSeconds);
         LOG.debug("Throughput: " + throughput + " ops/sec.");
