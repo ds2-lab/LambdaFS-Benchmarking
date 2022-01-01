@@ -395,7 +395,6 @@ public class InteractiveTest {
         Duration duration = Duration.between(start, end);
 
         LOG.debug("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + duration.toString());
-        LOG.debug("durationSeconds = " + durationSeconds);
         LOG.debug("duration.getSeconds(): " + duration.getSeconds());
         LOG.debug("duration.getNano(): " + duration.getNano());
         float totalReads = (float)n * (float)readsPerFile;
