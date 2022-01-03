@@ -690,7 +690,7 @@ public class InteractiveTest {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
         System.out.print("File contents:\n> ");
-        String fileContents = scanner.nextLine();
+        String fileContents = scanner.nextLine().trim();
 
         createFile(fileName, fileContents, hdfs);
     }

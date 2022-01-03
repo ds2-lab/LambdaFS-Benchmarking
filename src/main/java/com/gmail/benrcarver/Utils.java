@@ -105,6 +105,8 @@ public class Utils {
     /**
      * Randomly generate n strings to be used as file contents during a write operation.
      *
+     * If both minLength and maxLength are zero, then the array is populated with empty strings ("").
+     *
      * @param numberOfFiles The number of files to be written. We'll generate this many strings.
      * @param minLength Minimum length of a randomly-generated string (inclusive).
      * @param maxLength Maximum length of a randomly-generated string (exclusive).
@@ -115,7 +117,10 @@ public class Utils {
         String[] fileContents = new String[numberOfFiles];
 
         for (int i = 0; i < numberOfFiles; i++) {
-            fileContents[i] = RandomStringUtils.randomAlphabetic(minLength, maxLength);
+            if (minLength == 0 && maxLength == 0)
+                fileContents[i] = "";
+            else
+                fileContents[i] = RandomStringUtils.randomAlphabetic(minLength, maxLength);
         }
 
         return fileContents;
