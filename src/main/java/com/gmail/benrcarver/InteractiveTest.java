@@ -4,16 +4,12 @@ import com.google.gson.JsonObject;
 import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import io.hops.metrics.TransactionEvent;
-import io.hops.metrics.TransactionAttempt;
-import io.hops.transaction.context.TransactionsStats;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
-import io.hops.metrics.OperationPerformed;
 
 import javax.swing.*;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -73,9 +69,8 @@ public class InteractiveTest {
                     hdfs.dumpStatisticsPackages(true);
                     break;
                 case -2:
-                    LOG.debug("Printing operations performed...");
+                    LOG.warn("Printing operations performed not supported by Vanilla HopsFS...");
                     LOG.debug("");
-                    printOperationsPerformed(hdfs);
                     break;
                 case -1:
                     LOG.debug("Printing TCP debug information...");
@@ -225,51 +220,6 @@ public class InteractiveTest {
         }
     }
 
-    /**
-     * Print the operations performed. Optionally write them to a CSV.
-     */
-    private static void printOperationsPerformed(DistributedFileSystem hdfs) throws IOException {
-        System.out.print("Write to CSV? \n> ");
-        String input = scanner.nextLine();
-
-        hdfs.printOperationsPerformed();
-
-        if (input.equalsIgnoreCase("y")) {
-            System.out.print("File path? (no extension)\n> ");
-            String baseFilePath = scanner.nextLine();
-
-            BufferedWriter opsPerformedWriter = new BufferedWriter(new FileWriter(baseFilePath + ".csv"));
-            List<OperationPerformed> operationsPerformed = hdfs.getOperationsPerformed();
-
-            opsPerformedWriter.write(OperationPerformed.getHeader());
-            opsPerformedWriter.newLine();
-            for (OperationPerformed op : operationsPerformed) {
-                op.write(opsPerformedWriter);
-            }
-            opsPerformedWriter.close();
-
-            BufferedWriter txEventsWriter = new BufferedWriter(new FileWriter(baseFilePath + "-txevents.csv"));
-            HashMap<String, List<TransactionEvent>> transactionEvents = hdfs.getTransactionEvents();
-
-            LOG.debug("Writing " + transactionEvents.size() + " transaction event lists to CSV.");
-
-            txEventsWriter.write(TransactionEvent.getHeader());
-            txEventsWriter.newLine();
-
-            for (Map.Entry<String, List<TransactionEvent>> entry : transactionEvents.entrySet()) {
-                String requestId = entry.getKey();
-                List<TransactionEvent> txEvents = entry.getValue();
-
-                LOG.debug("Adding " + txEvents.size() + " transaction events to CSV.");
-                for (TransactionEvent transactionEvent : txEvents) {
-                    transactionEvent.write(txEventsWriter);
-                }
-            }
-
-            txEventsWriter.close();
-        }
-    }
-
     private static void readFilesOperation(final Configuration configuration, DistributedFileSystem sharedHdfs)
             throws InterruptedException {
         System.out.print("Path to local file containing HopsFS/HDFS paths:\n> ");
@@ -341,13 +291,6 @@ public class InteractiveTest {
         // count down. So, they all cannot start until they are all connected.
         final CountDownLatch latch = new CountDownLatch(numThreads);
 
-        final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
-                new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
-        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
-                = new ArrayBlockingQueue<>(numThreads);
-        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
-                = new ArrayBlockingQueue<>(numThreads);
-
         for (int i = 0; i < numThreads; i++) {
             final String[] pathsForThread = pathsPerThread[i];
             Thread thread = new Thread(() -> {
@@ -367,10 +310,6 @@ public class InteractiveTest {
                     for (int j = 0; j < readsPerFile; j++)
                         readFile(filePath, hdfs);
                 }
-
-                operationsPerformed.add(hdfs.getOperationsPerformed());
-                statisticsPackages.add(hdfs.getStatisticsPackages());
-                transactionEvents.add(hdfs.getTransactionEvents());
 
                 try {
                     hdfs.close();
@@ -399,23 +338,6 @@ public class InteractiveTest {
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
         LOG.debug("Throughput: " + throughput + " ops/sec.");
-
-        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            LOG.debug("Adding list of " + opsPerformed.size() +
-                    " operations performed to master/shared HDFS object.");
-            sharedHdfs.addOperationPerformeds(opsPerformed);
-        }
-
-        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            LOG.debug("Adding list of " + statPackages.size() +
-                    " statistics packages to master/shared HDFS object.");
-            sharedHdfs.mergeStatisticsPackages(statPackages, true);
-        }
-
-        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            LOG.debug("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
-            sharedHdfs.mergeTransactionEvents(txEvents, true);
-        }
     }
 
     /**
@@ -515,13 +437,6 @@ public class InteractiveTest {
 
             Thread[] threads = new Thread[numThreads];
 
-            final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
-                    new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
-            final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
-                    = new ArrayBlockingQueue<>(numThreads);
-            final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
-                    = new ArrayBlockingQueue<>(numThreads);
-
             for (int i = 0; i < numThreads; i++) {
                 final int idx = i;
                 Thread thread = new Thread(() -> {
@@ -537,10 +452,6 @@ public class InteractiveTest {
 
                     latch.countDown();
                     createFiles(targetPathsPerArray[idx], contentPerArray[idx], hdfs);
-
-                    operationsPerformed.add(hdfs.getOperationsPerformed());
-                    statisticsPackages.add(hdfs.getStatisticsPackages());
-                    transactionEvents.add(hdfs.getTransactionEvents());
 
                     try {
                         hdfs.close();
@@ -562,23 +473,6 @@ public class InteractiveTest {
                 thread.join();
             }
             end = Instant.now();
-
-            for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-                LOG.debug("Adding list of " + opsPerformed.size() +
-                        " operations performed to master/shared HDFS object.");
-                sharedHdfs.addOperationPerformeds(opsPerformed);
-            }
-
-            for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-                LOG.debug("Adding list of " + statPackages.size() +
-                        " statistics packages to master/shared HDFS object.");
-                sharedHdfs.mergeStatisticsPackages(statPackages, true);
-            }
-
-            for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-                LOG.debug("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
-                sharedHdfs.mergeTransactionEvents(txEvents, true);
-            }
         }
 
         Duration duration = Duration.between(start, end);
@@ -870,11 +764,6 @@ public class InteractiveTest {
             long readDuration = readEnd - readStart;
 
             LOG.debug("Read contents of file \"" + fileName + "\" from DataNode in " + readDuration + " milliseconds.");
-
-            OperationPerformed operationPerformed = new OperationPerformed(
-                    "ReadBlocksFromDataNode", UUID.randomUUID().toString(), readStart, readEnd,
-                    readStart, readEnd, readStart, readEnd, 999, false, true, "TCP", 0L, 0, 0);
-            hdfs.addOperationPerformed(operationPerformed);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
