@@ -722,13 +722,15 @@ public class InteractiveTest {
 
         try {
             FSDataOutputStream outputStream = hdfs.create(filePath);
-            LOG.debug("\t Called create() successfully.");
-            BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
-            LOG.debug("\t Created BufferedWriter object.");
-            br.write(contents);
-            LOG.debug("\t Wrote \"" + contents + "\" using BufferedWriter.");
-            br.close();
-            LOG.debug("\t Closed BufferedWriter.");
+
+            if (!contents.isEmpty()) {
+                BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
+                br.write(contents);
+                br.close();
+                LOG.debug("\t Successfully created non-empty file '" + filePath + "'");
+            } else {
+                LOG.debug("\t Successfully created empty file '" + filePath + "'");
+            }
         } catch (IOException ex) {
             ex.printStackTrace();
         }
