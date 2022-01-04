@@ -34,7 +34,7 @@ public class InteractiveTest {
         LOG.debug("Starting HdfsTest now.");
         Configuration configuration = Utils.getConfiguration();
         try {
-            configuration.addResource(new File("/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml").toURI().toURL());
+            configuration.addResource(new File("/home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0.2-RC0/etc/hadoop/hdfs-site.xml").toURI().toURL());
         } catch (MalformedURLException ex) {
             ex.printStackTrace();
         }
