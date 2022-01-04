@@ -283,7 +283,7 @@ public class InteractiveTest {
                 DistributedFileSystem hdfs = new DistributedFileSystem();
 
                 try {
-                    hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
+                    hdfs.initialize(new URI(filesystemEndpoint), configuration);
                 } catch (URISyntaxException | IOException ex) {
                     LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
                     ex.printStackTrace();
@@ -429,7 +429,7 @@ public class InteractiveTest {
                     DistributedFileSystem hdfs = new DistributedFileSystem();
 
                     try {
-                        hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
+                        hdfs.initialize(new URI(filesystemEndpoint), configuration);
                     } catch (URISyntaxException | IOException ex) {
                         LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
                         ex.printStackTrace();
