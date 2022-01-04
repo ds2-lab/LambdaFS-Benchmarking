@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 public class InteractiveTest {
     public static final Log LOG = LogFactory.getLog(InteractiveTest.class);
     
-    private static final String filesystemEndpoint = "hdfs://10.150.0.48:8020";
+    private static final String filesystemEndpoint = "hdfs://10.150.0.48:8020/";
 
     private static final Scanner scanner = new Scanner(System.in);
     //private static DistributedFileSystem hdfs;
