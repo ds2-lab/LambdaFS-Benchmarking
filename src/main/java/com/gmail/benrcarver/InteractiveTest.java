@@ -295,7 +295,13 @@ public class InteractiveTest {
      * @param localPath Text file containing HopsFS file paths to delete.
      */
     private static void deleteFiles(String localPath, DistributedFileSystem sharedHdfs) {
-        List<String> paths = Utils.getFilePathsFromFile(localPath);
+        List<String> paths;
+        try {
+            paths = Utils.getFilePathsFromFile(localPath);
+        } catch (FileNotFoundException ex) {
+            LOG.error("Could not find file: '" + localPath + "'");
+            return;
+        }
 
         for (String path : paths) {
             try {
@@ -317,7 +323,13 @@ public class InteractiveTest {
      */
     private static void readFiles(String path, int readsPerFile, int numThreads, final Configuration configuration,
                                   DistributedFileSystem sharedHdfs) throws InterruptedException {
-        List<String> paths = Utils.getFilePathsFromFile(path);
+        List<String> paths;
+        try {
+            paths = Utils.getFilePathsFromFile(path);
+        } catch (FileNotFoundException ex) {
+            LOG.error("Could not find file: '" + path + "'");
+            return;
+        }
         int n = paths.size();
 
         int filesPerArray = (int)Math.floor((double)n/numThreads);

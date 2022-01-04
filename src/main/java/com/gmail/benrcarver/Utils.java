@@ -28,7 +28,7 @@ public class Utils {
      * @param path Path to file on local FS containing HopsFS file paths.
      * @return List of HopsFS file paths read in from the specified local file.
      */
-    public static List<String> getFilePathsFromFile(String path) {
+    public static List<String> getFilePathsFromFile(String path) throws FileNotFoundException {
         List<String> filePaths = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new FileReader(path))) {
             String line = br.readLine();
