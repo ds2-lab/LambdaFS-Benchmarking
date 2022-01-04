@@ -43,7 +43,7 @@ public class InteractiveTest {
         LOG.debug("Created DistributedFileSystem object.");
 
         try {
-            hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
+            hdfs.initialize(new URI("hdfs://10.150.0.48:8020"), configuration);
             LOG.debug("Called initialize() successfully.");
         } catch (URISyntaxException | IOException ex) {
             LOG.error("");
