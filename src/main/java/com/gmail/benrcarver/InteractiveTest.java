@@ -693,19 +693,6 @@ public class InteractiveTest {
         }
     }
 
-    private static void pingOperation(DistributedFileSystem hdfs) {
-        System.out.print("Target deployment:\n> ");
-        int targetDeployment = Integer.parseInt(scanner.nextLine());
-
-        try {
-            hdfs.ping(targetDeployment);
-        } catch (IOException ex) {
-            LOG.debug("Encountered IOException while pinging NameNode deployment " +
-                    targetDeployment + ".");
-            ex.printStackTrace();
-        }
-    }
-
     private static void readOperation(DistributedFileSystem hdfs) {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
