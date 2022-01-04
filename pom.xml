@@ -81,13 +81,13 @@
         <dependency>
             <groupId>io.hops</groupId>
             <artifactId>hadoop-hdfs</artifactId>
-            <version>3.2.0.3-SNAPSHOT</version>
+            <version>3.2.0.2-RC0</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>io.hops</groupId>
             <artifactId>hadoop-common</artifactId>
-            <version>3.2.0.3-SNAPSHOT</version>
+            <version>3.2.0.2-RC0</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
