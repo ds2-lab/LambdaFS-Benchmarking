@@ -60,22 +60,19 @@ public class InteractiveTest {
 
             switch(op) {
                 case -4:
-                    LOG.debug("Clearing statistics packages...");
-                    clearStatisticsPackages(hdfs);
+                    LOG.debug("Clearing statistics packages is not supported for Vanilla HopsFS.");
                     break;
                 case -3:
-                    LOG.debug("Writing statistics packages to files...");
+                    LOG.debug("Writing statistics packages to files is not supported for Vanilla HopsFS.");
                     LOG.debug("");
-                    hdfs.dumpStatisticsPackages(true);
                     break;
                 case -2:
-                    LOG.warn("Printing operations performed not supported by Vanilla HopsFS...");
+                    LOG.warn("Printing operations performed is not supported by Vanilla HopsFS.");
                     LOG.debug("");
                     break;
                 case -1:
-                    LOG.debug("Printing TCP debug information...");
+                    LOG.debug("Printing TCP debug information is not supported by Vanilla HopsFS.");
                     LOG.debug("");
-                    hdfs.printDebugInformation();
                     break;
                 case 0:
                     LOG.debug("Exiting now... goodbye!");
@@ -119,12 +116,10 @@ public class InteractiveTest {
                     createSubtree(hdfs);
                     break;
                 case 9:
-                    LOG.debug("PING selected!");
-                    pingOperation(hdfs);
+                    LOG.debug("PING is not supported for Vanilla HopsFS!");
                     break;
                 case 10:
-                    LOG.debug("PREWARM selected!");
-                    prewarmOperation(hdfs);
+                    LOG.debug("PREWARM is not supported for Vanilla HopsFS!");
                     break;
                 case 11:
                     LOG.debug("WRITE FILES TO DIRECTORY selected!");
@@ -207,17 +202,6 @@ public class InteractiveTest {
 
         assert directories != null;
         writeFilesInternal(n, minLength, maxLength, numberOfThreads, directories, hdfs, configuration);
-    }
-
-    private static void clearStatisticsPackages(DistributedFileSystem hdfs) {
-        System.out.print("Are you sure? (y/N)\n> ");
-        String input = scanner.nextLine();
-
-        if (input.equalsIgnoreCase("y")) {
-            hdfs.clearStatistics(true, true, true);
-        } else {
-            LOG.debug("NOT clearing statistics packages.");
-        }
     }
 
     private static void readFilesOperation(final Configuration configuration, DistributedFileSystem sharedHdfs)
@@ -709,18 +693,6 @@ public class InteractiveTest {
         }
     }
 
-    private static void prewarmOperation(DistributedFileSystem hdfs) {
-        System.out.print("Invocations per deployment:\n> ");
-        int pingsPerDeployment = Integer.parseInt(scanner.nextLine());
-
-        try {
-            hdfs.prewarm(pingsPerDeployment);
-        } catch (IOException ex) {
-            LOG.debug("Encountered IOException while pre-warming NNs.");
-            ex.printStackTrace();
-        }
-    }
-
     private static void pingOperation(DistributedFileSystem hdfs) {
         System.out.print("Target deployment:\n> ");
         int targetDeployment = Integer.parseInt(scanner.nextLine());
@@ -801,11 +773,11 @@ public class InteractiveTest {
         System.out.println("");
         System.out.println("====== MENU ======");
         System.out.println("Debug Operations:");
-        System.out.println("(-4) Clear statistics\n(-3) Output statistics packages to CSV\n" +
-                "(-2) Output operations performed + write to file\n(-1) Print TCP debug information.");
+        System.out.println("(-4) Clear statistics [NOT SUPPORTED]\n(-3) Output statistics packages to CSV [NOT SUPPORTED]\n" +
+                "(-2) Output operations performed + write to file [NOT SUPPORTED]\n(-1) Print TCP debug information. [NOT SUPPORTED]");
         System.out.println("\nStandard Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
-                "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
+                "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping [NOT SUPPORTED]\n(10) Prewarm [NOT SUPPORTED]" +
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories");
         System.out.println("==================");
         System.out.println("");
