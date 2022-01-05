@@ -742,6 +742,7 @@ public class InteractiveTest {
                 LOG.debug("\t Successfully created non-empty file '" + filePath + "'");
             } else {
                 LOG.debug("\t Successfully created empty file '" + filePath + "'");
+                outputStream.close();
             }
         } catch (IOException ex) {
             ex.printStackTrace();
