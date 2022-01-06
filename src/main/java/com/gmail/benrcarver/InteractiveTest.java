@@ -34,6 +34,19 @@ public class InteractiveTest {
     private static final Scanner scanner = new Scanner(System.in);
     //private static DistributedFileSystem hdfs;
 
+    /////////////
+    // OPTIONS //
+    /////////////
+
+    /**
+     * If true, then all clients will issue a PING operation first, followed by whatever FS operation we're trying to
+     * do. The purpose of this is to potentially establish a TCP connection with the target NameNode before performing
+     * multiple operations in a row. There isn't really a point to doing this for a one-off operation, but if we're
+     * about to read/write a bunch of files, then it would make sense to establish a TCP connection right away so
+     * ALL subsequent operations are issued via TCP.
+     */
+    private static boolean pingFirst = false;
+
     public static void main(String[] args) throws InterruptedException, IOException {
         LOG.debug("Starting HdfsTest now.");
         Configuration configuration = Utils.getConfiguration();
@@ -63,6 +76,9 @@ public class InteractiveTest {
             int op = getNextOperation();
 
             switch(op) {
+                case -5:
+                    LOG.debug("OPTIONS MENU selected...");
+                    optionsOperation();
                 case -4:
                     LOG.debug("Clearing statistics packages...");
                     clearStatisticsPackages(hdfs);
@@ -150,6 +166,48 @@ public class InteractiveTest {
                 default:
                     LOG.debug("ERROR: Unknown or invalid operation specified: " + op);
                     break;
+            }
+        }
+    }
+
+    private static void showOptionsMenu() {
+        LOG.debug("====== OPTIONS ======");
+        LOG.debug("(1) PING FIRST: " + pingFirst);
+        LOG.debug("=====================");
+    }
+
+    private static void optionsOperation() {
+        LOG.debug("Welcome to the Options Menu.");
+        LOG.debug("Enter the integer corresponding to a given option to modify the value of that option.");
+        LOG.debug("For boolean options, entering their associated integer simply flips the value of the option.");
+        LOG.debug("Specify an integer <= 0 to exit the Options Menu.\n");
+
+        while (true) {
+            showOptionsMenu();
+            System.out.print("Select an option (or enter <= 0 to return to standard menu):\n> ");
+
+            String userInput = scanner.nextLine();
+            int selectedOption = 0;
+
+            try {
+                selectedOption = Integer.parseInt(userInput);
+
+                if (selectedOption > 1)
+                    throw new IllegalArgumentException("Invalid integer entered by user: " + selectedOption);
+            } catch (Exception ex) {
+                LOG.error("Invalid input: '" + userInput +
+                        "'. Please enter a valid integer associated with an option or an integer <= 0 to exit.");
+            }
+
+            if (selectedOption <= 0) {
+                LOG.debug("Returning to standard menu.");
+                return;
+            } else if (selectedOption == 1) {
+                LOG.debug("Setting 'PING FIRST' to " + (!pingFirst));
+                pingFirst = !pingFirst;
+            } else {
+                LOG.error("Invalid input: '" + userInput +
+                        "'. Please enter a valid integer associated with an option or an integer <= 0 to exit.");
             }
         }
     }
@@ -925,7 +983,7 @@ public class InteractiveTest {
         System.out.println("");
         System.out.println("====== MENU ======");
         System.out.println("Debug Operations:");
-        System.out.println("(-4) Clear statistics\n(-3) Output statistics packages to CSV\n" +
+        System.out.println("(-5) Options menu\n(-4) Clear statistics\n(-3) Output statistics packages to CSV\n" +
                 "(-2) Output operations performed + write to file\n(-1) Print TCP debug information.");
         System.out.println("\nStandard Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
