@@ -292,6 +292,24 @@ public class InteractiveTest {
 
         hdfs.printOperationsPerformed();
 
+        HashMap<String, List<TransactionEvent>> transactionEvents = hdfs.getTransactionEvents();
+        ArrayList<TransactionEvent> allTransactionEvents = new ArrayList<TransactionEvent>();
+        for (Map.Entry<String, List<TransactionEvent>> entry : transactionEvents.entrySet()) {
+            allTransactionEvents.addAll(entry.getValue());
+        }
+
+        System.out.println("====================== Transaction Events ========================");
+
+        System.out.println("\n-- SUMS ----------------------------------------------------------------------------------------------------------------------");
+        System.out.println(TransactionEvent.getMetricsHeader());
+        System.out.println(TransactionEvent.getMetricsString(TransactionEvent.getSums(allTransactionEvents)));
+
+        System.out.println("\n-- AVERAGES ------------------------------------------------------------------------------------------------------------------");
+        System.out.println(TransactionEvent.getMetricsHeader());
+        System.out.println(TransactionEvent.getMetricsString(TransactionEvent.getAverages(allTransactionEvents)));
+
+        System.out.println("\n==================================================================");
+
         if (input.equalsIgnoreCase("y")) {
             System.out.print("File path? (no extension)\n> ");
             String baseFilePath = scanner.nextLine();
@@ -307,9 +325,8 @@ public class InteractiveTest {
             opsPerformedWriter.close();
 
             BufferedWriter txEventsWriter = new BufferedWriter(new FileWriter(baseFilePath + "-txevents.csv"));
-            HashMap<String, List<TransactionEvent>> transactionEvents = hdfs.getTransactionEvents();
 
-            LOG.debug("Writing " + transactionEvents.size() + " transaction event lists to CSV.");
+            // LOG.debug("Writing " + transactionEvents.size() + " transaction event lists to CSV.");
 
             txEventsWriter.write(TransactionEvent.getHeader());
             txEventsWriter.newLine();
@@ -318,7 +335,7 @@ public class InteractiveTest {
                 String requestId = entry.getKey();
                 List<TransactionEvent> txEvents = entry.getValue();
 
-                LOG.debug("Adding " + txEvents.size() + " transaction events to CSV.");
+                // LOG.debug("Adding " + txEvents.size() + " transaction events to CSV.");
                 for (TransactionEvent transactionEvent : txEvents) {
                     transactionEvent.write(txEventsWriter);
                 }
@@ -918,6 +935,8 @@ public class InteractiveTest {
     }
 
     /**
+     *
+     *
      * Read the HopsFS/HDFS file at the given path.
      * @param fileName The path to the file to read.
      */
