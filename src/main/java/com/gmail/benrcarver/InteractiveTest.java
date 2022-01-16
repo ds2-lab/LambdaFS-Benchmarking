@@ -298,7 +298,7 @@ public class InteractiveTest {
             allTransactionEvents.addAll(entry.getValue());
         }
 
-        System.out.println("====================== Transaction Events ========================");
+        System.out.println("====================== Transaction Events ====================================================================================");
 
         System.out.println("\n-- SUMS ----------------------------------------------------------------------------------------------------------------------");
         System.out.println(TransactionEvent.getMetricsHeader());
@@ -308,7 +308,7 @@ public class InteractiveTest {
         System.out.println(TransactionEvent.getMetricsHeader());
         System.out.println(TransactionEvent.getMetricsString(TransactionEvent.getAverages(allTransactionEvents)));
 
-        System.out.println("\n==================================================================");
+        System.out.println("\n==============================================================================================================================");
 
         if (input.equalsIgnoreCase("y")) {
             System.out.print("File path? (no extension)\n> ");
