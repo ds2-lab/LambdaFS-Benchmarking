@@ -961,10 +961,10 @@ public class InteractiveTest {
 
             LOG.debug("Read contents of file \"" + fileName + "\" from DataNode in " + readDuration + " milliseconds.");
 
-            OperationPerformed operationPerformed = new OperationPerformed(
-                    "ReadBlocksFromDataNode", UUID.randomUUID().toString(), readStart, readEnd,
-                    readStart, readEnd, readStart, readEnd, 999, false, true, "TCP", 0L, 0, 0);
-            hdfs.addOperationPerformed(operationPerformed);
+//            OperationPerformed operationPerformed = new OperationPerformed(
+//                    "ReadBlocksFromDataNode", UUID.randomUUID().toString(), readStart, readEnd,
+//                    readStart, readEnd, readStart, readEnd, 999, false, true, "TCP", 0L, 0, 0);
+//            hdfs.addOperationPerformed(operationPerformed);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
