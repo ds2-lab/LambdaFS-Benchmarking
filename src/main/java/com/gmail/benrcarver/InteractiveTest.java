@@ -326,7 +326,7 @@ public class InteractiveTest {
         Duration duration = Duration.between(start, end);
 
         double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
-        LOG.debug("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + duration);
+        LOG.debug("Finished performing all " + (readsPerFile * n) + " file reads in " + duration);
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
         LOG.debug("Throughput: " + throughput + " ops/sec.");
@@ -856,7 +856,7 @@ public class InteractiveTest {
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping [NOT SUPPORTED]\n(10) Prewarm [NOT SUPPORTED]" +
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
-                "\n(15) Read N Files");
+                "\n(15) Read `n` Files");
         System.out.println("==================");
         System.out.println("");
         System.out.println("What would you like to do?");
