@@ -138,7 +138,11 @@ public class InteractiveTest {
                 case 14:
                     LOG.debug("WRITE FILES TO DIRECTORIES selected!");
                     writeFilesToDirectories(hdfs, configuration);
-
+                    break;
+                case 15:
+                    LOG.debug("READ N FILES selected!");
+                    readNFilesOperation(configuration);
+                    break;
                 default:
                     LOG.debug("ERROR: Unknown or invalid operation specified: " + op);
                     break;
@@ -245,6 +249,90 @@ public class InteractiveTest {
     }
 
     /**
+     * Query the user for:
+     *  - An integer `n`, the number of files to read
+     *  - The path to a local file containing `n` or more HopsFS file paths.
+     *  - The number of reads per file.
+     *
+     * This function will use `n` threads to read those `n` files.
+     */
+    private static void readNFilesOperation(final Configuration configuration)
+            throws InterruptedException {
+        System.out.print("How many files should be read?\n> ");
+        String inputN = scanner.nextLine();
+        int n = Integer.parseInt(inputN);
+
+        System.out.print("How many times should each file be read?\n> ");
+        String inputReadsPerFile = scanner.nextLine();
+        int readsPerFile = Integer.parseInt(inputReadsPerFile);
+
+        System.out.print("Please provide a path to a local file containing at least " + inputN + " HopsFS file " +
+                (n == 1 ? "path.\n> " : "paths.\n> "));
+        String inputPath = scanner.nextLine();
+
+        List<String> paths = Utils.getFilePathsFromFile(inputPath);
+
+        if (paths.size() < n) {
+            LOG.error("ERROR: The file should contain at least " + n +
+                    " HopsFS file path(s); however, it contains just " + paths.size() + " HopsFS file path(s).");
+            LOG.error("Aborting operation.");
+            return;
+        }
+
+        Thread[] threads = new Thread[n];
+
+        // Used to synchronize threads; they each connect to HopsFS and then
+        // count down. So, they all cannot start until they are all connected.
+        final CountDownLatch latch = new CountDownLatch(n);
+
+        for (int i = 0; i < n; i++) {
+            final String filePath = paths.get(i);
+            Thread thread = new Thread(() -> {
+                DistributedFileSystem hdfs = new DistributedFileSystem();
+
+                try {
+                    hdfs.initialize(new URI(filesystemEndpoint), configuration);
+                } catch (URISyntaxException | IOException ex) {
+                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
+                    ex.printStackTrace();
+                    System.exit(1);
+                }
+
+                latch.countDown();
+
+                for (int j = 0; j < readsPerFile; j++)
+                    readFile(filePath, hdfs);
+
+                try {
+                    hdfs.close();
+                } catch (IOException ex) {
+                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+                }
+            });
+            threads[i] = thread;
+        }
+
+        LOG.debug("Starting threads.");
+        Instant start = Instant.now();
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
+        LOG.debug("Joining threads.");
+        for (Thread thread : threads) {
+            thread.join();
+        }
+        Instant end = Instant.now();
+        Duration duration = Duration.between(start, end);
+
+        double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
+        LOG.debug("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + duration);
+        double totalReads = (double)n * (double)readsPerFile;
+        double throughput = (totalReads / durationSeconds);
+        LOG.debug("Throughput: " + throughput + " ops/sec.");
+    }
+
+    /**
      * Specify a file on the local filesystem containing a bunch of HopsFS file paths. Read the local file in order
      * to get all the HopsFS file paths, then read those files a configurable number of times.
      * @param path Path to file containing a bunch of HopsFS files.
@@ -268,7 +356,7 @@ public class InteractiveTest {
 
         String[][] pathsPerThread = Utils.splitArray(paths.toArray(new String[0]), filesPerArray);
 
-        assert pathsPerThread != null;
+        assert(pathsPerThread != null);
         LOG.debug("pathsPerThread.length: " + pathsPerThread.length);
 
         Thread[] threads = new Thread[numThreads];
@@ -767,7 +855,8 @@ public class InteractiveTest {
         System.out.println("\nStandard Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping [NOT SUPPORTED]\n(10) Prewarm [NOT SUPPORTED]" +
-                "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories");
+                "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
+                "\n(15) Read N Files");
         System.out.println("==================");
         System.out.println("");
         System.out.println("What would you like to do?");
