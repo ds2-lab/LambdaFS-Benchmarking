@@ -165,7 +165,7 @@ public class InteractiveTest {
                     break;
                 case 15:
                     LOG.debug("READ N FILES selected!");
-                    readNFilesOperation(configuration);
+                    readNFilesOperation(configuration, hdfs);
                     break;
                 default:
                     LOG.debug("ERROR: Unknown or invalid operation specified: " + op);
