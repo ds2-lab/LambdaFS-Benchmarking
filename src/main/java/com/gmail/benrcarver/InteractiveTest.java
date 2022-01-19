@@ -31,6 +31,8 @@ import java.util.concurrent.TimeUnit;
 public class InteractiveTest {
     public static final Log LOG = LogFactory.getLog(InteractiveTest.class);
 
+    private final static String namenodeEndpoint = "hdfs://10.150.0.17:9000";
+
     private static final Scanner scanner = new Scanner(System.in);
     //private static DistributedFileSystem hdfs;
 
@@ -60,7 +62,7 @@ public class InteractiveTest {
         LOG.debug("Created DistributedFileSystem object.");
 
         try {
-            hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
+            hdfs.initialize(new URI(namenodeEndpoint), configuration);
             LOG.debug("Called initialize() successfully.");
         } catch (URISyntaxException | IOException ex) {
             LOG.error("");
@@ -337,7 +339,7 @@ public class InteractiveTest {
                 DistributedFileSystem hdfs = new DistributedFileSystem();
 
                 try {
-                    hdfs.initialize(new URI(filesystemEndpoint), configuration);
+                    hdfs.initialize(new URI(namenodeEndpoint), configuration);
                 } catch (URISyntaxException | IOException ex) {
                     LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
                     ex.printStackTrace();
@@ -496,7 +498,7 @@ public class InteractiveTest {
 
         for (String path : paths) {
             try {
-                Path filePath = new Path("hdfs://10.241.64.14:9000/" + path);
+                Path filePath = new Path(namenodeEndpoint + path);
                 boolean success = sharedHdfs.delete(filePath, true);
                 LOG.debug("\t Delete was successful: " + success);
             } catch (IOException ex) {
@@ -557,7 +559,7 @@ public class InteractiveTest {
                 DistributedFileSystem hdfs = new DistributedFileSystem();
 
                 try {
-                    hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
+                    hdfs.initialize(new URI(namenodeEndpoint), configuration);
                 } catch (URISyntaxException | IOException ex) {
                     LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
                     ex.printStackTrace();
@@ -731,7 +733,7 @@ public class InteractiveTest {
                     DistributedFileSystem hdfs = new DistributedFileSystem();
 
                     try {
-                        hdfs.initialize(new URI("hdfs://10.241.64.14:9000"), configuration);
+                        hdfs.initialize(new URI(namenodeEndpoint), configuration);
                     } catch (URISyntaxException | IOException ex) {
                         LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
                         ex.printStackTrace();
@@ -921,7 +923,7 @@ public class InteractiveTest {
      * @param contents The content to be written to the file.
      */
     private static void createFile(String name, String contents, DistributedFileSystem hdfs) {
-        Path filePath = new Path("hdfs://10.241.64.14:9000/" + name);
+        Path filePath = new Path(namenodeEndpoint + name);
 
         try {
             FSDataOutputStream outputStream = hdfs.create(filePath);
@@ -946,8 +948,8 @@ public class InteractiveTest {
         System.out.print("Renamed file path:\n> ");
         String renamedFileName = scanner.nextLine();
 
-        Path filePath = new Path("hdfs://10.241.64.14:9000/" + originalFileName);
-        Path filePathRename = new Path("hdfs://10.241.64.14:9000/" + renamedFileName);
+        Path filePath = new Path(namenodeEndpoint + originalFileName);
+        Path filePathRename = new Path(namenodeEndpoint + renamedFileName);
 
         try {
             LOG.debug("\t Original file path: \"" + originalFileName + "\"");
@@ -964,7 +966,7 @@ public class InteractiveTest {
         String targetDirectory = scanner.nextLine();
 
         try {
-            FileStatus[] fileStatus = hdfs.listStatus(new Path("hdfs://10.241.64.14:9000/" + targetDirectory));
+            FileStatus[] fileStatus = hdfs.listStatus(new Path(namenodeEndpoint + targetDirectory));
             LOG.debug("Directory '" + targetDirectory + "' contains " + fileStatus.length + " files.");
             for(FileStatus status : fileStatus)
                 LOG.debug(status.getPath().toString());
@@ -979,7 +981,7 @@ public class InteractiveTest {
      * @param path The path of the new directory.
      */
     private static void mkdir(String path, DistributedFileSystem hdfs) {
-        Path filePath = new Path("hdfs://10.241.64.14:9000/" + path);
+        Path filePath = new Path(namenodeEndpoint + path);
 
         try {
             LOG.debug("\t Attempting to create new directory: \"" + path + "\"");
@@ -1003,7 +1005,7 @@ public class InteractiveTest {
         System.out.print("Content to append:\n> ");
         String fileContents = scanner.nextLine();
 
-        Path filePath = new Path("hdfs://10.241.64.14:9000/" + fileName);
+        Path filePath = new Path(namenodeEndpoint + fileName);
 
         try {
             FSDataOutputStream outputStream = hdfs.append(filePath);
@@ -1057,7 +1059,7 @@ public class InteractiveTest {
      * @param fileName The path to the file to read.
      */
     private static void readFile(String fileName, DistributedFileSystem hdfs) {
-        Path filePath = new Path("hdfs://10.241.64.14:9000/" + fileName);
+        Path filePath = new Path(namenodeEndpoint + fileName);
 
         try {
             FSDataInputStream inputStream = hdfs.open(filePath);
@@ -1090,7 +1092,7 @@ public class InteractiveTest {
         System.out.print("File or directory path:\n> ");
         String targetPath = scanner.nextLine();
 
-        Path filePath = new Path("hdfs://10.241.64.14:9000/" + targetPath);
+        Path filePath = new Path(namenodeEndpoint + targetPath);
 
         try {
             boolean success = hdfs.delete(filePath, true);
