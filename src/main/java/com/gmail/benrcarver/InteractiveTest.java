@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 public class InteractiveTest {
     public static final Log LOG = LogFactory.getLog(InteractiveTest.class);
 
-    private final static String namenodeEndpoint = "hdfs://10.150.0.17:9000";
+    private final static String namenodeEndpoint = "hdfs://10.150.0.17:9000/";
 
     private static final Scanner scanner = new Scanner(System.in);
     //private static DistributedFileSystem hdfs;
@@ -1125,7 +1125,7 @@ public class InteractiveTest {
         System.out.println("\nStandard Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
-                "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories\n" +
+                "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
                 "\n(15) Read `n` Files");
         System.out.println("==================");
         System.out.println("");
