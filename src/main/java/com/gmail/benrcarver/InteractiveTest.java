@@ -328,20 +328,20 @@ public class InteractiveTest {
         Collections.shuffle(paths);
         List<String> selectedPaths = paths.subList(0, n);
 
-        Thread[] threads = new Thread[n];
+        Thread[] threads = new Thread[numThreads];
 
         // Used to synchronize threads; they each connect to HopsFS and then
         // count down. So, they all cannot start until they are all connected.
-        final CountDownLatch latch = new CountDownLatch(n);
+        final CountDownLatch latch = new CountDownLatch(numThreads);
 
         final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
-                new java.util.concurrent.ArrayBlockingQueue<>(n);
+                new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
         final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
-                = new ArrayBlockingQueue<>(n);
+                = new ArrayBlockingQueue<>(numThreads);
         final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
-                = new ArrayBlockingQueue<>(n);
+                = new ArrayBlockingQueue<>(numThreads);
 
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < numThreads; i++) {
             Thread thread = new Thread(() -> {
                 DistributedFileSystem hdfs = new DistributedFileSystem();
 
