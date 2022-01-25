@@ -78,9 +78,9 @@ public class InteractiveTest {
             int op = getNextOperation();
 
             switch(op) {
-                case -5:
-                    LOG.info("OPTIONS MENU selected...");
-                    optionsOperation();
+//                case -5:
+//                    LOG.info("OPTIONS MENU selected...");
+//                    optionsOperation();
                 case -4:
                     LOG.info("Clearing statistics packages...");
                     clearStatisticsPackages(hdfs);
@@ -166,8 +166,12 @@ public class InteractiveTest {
                     writeFilesToDirectories(hdfs, configuration);
                     break;
                 case 15:
-                    LOG.info("READ N FILES selected!");
+                    LOG.info("'Read n Files with n Threads (Weak Scaling)' selected!");
                     readNFilesOperation(configuration, hdfs);
+                    break;
+                case 16:
+                    LOG.info("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
+                    strongScalingBenchmark(configuration, hdfs);
                     break;
                 default:
                     LOG.info("ERROR: Unknown or invalid operation specified: " + op);
@@ -287,6 +291,123 @@ public class InteractiveTest {
         } else {
             LOG.info("NOT clearing statistics packages.");
         }
+    }
+
+    private static void strongScalingBenchmark(final Configuration configuration,
+                                               final DistributedFileSystem sharedHdfs)
+            throws InterruptedException, FileNotFoundException {
+        // User provides file containing HopsFS file paths.
+        // Specifies how many files each thread should read.
+        // Specifies number of threads.
+        // Specifies how many times each file should be read.
+        System.out.print("How many files should be read by each thread?\n> ");
+        String inputN = scanner.nextLine();
+        int n = Integer.parseInt(inputN);
+
+        System.out.print("How many times should each file be read?\n> ");
+        String inputReadsPerFile = scanner.nextLine();
+        int readsPerFile = Integer.parseInt(inputReadsPerFile);
+
+        System.out.print("Number of threads:\n> ");
+        int numThreads = Integer.parseInt(scanner.nextLine());
+
+        System.out.print("Please provide a path to a local file containing at least " + inputN + " HopsFS file " +
+                (n == 1 ? "path.\n> " : "paths.\n> "));
+        String inputPath = scanner.nextLine();
+
+        List<String> paths = Utils.getFilePathsFromFile(inputPath);
+
+        if (paths.size() < n) {
+            LOG.error("ERROR: The file should contain at least " + n +
+                    " HopsFS file path(s); however, it contains just " + paths.size() + " HopsFS file path(s).");
+            LOG.error("Aborting operation.");
+            return;
+        }
+
+        // Select a random subset of size n, where n is the number of files each thread should rea.d
+        Collections.shuffle(paths);
+        List<String> selectedPaths = paths.subList(0, n);
+
+        Thread[] threads = new Thread[n];
+
+        // Used to synchronize threads; they each connect to HopsFS and then
+        // count down. So, they all cannot start until they are all connected.
+        final CountDownLatch latch = new CountDownLatch(n);
+
+        final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
+                new java.util.concurrent.ArrayBlockingQueue<>(n);
+        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
+                = new ArrayBlockingQueue<>(n);
+        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
+                = new ArrayBlockingQueue<>(n);
+
+        for (int i = 0; i < n; i++) {
+            Thread thread = new Thread(() -> {
+                DistributedFileSystem hdfs = new DistributedFileSystem();
+
+                try {
+                    hdfs.initialize(new URI(namenodeEndpoint), configuration);
+                } catch (URISyntaxException | IOException ex) {
+                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
+                    ex.printStackTrace();
+                    System.exit(1);
+                }
+
+                latch.countDown();
+
+                for (String filePath : selectedPaths) {
+                    for (int j = 0; j < readsPerFile; j++)
+                        readFile(filePath, hdfs);
+                }
+
+                operationsPerformed.add(hdfs.getOperationsPerformed());
+                statisticsPackages.add(hdfs.getStatisticsPackages());
+                transactionEvents.add(hdfs.getTransactionEvents());
+
+                try {
+                    hdfs.close();
+                } catch (IOException ex) {
+                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+                }
+            });
+            threads[i] = thread;
+        }
+
+        LOG.info("Starting threads.");
+        Instant start = Instant.now();
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
+        LOG.info("Joining threads.");
+        for (Thread thread : threads) {
+            thread.join();
+        }
+        Instant end = Instant.now();
+        Duration duration = Duration.between(start, end);
+
+        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
+            LOG.info("Adding list of " + opsPerformed.size() +
+                    " operations performed to master/shared HDFS object.");
+            sharedHdfs.addOperationPerformeds(opsPerformed);
+        }
+
+        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
+            LOG.info("Adding list of " + statPackages.size() +
+                    " statistics packages to master/shared HDFS object.");
+            sharedHdfs.mergeStatisticsPackages(statPackages, true);
+        }
+
+        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
+            LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
+            sharedHdfs.mergeTransactionEvents(txEvents, true);
+        }
+
+        double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
+        double totalReads = (double)n * (double)readsPerFile * (double)numThreads;
+        double throughput = (totalReads / durationSeconds);
+        LOG.info("Finished performing all " + totalReads + " file reads in " + duration);
+        LOG.info("Throughput: " + throughput + " ops/sec.");
     }
 
     /**
@@ -1120,13 +1241,13 @@ public class InteractiveTest {
         System.out.println("");
         System.out.println("====== MENU ======");
         System.out.println("Debug Operations:");
-        System.out.println("(-5) Options menu\n(-4) Clear statistics\n(-3) Output statistics packages to CSV\n" +
+        System.out.println("\n(-4) Clear statistics\n(-3) Output statistics packages to CSV\n" +
                 "(-2) Output operations performed + write to file\n(-1) Print TCP debug information.");
         System.out.println("\nStandard Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
-                "\n(15) Read `n` Files");
+                "\n(15) Read n Files with n Threads (Weak Scaling)\n(16) Read n Files y Times with z Threads (Strong Scaling)");
         System.out.println("==================");
         System.out.println("");
         System.out.println("What would you like to do?");
