@@ -199,7 +199,7 @@ public class InteractiveTest {
                 DistributedFileSystem hdfs = new DistributedFileSystem();
 
                 try {
-                    hdfs.initialize(new URI(namenodeEndpoint), configuration);
+                    hdfs.initialize(new URI(filesystemEndpoint), configuration);
                 } catch (URISyntaxException | IOException ex) {
                     LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
                     ex.printStackTrace();
