@@ -140,14 +140,106 @@ public class InteractiveTest {
                     writeFilesToDirectories(hdfs, configuration);
                     break;
                 case 15:
-                    LOG.debug("READ N FILES selected!");
+                    LOG.debug("'Read n Files with n Threads (Weak Scaling)' selected!");
                     readNFilesOperation(configuration);
+                    break;
+                case 16:
+                    LOG.debug("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
+                    strongScalingBenchmark(configuration);
                     break;
                 default:
                     LOG.debug("ERROR: Unknown or invalid operation specified: " + op);
                     break;
             }
         }
+    }
+
+    private static void strongScalingBenchmark(final Configuration configuration)
+            throws InterruptedException, FileNotFoundException {
+        // User provides file containing HopsFS file paths.
+        // Specifies how many files each thread should read.
+        // Specifies number of threads.
+        // Specifies how many times each file should be read.
+        System.out.print("How many files should be read by each thread?\n> ");
+        String inputN = scanner.nextLine();
+        int n = Integer.parseInt(inputN);
+
+        System.out.print("How many times should each file be read?\n> ");
+        String inputReadsPerFile = scanner.nextLine();
+        int readsPerFile = Integer.parseInt(inputReadsPerFile);
+
+        System.out.print("Number of threads:\n> ");
+        int numThreads = Integer.parseInt(scanner.nextLine());
+
+        System.out.print("Please provide a path to a local file containing at least " + inputN + " HopsFS file " +
+                (n == 1 ? "path.\n> " : "paths.\n> "));
+        String inputPath = scanner.nextLine();
+
+        List<String> paths = Utils.getFilePathsFromFile(inputPath);
+
+        if (paths.size() < n) {
+            LOG.error("ERROR: The file should contain at least " + n +
+                    " HopsFS file path(s); however, it contains just " + paths.size() + " HopsFS file path(s).");
+            LOG.error("Aborting operation.");
+            return;
+        }
+
+        // Select a random subset of size n, where n is the number of files each thread should rea.d
+        Collections.shuffle(paths);
+        List<String> selectedPaths = paths.subList(0, n);
+
+        Thread[] threads = new Thread[numThreads];
+
+        // Used to synchronize threads; they each connect to HopsFS and then
+        // count down. So, they all cannot start until they are all connected.
+        final CountDownLatch latch = new CountDownLatch(numThreads);
+
+        for (int i = 0; i < numThreads; i++) {
+            Thread thread = new Thread(() -> {
+                DistributedFileSystem hdfs = new DistributedFileSystem();
+
+                try {
+                    hdfs.initialize(new URI(namenodeEndpoint), configuration);
+                } catch (URISyntaxException | IOException ex) {
+                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
+                    ex.printStackTrace();
+                    System.exit(1);
+                }
+
+                latch.countDown();
+
+                for (String filePath : selectedPaths) {
+                    for (int j = 0; j < readsPerFile; j++)
+                        readFile(filePath, hdfs);
+                }
+
+                try {
+                    hdfs.close();
+                } catch (IOException ex) {
+                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+                }
+            });
+            threads[i] = thread;
+        }
+
+        LOG.info("Starting threads.");
+        Instant start = Instant.now();
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
+        LOG.info("Joining threads.");
+        for (Thread thread : threads) {
+            thread.join();
+        }
+        Instant end = Instant.now();
+        Duration duration = Duration.between(start, end);
+
+        double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
+        double totalReads = (double)n * (double)readsPerFile * (double)numThreads;
+        double throughput = (totalReads / durationSeconds);
+        LOG.info("Finished performing all " + totalReads + " file reads in " + duration);
+        LOG.info("Throughput: " + throughput + " ops/sec.");
     }
 
     private static void writeFilesToDirectories(DistributedFileSystem hdfs, final Configuration configuration) throws IOException, InterruptedException {
@@ -856,7 +948,7 @@ public class InteractiveTest {
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping [NOT SUPPORTED]\n(10) Prewarm [NOT SUPPORTED]" +
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
-                "\n(15) Read `n` Files");
+                "\n(15) Read n Files with n Threads (Weak Scaling)\n(16) Read n Files y Times with z Threads (Strong Scaling)");
         System.out.println("==================");
         System.out.println("");
         System.out.println("What would you like to do?");
