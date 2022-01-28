@@ -9,6 +9,7 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -142,7 +143,7 @@ public class Commands {
         // count down. So, they all cannot start until they are all connected.
         final CountDownLatch latch = new CountDownLatch(numThreads);
 
-        final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
+        final BlockingQueue<List<OperationPerformed>> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
         final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
                 = new ArrayBlockingQueue<>(numThreads);
