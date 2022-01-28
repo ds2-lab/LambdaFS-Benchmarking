@@ -78,6 +78,10 @@ public class Follower {
         });
     }
 
+    private void stopClient() {
+        client.stop();
+    }
+
     private DistributedFileSystem initDfsClient() {
         LOG.debug("Creating HDFS client now...");
         hdfsConfiguration = Utils.getConfiguration(hdfsConfigFilePath);
@@ -131,14 +135,16 @@ public class Follower {
                 hdfs.printDebugInformation();
                 break;
             case OP_EXIT:
-                LOG.info("Exiting now... goodbye!");
+                LOG.info("Received 'STOP' operation from Leader. Shutting down primary HDFS connection now.");
                 try {
                     hdfs.close();
                 } catch (IOException ex) {
                     LOG.info("Encountered exception while closing file system...");
                     ex.printStackTrace();
                 }
-                stopServer();
+                LOG.info("Stopping TCP client now.");
+                stopClient();
+                LOG.info("Exiting now... goodbye!");
                 System.exit(0);
             case OP_CREATE_FILE:
                 LOG.info("CREATE FILE selected!");

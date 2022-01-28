@@ -291,7 +291,7 @@ public class Commander {
                     break;
                 case OP_STRONG_SCALING:
                     LOG.info("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
-                    Commands.strongScalingOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                    strongScalingOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                     break;
                 default:
                     LOG.info("ERROR: Unknown or invalid operation specified: " + op);

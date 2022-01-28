@@ -111,7 +111,8 @@ public class Commands {
     public static void strongScalingBenchmark(final Configuration configuration,
                                                 final DistributedFileSystem sharedHdfs,
                                                 final String nameNodeEndpoint,
-                                                int n, int readsPerFile, int numThreads, String inputPaths) {
+                                                int n, int readsPerFile, int numThreads, String inputPath)
+            throws FileNotFoundException {
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
 
         if (paths.size() < n) {
