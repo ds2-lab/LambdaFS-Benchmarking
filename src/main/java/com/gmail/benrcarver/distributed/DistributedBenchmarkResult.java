@@ -10,6 +10,8 @@ public class DistributedBenchmarkResult implements Serializable {
     public long startTime;
     public long stopTime;
 
+    public DistributedBenchmarkResult() { }
+
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed, double duration, long startTime,
                                       long stopTime) {
         this.opId = opId;
