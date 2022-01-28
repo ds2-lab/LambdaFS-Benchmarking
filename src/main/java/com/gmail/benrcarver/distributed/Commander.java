@@ -4,7 +4,6 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.gmail.benrcarver.distributed.util.Utils;
-import com.gmail.benrcarver.distributed.util.TreeNode;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import net.schmizz.sshj.SSHClient;
@@ -26,16 +25,11 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static com.gmail.benrcarver.distributed.Constants.*;
@@ -293,17 +287,114 @@ public class Commander {
                     break;
                 case OP_WEAK_SCALING:
                     LOG.info("'Read n Files with n Threads (Weak Scaling)' selected!");
-                    Commands.readNFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                    readNFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                     break;
                 case OP_STRONG_SCALING:
                     LOG.info("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
-                    Commands.strongScalingBenchmark(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                    Commands.strongScalingOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                     break;
                 default:
                     LOG.info("ERROR: Unknown or invalid operation specified: " + op);
                     break;
             }
         }
+    }
+
+    /**
+     * Issue a command to all our followers.
+     * @param opName The name of the command.
+     * @param payload Contains the command and necessary arguments.
+     */
+    private void issueCommandToFollowers(String opName, JsonObject payload) {
+        LOG.debug("Issuing '" + opName + "' command to " + followers.size() + " follower(s).");
+        String payloadStr = new Gson().toJson(payload);
+        for (Connection followerConnection : followers) {
+            LOG.debug("Sending '" + opName + "' operation to follower at " +
+                    followerConnection.getRemoteAddressTCP());
+            followerConnection.sendTCP(payloadStr);
+        }
+    }
+
+    public void strongScalingOperation(final Configuration configuration,
+                                              final DistributedFileSystem sharedHdfs,
+                                              final String nameNodeEndpoint)
+            throws InterruptedException, FileNotFoundException {
+        // User provides file containing HopsFS file paths.
+        // Specifies how many files each thread should read.
+        // Specifies number of threads.
+        // Specifies how many times each file should be read.
+        System.out.print("How many files should be read by each thread?\n> ");
+        String inputN = scanner.nextLine();
+        int n = Integer.parseInt(inputN);
+
+        System.out.print("How many times should each file be read?\n> ");
+        String inputReadsPerFile = scanner.nextLine();
+        int readsPerFile = Integer.parseInt(inputReadsPerFile);
+
+        System.out.print("Number of threads:\n> ");
+        int numThreads = Integer.parseInt(scanner.nextLine());
+
+        System.out.print("Please provide a path to a local file containing at least " + n + " HopsFS file " +
+                (n == 1 ? "path.\n> " : "paths.\n> "));
+        String inputPath = scanner.nextLine();
+
+        String operationId = UUID.randomUUID().toString();
+        if (followers.size() > 0) {
+            JsonObject payload = new JsonObject();
+            payload.addProperty(OPERATION, OP_WEAK_SCALING);
+            payload.addProperty(OPERATION_ID, operationId);
+            payload.addProperty("n", n);
+            payload.addProperty("readsPerFile", readsPerFile);
+            payload.addProperty("numThreads", numThreads);
+            payload.addProperty("inputPath", inputPath);
+
+            issueCommandToFollowers("Read N Files with N Threads (Weak Scaling)", payload);
+        }
+        // TODO: Make this return some sort of 'result' object encapsulating the result.
+        //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
+        Commands.strongScalingBenchmark(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile, numThreads, inputPath);
+    }
+
+    /**
+     * Weak scaling benchmark.
+     *
+     * Query the user for:
+     *  - An integer `n`, the number of files to read
+     *  - The path to a local file containing `n` or more HopsFS file paths.
+     *  - The number of reads per file.
+     *
+     * This function will use `n` threads to read those `n` files.
+     */
+    private void readNFilesOperation(final Configuration configuration,
+                                           final DistributedFileSystem sharedHdfs,
+                                           final String nameNodeEndpoint)
+            throws InterruptedException, FileNotFoundException {
+        System.out.print("How many files should be read?\n> ");
+        String inputN = scanner.nextLine();
+        int n = Integer.parseInt(inputN);
+
+        System.out.print("How many times should each file be read?\n> ");
+        String inputReadsPerFile = scanner.nextLine();
+        int readsPerFile = Integer.parseInt(inputReadsPerFile);
+
+        System.out.print("Please provide a path to a local file containing at least " + inputN + " HopsFS file " +
+                (n == 1 ? "path.\n> " : "paths.\n> "));
+        String inputPath = scanner.nextLine();
+
+        String operationId = UUID.randomUUID().toString();
+        if (followers.size() > 0) {
+            JsonObject payload = new JsonObject();
+            payload.addProperty(OPERATION, OP_WEAK_SCALING);
+            payload.addProperty(OPERATION_ID, operationId);
+            payload.addProperty("n", n);
+            payload.addProperty("readsPerFile", readsPerFile);
+            payload.addProperty("inputPath", inputPath);
+
+            issueCommandToFollowers("Read N Files with N Threads (Weak Scaling)", payload);
+        }
+        // TODO: Make this return some sort of 'result' object encapsulating the result.
+        //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
+        Commands.readNFiles(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile, inputPath);
     }
 
     private int getNextOperation() {

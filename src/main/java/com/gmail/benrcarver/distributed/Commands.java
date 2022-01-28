@@ -105,29 +105,13 @@ public class Commands {
         }
     }
 
+    /**
+     * Gets the user inputs for this benchmark, then calls the actual benchmark itself.
+     */
     public static void strongScalingBenchmark(final Configuration configuration,
-                                              final DistributedFileSystem sharedHdfs,
-                                              final String nameNodeEndpoint)
-            throws InterruptedException, FileNotFoundException {
-        // User provides file containing HopsFS file paths.
-        // Specifies how many files each thread should read.
-        // Specifies number of threads.
-        // Specifies how many times each file should be read.
-        System.out.print("How many files should be read by each thread?\n> ");
-        String inputN = scanner.nextLine();
-        int n = Integer.parseInt(inputN);
-
-        System.out.print("How many times should each file be read?\n> ");
-        String inputReadsPerFile = scanner.nextLine();
-        int readsPerFile = Integer.parseInt(inputReadsPerFile);
-
-        System.out.print("Number of threads:\n> ");
-        int numThreads = Integer.parseInt(scanner.nextLine());
-
-        System.out.print("Please provide a path to a local file containing at least " + inputN + " HopsFS file " +
-                (n == 1 ? "path.\n> " : "paths.\n> "));
-        String inputPath = scanner.nextLine();
-
+                                                final DistributedFileSystem sharedHdfs,
+                                                final String nameNodeEndpoint,
+                                                int n, int readsPerFile, int numThreads, String inputPaths) {
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
 
         if (paths.size() < n) {
@@ -224,29 +208,18 @@ public class Commands {
     }
 
     /**
-     * Query the user for:
-     *  - An integer `n`, the number of files to read
-     *  - The path to a local file containing `n` or more HopsFS file paths.
-     *  - The number of reads per file.
+     * Read N files using N threads (so, each thread reads 1 file). Each file is read a specified number of times.
      *
-     * This function will use `n` threads to read those `n` files.
+     * @param n Number of files to read.
+     * @param readsPerFile How many times each file should be read.
+     * @param inputPath Path to local file containing HopsFS filepaths (of the files to read).
      */
-    public static void readNFilesOperation(final Configuration configuration,
-                                           final DistributedFileSystem sharedHdfs,
-                                           final String nameNodeEndpoint)
-            throws InterruptedException, FileNotFoundException {
-        System.out.print("How many files should be read?\n> ");
-        String inputN = scanner.nextLine();
-        int n = Integer.parseInt(inputN);
-
-        System.out.print("How many times should each file be read?\n> ");
-        String inputReadsPerFile = scanner.nextLine();
-        int readsPerFile = Integer.parseInt(inputReadsPerFile);
-
-        System.out.print("Please provide a path to a local file containing at least " + inputN + " HopsFS file " +
-                (n == 1 ? "path.\n> " : "paths.\n> "));
-        String inputPath = scanner.nextLine();
-
+    public static void readNFiles(final Configuration configuration,
+                                  final DistributedFileSystem sharedHdfs,
+                                  final String nameNodeEndpoint,
+                                  int n,
+                                  int readsPerFile,
+                                  String inputPath) throws InterruptedException, FileNotFoundException {
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
 
         if (paths.size() < n) {

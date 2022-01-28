@@ -108,6 +108,9 @@ public class Follower {
         int operation = message.getAsJsonPrimitive(OPERATION).getAsInt();
 
         switch(operation) {
+            case OP_REGISTRATION:
+                handleRegistration(message);
+                break;
             case OP_CLEAR_STATISTICS:
                 LOG.info("Clearing statistics packages...");
                 Commands.clearStatisticsPackages(hdfs);
@@ -195,14 +198,23 @@ public class Follower {
                 break;
             case OP_WEAK_SCALING:
                 LOG.info("'Read n Files with n Threads (Weak Scaling)' selected!");
-                Commands.readNFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                Commands.readNFiles(hdfsConfiguration,
+                        hdfs, nameNodeEndpoint,
+                        message.getAsJsonPrimitive("n").getAsInt(),
+                        message.getAsJsonPrimitive("readsPerFile").getAsInt(),
+                        message.getAsJsonPrimitive("inputPath").getAsString());
                 break;
             case OP_STRONG_SCALING:
                 LOG.info("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
-                Commands.strongScalingBenchmark(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                Commands.strongScalingBenchmark(hdfsConfiguration,
+                        hdfs, nameNodeEndpoint,
+                        message.getAsJsonPrimitive("n").getAsInt(),
+                        message.getAsJsonPrimitive("readsPerFile").getAsInt(),
+                        message.getAsJsonPrimitive("numThreads").getAsInt(),
+                        message.getAsJsonPrimitive("inputPath").getAsString());
                 break;
             default:
-                LOG.info("ERROR: Unknown or invalid operation specified: " + op);
+                LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
                 break;
         }
     }
