@@ -245,7 +245,7 @@ public class Commander {
                     break;
                 case 5:
                     LOG.info("DELETE selected!");
-                    Commands.deleteOperation(hdfs);
+                    Commands.deleteOperation(hdfs, nameNodeEndpoint);
                     break;
                 case 6:
                     LOG.info("LIST selected!");
@@ -273,11 +273,11 @@ public class Commander {
                     break;
                 case 12:
                     LOG.info("READ FILES selected!");
-                    Commands.readFilesOperation(hdfsConfiguration, hdfs);
+                    Commands.readFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                     break;
                 case 13:
                     LOG.info("DELETE FILES selected!");
-                    Commands.deleteFilesOperation(hdfs);
+                    Commands.deleteFilesOperation(hdfs, nameNodeEndpoint);
                     break;
                 case 14:
                     LOG.info("WRITE FILES TO DIRECTORIES selected!");
@@ -285,11 +285,11 @@ public class Commander {
                     break;
                 case 15:
                     LOG.info("'Read n Files with n Threads (Weak Scaling)' selected!");
-                    Commands.readNFilesOperation(hdfsConfiguration, hdfs);
+                    Commands.readNFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                     break;
                 case 16:
                     LOG.info("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
-                    Commands.strongScalingBenchmark(hdfsConfiguration, hdfs);
+                    Commands.strongScalingBenchmark(hdfsConfiguration, hdfs, nameNodeEndpoint);
                     break;
                 default:
                     LOG.info("ERROR: Unknown or invalid operation specified: " + op);

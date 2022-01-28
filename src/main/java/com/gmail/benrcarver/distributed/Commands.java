@@ -103,7 +103,8 @@ public class Commands {
     }
 
     public static void strongScalingBenchmark(final Configuration configuration,
-                                        final DistributedFileSystem sharedHdfs)
+                                              final DistributedFileSystem sharedHdfs,
+                                              final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         // User provides file containing HopsFS file paths.
         // Specifies how many files each thread should read.
@@ -227,7 +228,9 @@ public class Commands {
      *
      * This function will use `n` threads to read those `n` files.
      */
-    public static void readNFilesOperation(final Configuration configuration, final DistributedFileSystem sharedHdfs)
+    public static void readNFilesOperation(final Configuration configuration,
+                                           final DistributedFileSystem sharedHdfs,
+                                           final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         System.out.print("How many files should be read?\n> ");
         String inputN = scanner.nextLine();
@@ -393,7 +396,9 @@ public class Commands {
         }
     }
 
-    public static void readFilesOperation(final Configuration configuration, DistributedFileSystem sharedHdfs)
+    public static void readFilesOperation(final Configuration configuration,
+                                          DistributedFileSystem sharedHdfs,
+                                          final String nameNodeEndpoint)
             throws InterruptedException {
         System.out.print("Path to local file containing HopsFS/HDFS paths:\n> ");
         String localFilePath = scanner.nextLine();
@@ -404,20 +409,20 @@ public class Commands {
         System.out.print("Number of threads:\n> ");
         int numThreads = Integer.parseInt(scanner.nextLine());
 
-        readFiles(localFilePath, readsPerFile, numThreads, configuration, sharedHdfs);
+        readFiles(localFilePath, readsPerFile, numThreads, configuration, sharedHdfs, nameNodeEndpoint);
     }
 
-    public static void deleteFilesOperation(DistributedFileSystem sharedHdfs) {
+    public static void deleteFilesOperation(DistributedFileSystem sharedHdfs, final String nameNodeEndpoint) {
         System.out.print("Path to file containing HopsFS paths? \n> ");
         String input = scanner.nextLine();
-        deleteFiles(input, sharedHdfs);
+        deleteFiles(input, sharedHdfs, nameNodeEndpoint);
     }
 
     /**
      * Delete the files listed in the file specified by the path argument.
      * @param localPath Text file containing HopsFS file paths to delete.
      */
-    public static void deleteFiles(String localPath, DistributedFileSystem sharedHdfs) {
+    public static void deleteFiles(String localPath, DistributedFileSystem sharedHdfs, final String nameNodeEndpoint) {
         List<String> paths;
         try {
             paths = Utils.getFilePathsFromFile(localPath);
@@ -444,8 +449,9 @@ public class Commands {
      * @param readsPerFile Number of times each file should be read.
      * @param numThreads Number of threads to use when performing the reads concurrently.
      */
-    public static void readFiles(String path, int readsPerFile, int numThreads, final Configuration configuration,
-                           DistributedFileSystem sharedHdfs) throws InterruptedException {
+    public static void readFiles(String path, int readsPerFile, int numThreads,
+                                 final Configuration configuration, DistributedFileSystem sharedHdfs,
+                                 final String nameNodeEndpoint) throws InterruptedException {
         List<String> paths;
         try {
             paths = Utils.getFilePathsFromFile(path);
@@ -1010,7 +1016,7 @@ public class Commands {
         }
     }
 
-    public static void deleteOperation(DistributedFileSystem hdfs) {
+    public static void deleteOperation(DistributedFileSystem hdfs, final String nameNodeEndpoint) {
         System.out.print("File or directory path:\n> ");
         String targetPath = scanner.nextLine();
 
