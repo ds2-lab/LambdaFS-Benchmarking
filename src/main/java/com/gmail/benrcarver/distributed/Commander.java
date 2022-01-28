@@ -5,6 +5,8 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.gmail.benrcarver.distributed.util.Utils;
 import com.gmail.benrcarver.distributed.util.TreeNode;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.common.IOUtils;
 import net.schmizz.sshj.connection.channel.direct.Session;
@@ -36,12 +38,16 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static com.gmail.benrcarver.distributed.Constants.*;
+
 /**
  * Controls a fleet of distributed machines. Executes HopsFS benchmarks based on user input/commands.
  */
 public class Commander {
     public static final Log LOG = LogFactory.getLog(Commander.class);
     private static final Console con = System.console();
+
+    private List<Connection> followers;
 
     private static final String LEADER_PREFIX = "[LEADER TCP SERVER]";
 
@@ -98,6 +104,7 @@ public class Commander {
     public Commander(String ip, int port, String yamlPath) throws IOException {
         this.ip = ip;
         this.port = port;
+        this.followers = new ArrayList<>();
 
         tcpServer = new Server() {
             @Override
@@ -176,6 +183,7 @@ public class Commander {
 
     private void startServer() throws IOException {
         tcpServer.start();
+        Network.register(tcpServer);
         tcpServer.bind(port);
     }
 
@@ -362,7 +370,7 @@ public class Commander {
         }
     }
 
-    private static class ServerListener extends Listener {
+    private class ServerListener extends Listener {
         /**
          * Listener handles connection establishment with remote NameNodes.
          */
@@ -371,6 +379,13 @@ public class Commander {
                     + conn.getRemoteAddressTCP());
             conn.setKeepAliveTCP(6000);
             conn.setTimeout(12000);
+            followers.add(conn);
+
+            JsonObject registrationPayload = new JsonObject();
+            registrationPayload.addProperty(OPERATION, OP_REGISTRATION);
+            registrationPayload.addProperty(NAMENODE_ENDPOINT, nameNodeEndpoint);
+
+            conn.sendTCP(new Gson().toJson(registrationPayload));
         }
     }
 

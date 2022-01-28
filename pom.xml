@@ -138,6 +138,19 @@
             <version>1.7.25</version>
             <scope>compile</scope>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.esotericsoftware/reflectasm -->
+        <!-- Needed by the Kryo TCP library. -->
+        <dependency>
+            <groupId>com.esotericsoftware</groupId>
+            <artifactId>reflectasm</artifactId>
+            <version>1.11.9</version>
+        </dependency>
+        <!-- Used by NN TCP client/server. Handles serialization. -->
+        <dependency>
+            <groupId>com.esotericsoftware</groupId>
+            <artifactId>kryo</artifactId>
+            <version>5.2.0</version>
+        </dependency>
         <dependency>
             <groupId>kryonet</groupId>
             <artifactId>kryonet</artifactId>
