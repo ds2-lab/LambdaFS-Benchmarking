@@ -48,7 +48,7 @@ public class Commander {
     /**
      * Use with String.format(LAUNCH_FOLLOWER_CMD, leader_ip, leader_port)
      */
-    private static final String LAUNCH_FOLLOWER_CMD = "source ~/.bashrc & int-test"; //"source ~/.bashrc & java -cp \".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/share/hadoop/hdfs/lib/*:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0-SNAPSHOT/share/hadoop/common/lib/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hops-leader-election/target/hops-leader-election-3.2.0.3-SNAPSHOT.jar:/home/ben/openwhisk-runtime-java/core/java8/libs/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hadoop-common-project/hadoop-common/target/hadoop-common-3.2.0.3-SNAPSHOT.jar\" com.gmail.benrcarver.distributed.InteractiveTest --worker --leader_ip %s --leader_port %d";
+    private static final String LAUNCH_FOLLOWER_CMD = "source ~/.bashrc & java -cp \".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/share/hadoop/hdfs/lib/*:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0-SNAPSHOT/share/hadoop/common/lib/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hops-leader-election/target/hops-leader-election-3.2.0.3-SNAPSHOT.jar:/home/ben/openwhisk-runtime-java/core/java8/libs/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hadoop-common-project/hadoop-common/target/hadoop-common-3.2.0.3-SNAPSHOT.jar\" com.gmail.benrcarver.distributed.InteractiveTest --worker --leader_ip %s --leader_port %d";
 
     /**
      * Has a default value.
@@ -137,40 +137,44 @@ public class Commander {
         for (FollowerConfig config : followerConfigs) {
             LOG.info("Starting follower at " + config.getUser() + "@" + config.getIp() + " now.");
 
-            SSHClient ssh = new SSHClient();
-            ssh.loadKnownHosts();
-            ssh.connect(config.getIp());
+            ProcessBuilder processBuilder = new ProcessBuilder("./scripts/launch_follower.sh",
+                    config.getUser(), config.getIp(), fullCommand);
+            Process p = processBuilder.start();
 
-            LOG.debug("Connected to follower at " + config.getUser() + "@" + config.getIp() + " now.");
-
-            Session session = null;
-
-            try {
-                ssh.authPublickey(config.getUser());
-
-                LOG.debug("Authenticated with follower at " + config.getUser() + "@" + config.getIp() + " now.");
-
-                session = ssh.startSession();
-
-                LOG.debug("Started session with follower at " + config.getUser() + "@" + config.getIp() + " now.");
-
-                Session.Command cmd = session.exec(fullCommand);
-
-                LOG.debug("Executed command: " + fullCommand);
-
-                ByteArrayOutputStream inputStream = IOUtils.readFully(cmd.getInputStream());
-                LOG.debug("Output: " + inputStream);
-
-                con.writer().print(inputStream);
-                cmd.join(5, TimeUnit.SECONDS);
-                con.writer().print("\n** exit status: " + cmd.getExitStatus());
-                LOG.debug("Exit status: " + cmd.getExitStatus());
-            } finally {
-                if (session != null)
-                    session.close();
-
-                ssh.disconnect();
-            }
+//            SSHClient ssh = new SSHClient();
+//            ssh.loadKnownHosts();
+//            ssh.connect(config.getIp());
+//
+//            LOG.debug("Connected to follower at " + config.getUser() + "@" + config.getIp() + " now.");
+//
+//            Session session = null;
+//
+//            try {
+//                ssh.authPublickey(config.getUser());
+//
+//                LOG.debug("Authenticated with follower at " + config.getUser() + "@" + config.getIp() + " now.");
+//
+//                session = ssh.startSession();
+//
+//                LOG.debug("Started session with follower at " + config.getUser() + "@" + config.getIp() + " now.");
+//
+//                Session.Command cmd = session.exec(fullCommand);
+//
+//                LOG.debug("Executed command: " + fullCommand);
+//
+//                ByteArrayOutputStream inputStream = IOUtils.readFully(cmd.getInputStream());
+//                LOG.debug("Output: " + inputStream);
+//
+//                con.writer().print(inputStream);
+//                cmd.join(5, TimeUnit.SECONDS);
+//                con.writer().print("\n** exit status: " + cmd.getExitStatus());
+//                LOG.debug("Exit status: " + cmd.getExitStatus());
+//            } finally {
+//                if (session != null)
+//                    session.close();
+//
+//                ssh.disconnect();
+//            }
         }
     }
 
