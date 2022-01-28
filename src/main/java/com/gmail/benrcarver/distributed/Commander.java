@@ -570,6 +570,7 @@ public class Commander {
         /**
          * Listener handles connection establishment with remote NameNodes.
          */
+        @Override
         public void connected(Connection conn) {
             LOG.debug(LEADER_PREFIX + " Connection established with remote NameNode at "
                     + conn.getRemoteAddressTCP());
@@ -590,9 +591,8 @@ public class Commander {
          * @param conn The connection to the followers.
          * @param object The object that was sent by the followers to the leader (us).
          */
+        @Override
         public void received(Connection conn, Object object) {
-            FollowerConnection connection = (FollowerConnection)conn;
-
             if (object instanceof String) {
                 JsonObject body = new JsonParser().parse((String)object).getAsJsonObject();
                 LOG.debug("Received message from follower: " + body);
@@ -600,7 +600,7 @@ public class Commander {
             else if (object instanceof DistributedBenchmarkResult) {
                 DistributedBenchmarkResult result = (DistributedBenchmarkResult)object;
 
-                LOG.debug("Received result from follower: " + result);
+                LOG.info("Received result from follower: " + result);
 
                 String opId = result.opId;
 
