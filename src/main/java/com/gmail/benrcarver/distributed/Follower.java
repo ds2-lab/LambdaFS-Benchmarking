@@ -48,7 +48,7 @@ public class Follower {
     private Configuration hdfsConfiguration;
     private DistributedFileSystem hdfs;
 
-    public void waitUntilDone() throws InterruptedException {
+    public synchronized void waitUntilDone() throws InterruptedException {
         this.wait();
     }
 
