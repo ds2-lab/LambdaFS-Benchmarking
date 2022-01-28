@@ -386,6 +386,7 @@ public class Commander {
 
         // Wait for followers' results if we had followers when we first started the operation.
         if (numDistributedResults > 0) {
+            LOG.info("Waiting for " + numDistributedResults + " distributed result(s).");
             BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
             assert(resultQueue != null);
 
@@ -469,6 +470,7 @@ public class Commander {
 
         // Wait for followers' results if we had followers when we first started the operation.
         if (numDistributedResults > 0) {
+            LOG.info("Waiting for " + numDistributedResults + " distributed result(s).");
             BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
             assert(resultQueue != null);
 
