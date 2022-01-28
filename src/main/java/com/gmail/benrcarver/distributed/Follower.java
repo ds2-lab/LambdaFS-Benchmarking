@@ -107,30 +107,27 @@ public class Follower {
     private void handleMessageFromLeader(JsonObject message, DistributedFileSystem hdfs) throws IOException, InterruptedException {
         int operation = message.getAsJsonPrimitive(OPERATION).getAsInt();
 
-        switch (operation) {
-            case OP_REGISTRATION:
-                handleRegistration(message);
-                break;
-            case -4:
+        switch(operation) {
+            case OP_CLEAR_STATISTICS:
                 LOG.info("Clearing statistics packages...");
                 Commands.clearStatisticsPackages(hdfs);
                 break;
-            case -3:
+            case OP_WRITE_STATISTICS:
                 LOG.info("Writing statistics packages to files...");
                 LOG.info("");
                 hdfs.dumpStatisticsPackages(true);
                 break;
-            case -2:
+            case OP_PRINT_OPS_PERFORMED:
                 LOG.info("Printing operations performed...");
                 LOG.info("");
                 Commands.printOperationsPerformed(hdfs);
                 break;
-            case -1:
+            case OP_PRINT_TCP_DEBUG:
                 LOG.info("Printing TCP debug information...");
                 LOG.info("");
                 hdfs.printDebugInformation();
                 break;
-            case 0:
+            case OP_EXIT:
                 LOG.info("Exiting now... goodbye!");
                 try {
                     hdfs.close();
@@ -138,74 +135,75 @@ public class Follower {
                     LOG.info("Encountered exception while closing file system...");
                     ex.printStackTrace();
                 }
-                client.stop();
+                stopServer();
                 System.exit(0);
-            case 1:
+            case OP_CREATE_FILE:
                 LOG.info("CREATE FILE selected!");
                 Commands.createFileOperation(hdfs, nameNodeEndpoint);
                 break;
-            case 2:
+            case OP_MKDIR:
                 LOG.info("MAKE DIRECTORY selected!");
                 Commands.mkdirOperation(hdfs, nameNodeEndpoint);;
                 break;
-            case 3:
+            case OP_READ_FILE:
                 LOG.info("READ FILE selected!");
                 Commands.readOperation(hdfs, nameNodeEndpoint);
                 break;
-            case 4:
+            case OP_RENAME:
                 LOG.info("RENAME selected!");
                 Commands.renameOperation(hdfs, nameNodeEndpoint);
                 break;
-            case 5:
+            case OP_DELETE:
                 LOG.info("DELETE selected!");
                 Commands.deleteOperation(hdfs, nameNodeEndpoint);
                 break;
-            case 6:
+            case OP_LIST:
                 LOG.info("LIST selected!");
                 Commands.listOperation(hdfs, nameNodeEndpoint);
                 break;
-            case 7:
+            case OP_APPEND:
                 LOG.info("APPEND selected!");
                 Commands.appendOperation(hdfs, nameNodeEndpoint);
                 break;
-            case 8:
+            case OP_CREATE_SUBTREE:
                 LOG.info("CREATE SUBTREE selected!");
                 Commands.createSubtree(hdfs, nameNodeEndpoint);
                 break;
-            case 9:
+            case OP_PING:
                 LOG.info("PING selected!");
                 Commands.pingOperation(hdfs);
                 break;
-            case 10:
+            case OP_PREWARM:
                 LOG.info("PREWARM selected!");
                 Commands.prewarmOperation(hdfs);
                 break;
-            case 11:
+            case OP_WRITE_FILES_TO_DIR:
                 LOG.info("WRITE FILES TO DIRECTORY selected!");
                 Commands.writeFilesToDirectory(hdfs, hdfsConfiguration, nameNodeEndpoint);
                 break;
-            case 12:
+            case OP_READ_FILES:
                 LOG.info("READ FILES selected!");
                 Commands.readFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                 break;
-            case 13:
+            case OP_DELETE_FILES:
                 LOG.info("DELETE FILES selected!");
                 Commands.deleteFilesOperation(hdfs, nameNodeEndpoint);
                 break;
-            case 14:
+            case OP_WRITE_FILS_TO_DIRS:
                 LOG.info("WRITE FILES TO DIRECTORIES selected!");
                 Commands.writeFilesToDirectories(hdfs, hdfsConfiguration, nameNodeEndpoint);
                 break;
-            case 15:
+            case OP_WEAK_SCALING:
                 LOG.info("'Read n Files with n Threads (Weak Scaling)' selected!");
                 Commands.readNFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                 break;
-            case 16:
+            case OP_STRONG_SCALING:
                 LOG.info("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
                 Commands.strongScalingBenchmark(hdfsConfiguration, hdfs, nameNodeEndpoint);
                 break;
             default:
-                LOG.warn("Received unknown operation from Leader: '" + operation + "'");
+                LOG.info("ERROR: Unknown or invalid operation specified: " + op);
+                break;
         }
     }
 
