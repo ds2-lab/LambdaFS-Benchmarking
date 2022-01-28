@@ -14,10 +14,10 @@ public class Follower {
 
     private static final int CONN_TIMEOUT_MILLISECONDS = 10000;
 
-    private Client client;
+    private final Client client;
 
-    private String masterIp;
-    private int masterPort;
+    private final String masterIp;
+    private final int masterPort;
 
     public Follower(String masterIp, int masterPort) {
         client = new Client();
@@ -25,17 +25,14 @@ public class Follower {
         this.masterPort = masterPort;
     }
 
-    private void connect() {
-        Thread connectThread = new Thread() {
-          @Override
-          public void run() {
-              try {
-                  client.connect(CONN_TIMEOUT_MILLISECONDS, masterIp, masterPort);
-              } catch (IOException e) {
-                  LOG.error("Failed to connect to Leader.", e);
-              }
-          }
-        };
+    public void connect() {
+        Thread connectThread = new Thread(() -> {
+            try {
+                client.connect(CONN_TIMEOUT_MILLISECONDS, masterIp, masterPort);
+            } catch (IOException e) {
+                LOG.error("Failed to connect to Leader.", e);
+            }
+        });
         connectThread.start();
 
         try {

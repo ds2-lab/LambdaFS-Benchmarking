@@ -80,6 +80,7 @@ public class InteractiveTest {
             Follower follower = new Follower(
                     cmd.getOptionValue("leader_ip"),
                     Integer.parseInt(cmd.getOptionValue("leader_port")));
+            follower.connect();
         } else {
             Commander commander = new Commander(
                     cmd.getOptionValue("leader_ip"),
