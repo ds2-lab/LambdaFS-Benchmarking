@@ -6,6 +6,7 @@ import com.esotericsoftware.kryonet.Server;
 import com.gmail.benrcarver.distributed.util.Utils;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.common.IOUtils;
 import net.schmizz.sshj.connection.channel.direct.Session;
@@ -30,6 +31,9 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import static com.gmail.benrcarver.distributed.Constants.*;
@@ -95,10 +99,17 @@ public class Commander {
      */
     private HashMap<String, SSHClient> sshClients;
 
+    /**
+     * Map from operation ID to the queue in which distributed results should be placed by the TCP server.
+     */
+    private ConcurrentHashMap<String, BlockingQueue<DistributedBenchmarkResult>> resultQueues;
+
     public Commander(String ip, int port, String yamlPath) throws IOException {
         this.ip = ip;
         this.port = port;
+        // TODO: Maybe do book-keeping or fault-tolerance here.
         this.followers = new ArrayList<>();
+        this.resultQueues = new ConcurrentHashMap<>();
 
         tcpServer = new Server() {
             @Override
@@ -303,10 +314,17 @@ public class Commander {
     /**
      * Issue a command to all our followers.
      * @param opName The name of the command.
+     * @param operationId Unique ID of this operation.
      * @param payload Contains the command and necessary arguments.
      */
-    private void issueCommandToFollowers(String opName, JsonObject payload) {
-        LOG.debug("Issuing '" + opName + "' command to " + followers.size() + " follower(s).");
+    private void issueCommandToFollowers(String opName, String operationId, JsonObject payload) {
+        LOG.debug("Issuing '" + opName + "' (id=" + operationId + ") command to " +
+                followers.size() + " follower(s).");
+
+        BlockingQueue<DistributedBenchmarkResult> resultQueue = new
+                ArrayBlockingQueue<>(followers.size());
+        resultQueues.put(operationId, resultQueue);
+
         String payloadStr = new Gson().toJson(payload);
         for (Connection followerConnection : followers) {
             LOG.debug("Sending '" + opName + "' operation to follower at " +
@@ -339,6 +357,7 @@ public class Commander {
         String inputPath = scanner.nextLine();
 
         String operationId = UUID.randomUUID().toString();
+        int numDistributedResults = followers.size();
         if (followers.size() > 0) {
             JsonObject payload = new JsonObject();
             payload.addProperty(OPERATION, OP_WEAK_SCALING);
@@ -348,11 +367,33 @@ public class Commander {
             payload.addProperty("numThreads", numThreads);
             payload.addProperty("inputPath", inputPath);
 
-            issueCommandToFollowers("Read N Files with N Threads (Weak Scaling)", payload);
+            issueCommandToFollowers("Read N Files with N Threads (Weak Scaling)", operationId, payload);
         }
         // TODO: Make this return some sort of 'result' object encapsulating the result.
         //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
-        Commands.strongScalingBenchmark(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile, numThreads, inputPath);
+        DistributedBenchmarkResult result =
+                Commands.strongScalingBenchmark(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile,
+                        numThreads, inputPath);
+
+        if (result != null) {
+            LOG.info("LOCAL result of strong scaling benchmark: " + result);
+            result.setOperationId(operationId);
+        }
+
+        // Wait for followers' results if we had followers when we first started the operation.
+        if (numDistributedResults > 0) {
+            BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
+            assert(resultQueue != null);
+
+            while (resultQueue.size() < numDistributedResults) {
+                Thread.sleep(50);
+            }
+
+
+            for (DistributedBenchmarkResult res : resultQueue) {
+                LOG.debug("Received result: " + res);
+            }
+        }
     }
 
     /**
@@ -382,6 +423,7 @@ public class Commander {
         String inputPath = scanner.nextLine();
 
         String operationId = UUID.randomUUID().toString();
+        boolean hasDistributedResult = false;
         if (followers.size() > 0) {
             JsonObject payload = new JsonObject();
             payload.addProperty(OPERATION, OP_WEAK_SCALING);
@@ -390,11 +432,23 @@ public class Commander {
             payload.addProperty("readsPerFile", readsPerFile);
             payload.addProperty("inputPath", inputPath);
 
-            issueCommandToFollowers("Read N Files with N Threads (Weak Scaling)", payload);
+            hasDistributedResult = true;
+            issueCommandToFollowers("Read N Files with N Threads (Weak Scaling)", operationId, payload);
         }
         // TODO: Make this return some sort of 'result' object encapsulating the result.
         //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
-        Commands.readNFiles(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile, inputPath);
+        DistributedBenchmarkResult result =
+                Commands.readNFiles(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile, inputPath);
+
+        if (result != null) {
+            LOG.info("LOCAL result of weak scaling benchmark: " + result);
+            result.setOperationId(operationId);
+        }
+
+        // Wait for followers' results.
+        if (hasDistributedResult) {
+
+        }
     }
 
     private int getNextOperation() {
@@ -477,6 +531,30 @@ public class Commander {
             registrationPayload.addProperty(NAMENODE_ENDPOINT, nameNodeEndpoint);
 
             conn.sendTCP(new Gson().toJson(registrationPayload));
+        }
+
+        /**
+         * This listener handles receiving TCP messages from followers.
+         * @param conn The connection to the followers.
+         * @param object The object that was sent by the followers to the leader (us).
+         */
+        public void received(Connection conn, Object object) {
+            FollowerConnection connection = (FollowerConnection)conn;
+
+            if (object instanceof String) {
+                JsonObject body = new JsonParser().parse((String)object).getAsJsonObject();
+                LOG.debug("Received message from follower: " + body);
+            }
+            else if (object instanceof DistributedBenchmarkResult) {
+                DistributedBenchmarkResult result = (DistributedBenchmarkResult)object;
+
+                LOG.debug("Received result from follower: " + result);
+
+                String opId = result.opId;
+
+                BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(opId);
+                resultQueue.add(result);
+            }
         }
     }
 

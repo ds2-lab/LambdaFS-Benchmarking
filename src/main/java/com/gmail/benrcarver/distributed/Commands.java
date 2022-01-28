@@ -27,6 +27,8 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import io.hops.metrics.OperationPerformed;
 
+import static com.gmail.benrcarver.distributed.Constants.OP_STRONG_SCALING;
+
 public class Commands {
     public static final Log LOG = LogFactory.getLog(Commands.class);
     private static Scanner scanner = new Scanner(System.in);
@@ -108,7 +110,7 @@ public class Commands {
     /**
      * Gets the user inputs for this benchmark, then calls the actual benchmark itself.
      */
-    public static void strongScalingBenchmark(final Configuration configuration,
+    public static DistributedBenchmarkResult strongScalingBenchmark(final Configuration configuration,
                                                 final DistributedFileSystem sharedHdfs,
                                                 final String nameNodeEndpoint,
                                                 int n, int readsPerFile, int numThreads, String inputPath)
@@ -119,7 +121,7 @@ public class Commands {
             LOG.error("ERROR: The file should contain at least " + n +
                     " HopsFS file path(s); however, it contains just " + paths.size() + " HopsFS file path(s).");
             LOG.error("Aborting operation.");
-            return;
+            return null;
         }
 
         // Select a random subset of size n, where n is the number of files each thread should rea.d
@@ -206,6 +208,9 @@ public class Commands {
         double throughput = (totalReads / durationSeconds);
         LOG.info("Finished performing all " + totalReads + " file reads in " + duration);
         LOG.info("Throughput: " + throughput + " ops/sec.");
+
+        return new DistributedBenchmarkResult(null, OP_STRONG_SCALING, (int)totalReads, durationSeconds,
+                start.toEpochMilli(), end.toEpochMilli());
     }
 
     /**
@@ -215,7 +220,7 @@ public class Commands {
      * @param readsPerFile How many times each file should be read.
      * @param inputPath Path to local file containing HopsFS filepaths (of the files to read).
      */
-    public static void readNFiles(final Configuration configuration,
+    public static DistributedBenchmarkResult readNFiles(final Configuration configuration,
                                   final DistributedFileSystem sharedHdfs,
                                   final String nameNodeEndpoint,
                                   int n,
@@ -227,7 +232,7 @@ public class Commands {
             LOG.error("ERROR: The file should contain at least " + n +
                     " HopsFS file path(s); however, it contains just " + paths.size() + " HopsFS file path(s).");
             LOG.error("Aborting operation.");
-            return;
+            return null;
         }
 
         Thread[] threads = new Thread[n];
@@ -309,6 +314,9 @@ public class Commands {
         double throughput = (totalReads / durationSeconds);
         LOG.info("Finished performing all " + totalReads + " file reads in " + duration);
         LOG.info("Throughput: " + throughput + " ops/sec.");
+
+        return new DistributedBenchmarkResult(null, OP_STRONG_SCALING, (int)totalReads, durationSeconds,
+                start.toEpochMilli(), end.toEpochMilli());
     }
 
     /**

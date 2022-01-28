@@ -7,5 +7,6 @@ public class Network {
     public static void register (EndPoint endPoint) {
         Kryo kryo = endPoint.getKryo();
         kryo.register(String[].class);
+        kryo.register(DistributedBenchmarkResult.class);
     }
 }

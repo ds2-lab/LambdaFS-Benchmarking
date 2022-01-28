@@ -4,6 +4,7 @@ import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.gmail.benrcarver.distributed.util.Utils;
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.commons.logging.Log;
@@ -204,7 +205,7 @@ public class Follower {
                 break;
             case OP_WEAK_SCALING:
                 LOG.info("'Read n Files with n Threads (Weak Scaling)' selected!");
-                Commands.readNFiles(hdfsConfiguration,
+                DistributedBenchmarkResult result = Commands.readNFiles(hdfsConfiguration,
                         hdfs, nameNodeEndpoint,
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
@@ -212,7 +213,7 @@ public class Follower {
                 break;
             case OP_STRONG_SCALING:
                 LOG.info("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
-                Commands.strongScalingBenchmark(hdfsConfiguration,
+                result = Commands.strongScalingBenchmark(hdfsConfiguration,
                         hdfs, nameNodeEndpoint,
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
@@ -223,6 +224,14 @@ public class Follower {
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
                 break;
         }
+    }
+
+    private void sendResultToLeader(DistributedBenchmarkResult result) {
+        this.client.sendTCP(result);
+    }
+
+    private void sendMessageToLeader(JsonObject payload) {
+        this.client.sendTCP(new Gson().toJson(payload));
     }
 
     private void handleRegistration(JsonObject message) {
