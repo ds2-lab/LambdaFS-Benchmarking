@@ -15,6 +15,7 @@ import org.apache.commons.logging.LogFactory;
 import io.hops.metrics.TransactionEvent;
 import io.hops.metrics.TransactionAttempt;
 import io.hops.transaction.context.TransactionsStats;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -360,7 +361,7 @@ public class Commander {
         int numDistributedResults = followers.size();
         if (followers.size() > 0) {
             JsonObject payload = new JsonObject();
-            payload.addProperty(OPERATION, OP_WEAK_SCALING);
+            payload.addProperty(OPERATION, OP_STRONG_SCALING);
             payload.addProperty(OPERATION_ID, operationId);
             payload.addProperty("n", n);
             payload.addProperty("readsPerFile", readsPerFile);
@@ -371,14 +372,17 @@ public class Commander {
         }
         // TODO: Make this return some sort of 'result' object encapsulating the result.
         //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
-        DistributedBenchmarkResult result =
+        DistributedBenchmarkResult localResult =
                 Commands.strongScalingBenchmark(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile,
                         numThreads, inputPath);
 
-        if (result != null) {
-            LOG.info("LOCAL result of strong scaling benchmark: " + result);
-            result.setOperationId(operationId);
+        if (localResult == null) {
+            LOG.warn("Local result is null. Aborting.");
+            return;
         }
+
+        LOG.info("LOCAL result of strong scaling benchmark: " + localResult);
+        localResult.setOperationId(operationId);
 
         // Wait for followers' results if we had followers when we first started the operation.
         if (numDistributedResults > 0) {
@@ -389,10 +393,26 @@ public class Commander {
                 Thread.sleep(50);
             }
 
+            DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
+            DescriptiveStatistics duration = new DescriptiveStatistics();
+            DescriptiveStatistics throughput = new DescriptiveStatistics();
+
+            opsPerformed.addValue(localResult.numOpsPerformed);
+            duration.addValue(localResult.durationSeconds);
+            throughput.addValue(localResult.getOpsPerSecond());
 
             for (DistributedBenchmarkResult res : resultQueue) {
                 LOG.debug("Received result: " + res);
+
+                opsPerformed.addValue(res.numOpsPerformed);
+                duration.addValue(res.durationSeconds);
+                throughput.addValue(res.getOpsPerSecond());
             }
+
+            LOG.info("==== RESULTS ====");
+            LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
+            LOG.info("Aggregate Throughput (ops/sec): " + (opsPerformed.getSum() / (duration.getMean())));
+            LOG.info("Average Non-Aggregate Throughput (op/sec): " + throughput.getMean());
         }
     }
 
@@ -423,7 +443,7 @@ public class Commander {
         String inputPath = scanner.nextLine();
 
         String operationId = UUID.randomUUID().toString();
-        boolean hasDistributedResult = false;
+        int numDistributedResults = followers.size();
         if (followers.size() > 0) {
             JsonObject payload = new JsonObject();
             payload.addProperty(OPERATION, OP_WEAK_SCALING);
@@ -432,22 +452,50 @@ public class Commander {
             payload.addProperty("readsPerFile", readsPerFile);
             payload.addProperty("inputPath", inputPath);
 
-            hasDistributedResult = true;
             issueCommandToFollowers("Read N Files with N Threads (Weak Scaling)", operationId, payload);
         }
         // TODO: Make this return some sort of 'result' object encapsulating the result.
         //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
-        DistributedBenchmarkResult result =
+        DistributedBenchmarkResult localResult =
                 Commands.readNFiles(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile, inputPath);
 
-        if (result != null) {
-            LOG.info("LOCAL result of weak scaling benchmark: " + result);
-            result.setOperationId(operationId);
+        if (localResult == null) {
+            LOG.warn("Local result is null. Aborting.");
+            return;
         }
 
-        // Wait for followers' results.
-        if (hasDistributedResult) {
+        LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
+        localResult.setOperationId(operationId);
 
+        // Wait for followers' results if we had followers when we first started the operation.
+        if (numDistributedResults > 0) {
+            BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
+            assert(resultQueue != null);
+
+            while (resultQueue.size() < numDistributedResults) {
+                Thread.sleep(50);
+            }
+
+            DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
+            DescriptiveStatistics duration = new DescriptiveStatistics();
+            DescriptiveStatistics throughput = new DescriptiveStatistics();
+
+            opsPerformed.addValue(localResult.numOpsPerformed);
+            duration.addValue(localResult.durationSeconds);
+            throughput.addValue(localResult.getOpsPerSecond());
+
+            for (DistributedBenchmarkResult res : resultQueue) {
+                LOG.debug("Received result: " + res);
+
+                opsPerformed.addValue(res.numOpsPerformed);
+                duration.addValue(res.durationSeconds);
+                throughput.addValue(res.getOpsPerSecond());
+            }
+
+            LOG.info("==== RESULTS ====");
+            LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
+            LOG.info("Aggregate Throughput (ops/sec): " + (opsPerformed.getSum() / (duration.getMean())));
+            LOG.info("Average Non-Aggregate Throughput (op/sec): " + throughput.getMean());
         }
     }
 
