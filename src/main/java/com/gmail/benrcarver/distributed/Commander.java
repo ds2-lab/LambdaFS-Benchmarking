@@ -614,6 +614,10 @@ public class Commander {
                 LOG.error("Received object of unexpected/unsupported type " + object.getClass().getSimpleName());
             }
         }
+
+        public void disconnected(Connection conn) {
+            LOG.info("Lost connection to follower.");
+        }
     }
 
     private static void printMenu() {
