@@ -113,7 +113,7 @@ public class Commander {
         this.followers = new ArrayList<>();
         this.resultQueues = new ConcurrentHashMap<>();
 
-        tcpServer = new Server() {
+        tcpServer = new Server(32000, 32000) {
             @Override
             protected Connection newConnection() {
                 LOG.debug(LEADER_PREFIX + " Creating new FollowerConnection.");

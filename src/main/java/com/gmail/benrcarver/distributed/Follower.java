@@ -53,7 +53,7 @@ public class Follower {
     }
 
     public Follower(String masterIp, int masterPort) {
-        client = new Client();
+        client = new Client(32000, 32000);
         this.masterIp = masterIp;
         this.masterPort = masterPort;
 
