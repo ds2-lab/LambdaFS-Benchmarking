@@ -156,7 +156,12 @@ public class Commander {
 
                 Session.Command cmd = session.exec(fullCommand);
 
-                con.writer().print(IOUtils.readFully(cmd.getInputStream()).toString());
+                LOG.debug("Executed command: " + fullCommand);
+
+                ByteArrayOutputStream output = IOUtils.readFully(cmd.getInputStream());
+                LOG.debug("Output: " + output);
+
+                con.writer().print(output);
                 cmd.join(5, TimeUnit.SECONDS);
                 con.writer().print("\n** exit status: " + cmd.getExitStatus());
             } finally {
