@@ -67,10 +67,10 @@ public class InteractiveTest {
         CommandLine cmd = null;
 
         try {
-            cmd = parser.parse(options, args);
+            cmd = parser.parse(cmdLineOpts, args);
         } catch (ParseException e) {
             System.out.println(e.getMessage());
-            formatter.printHelp("utility-name", options);
+            formatter.printHelp("utility-name", cmdLineOpts);
 
             System.exit(1);
         }
@@ -86,116 +86,6 @@ public class InteractiveTest {
                     Integer.parseInt(cmd.getOptionValue("leader_port")),
                     cmd.getOptionValue("yaml_path"));
             commander.start();
-        }
-    }
-
-    private static void interactiveLoop() throws InterruptedException, IOException {
-        LOG.info("Beginning execution as LEADER now.");
-
-        DistributedFileSystem hdfs = initDfsClient();
-
-        while (true) {
-            Thread.sleep(250);
-            printMenu();
-            int op = getNextOperation();
-
-            switch(op) {
-                case -4:
-                    LOG.info("Clearing statistics packages...");
-                    clearStatisticsPackages(hdfs);
-                    break;
-                case -3:
-                    LOG.info("Writing statistics packages to files...");
-                    LOG.info("");
-                    hdfs.dumpStatisticsPackages(true);
-                    break;
-                case -2:
-                    LOG.info("Printing operations performed...");
-                    LOG.info("");
-                    printOperationsPerformed(hdfs);
-                    break;
-                case -1:
-                    LOG.info("Printing TCP debug information...");
-                    LOG.info("");
-                    hdfs.printDebugInformation();
-                    break;
-                case 0:
-                    LOG.info("Exiting now... goodbye!");
-                    try {
-                        hdfs.close();
-                    } catch (IOException ex) {
-                        LOG.info("Encountered exception while closing file system...");
-                        ex.printStackTrace();
-                    }
-                    System.exit(0);
-                case 1:
-                    LOG.info("CREATE FILE selected!");
-                    createFileOperation(hdfs);
-                    break;
-                case 2:
-                    LOG.info("MAKE DIRECTORY selected!");
-                    mkdirOperation(hdfs);;
-                    break;
-                case 3:
-                    LOG.info("READ FILE selected!");
-                    readOperation(hdfs);
-                    break;
-                case 4:
-                    LOG.info("RENAME selected!");
-                    renameOperation(hdfs);
-                    break;
-                case 5:
-                    LOG.info("DELETE selected!");
-                    deleteOperation(hdfs);
-                    break;
-                case 6:
-                    LOG.info("LIST selected!");
-                    listOperation(hdfs);
-                    break;
-                case 7:
-                    LOG.info("APPEND selected!");
-                    appendOperation(hdfs);
-                    break;
-                case 8:
-                    LOG.info("CREATE SUBTREE selected!");
-                    createSubtree(hdfs);
-                    break;
-                case 9:
-                    LOG.info("PING selected!");
-                    pingOperation(hdfs);
-                    break;
-                case 10:
-                    LOG.info("PREWARM selected!");
-                    prewarmOperation(hdfs);
-                    break;
-                case 11:
-                    LOG.info("WRITE FILES TO DIRECTORY selected!");
-                    writeFilesToDirectory(hdfs, configuration);
-                    break;
-                case 12:
-                    LOG.info("READ FILES selected!");
-                    readFilesOperation(configuration, hdfs);
-                    break;
-                case 13:
-                    LOG.info("DELETE FILES selected!");
-                    deleteFilesOperation(hdfs);
-                    break;
-                case 14:
-                    LOG.info("WRITE FILES TO DIRECTORIES selected!");
-                    writeFilesToDirectories(hdfs, configuration);
-                    break;
-                case 15:
-                    LOG.info("'Read n Files with n Threads (Weak Scaling)' selected!");
-                    readNFilesOperation(configuration, hdfs);
-                    break;
-                case 16:
-                    LOG.info("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
-                    strongScalingBenchmark(configuration, hdfs);
-                    break;
-                default:
-                    LOG.info("ERROR: Unknown or invalid operation specified: " + op);
-                    break;
-            }
         }
     }
 

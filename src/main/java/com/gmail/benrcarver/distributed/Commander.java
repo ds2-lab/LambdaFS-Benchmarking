@@ -1300,7 +1300,7 @@ public class Commander {
         LOG.debug("Creating HDFS client now...");
         hdfsConfiguration = Utils.getConfiguration(hdfsConfigFilePath);
         try {
-            configuration.addResource(new File(hdfsConfigFilePath).toURI().toURL());
+            hdfsConfiguration.addResource(new File(hdfsConfigFilePath).toURI().toURL());
         } catch (MalformedURLException ex) {
             ex.printStackTrace();
         }
@@ -1309,7 +1309,7 @@ public class Commander {
         LOG.info("Created DistributedFileSystem object.");
 
         try {
-            hdfs.initialize(new URI(nameNodeEndpoint), configuration);
+            hdfs.initialize(new URI(nameNodeEndpoint), hdfsConfiguration);
             LOG.info("Called initialize() successfully.");
         } catch (URISyntaxException | IOException ex) {
             LOG.error("");
