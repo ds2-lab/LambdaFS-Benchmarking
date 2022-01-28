@@ -48,6 +48,10 @@ public class Follower {
     private Configuration hdfsConfiguration;
     private DistributedFileSystem hdfs;
 
+    public void waitUntilDone() throws InterruptedException {
+        this.wait();
+    }
+
     public Follower(String masterIp, int masterPort) {
         client = new Client();
         this.masterIp = masterIp;
@@ -81,6 +85,7 @@ public class Follower {
 
     private void stopClient() {
         client.stop();
+        this.notifyAll();
     }
 
     private DistributedFileSystem initDfsClient() {
