@@ -1,4 +1,4 @@
-package com.gmail.benrcarver;
+package com.gmail.benrcarver.distributed.util;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;

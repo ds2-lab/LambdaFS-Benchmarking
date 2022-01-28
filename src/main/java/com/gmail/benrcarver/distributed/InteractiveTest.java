@@ -1,6 +1,7 @@
-package com.gmail.benrcarver;
+package com.gmail.benrcarver.distributed;
 
-import com.google.gson.JsonObject;
+import com.gmail.benrcarver.distributed.util.TreeNode;
+import com.gmail.benrcarver.distributed.util.Utils;
 import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -15,7 +16,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import io.hops.metrics.OperationPerformed;
 
-import javax.swing.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.io.*;
 import java.net.MalformedURLException;
@@ -50,27 +50,49 @@ public class InteractiveTest {
     private static boolean pingFirst = false;
 
     public static void main(String[] args) throws InterruptedException, IOException {
-        LOG.info("Starting HdfsTest now.");
-        Configuration configuration = Utils.getConfiguration();
-        try {
-            configuration.addResource(new File("/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml").toURI().toURL());
-        } catch (MalformedURLException ex) {
-            ex.printStackTrace();
-        }
-        LOG.info("Created configuration.");
-        DistributedFileSystem hdfs = new DistributedFileSystem();
-        LOG.info("Created DistributedFileSystem object.");
+        Options cmdLineOpts = new Options();
+        Option workerOpt = new Option("w", "worker", false, "If true, run this program as a worker, listening to commands from a remote leader.");
+        Option leaderIpOpt = new Option("l", "leader_ip", true, "The IP address of the Leader. Only used when this process is designated as a worker.");
+        Option leaderPort = new Option("p", "leader_port", true, "The port of the Leader. Only used when this process is designated as a worker.");
+
+        Option yamlPath = new Option("y", "yaml_path", true, "Path to YAML configuration file.");
+
+        cmdLineOpts.addOption(workerOpt);
+        cmdLineOpts.addOption(leaderIpOpt);
+        cmdLineOpts.addOption(leaderPort);
+        cmdLineOpts.addOption(yamlPath);
+
+        CommandLineParser parser = new GnuParser();
+        HelpFormatter formatter = new HelpFormatter();
+        CommandLine cmd = null;
 
         try {
-            hdfs.initialize(new URI(namenodeEndpoint), configuration);
-            LOG.info("Called initialize() successfully.");
-        } catch (URISyntaxException | IOException ex) {
-            LOG.error("");
-            LOG.error("");
-            LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
-            ex.printStackTrace();
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+            formatter.printHelp("utility-name", options);
+
             System.exit(1);
         }
+
+        if (cmd.hasOption("worker")) {
+            LOG.info("Beginning execution as FOLLOWER now.");
+            Follower follower = new Follower(
+                    cmd.getOptionValue("leader_ip"),
+                    Integer.parseInt(cmd.getOptionValue("leader_port")));
+        } else {
+            Commander commander = new Commander(
+                    cmd.getOptionValue("leader_ip"),
+                    Integer.parseInt(cmd.getOptionValue("leader_port")),
+                    cmd.getOptionValue("yaml_path"));
+            commander.start();
+        }
+    }
+
+    private static void interactiveLoop() throws InterruptedException, IOException {
+        LOG.info("Beginning execution as LEADER now.");
+
+        DistributedFileSystem hdfs = initDfsClient();
 
         while (true) {
             Thread.sleep(250);
@@ -78,9 +100,6 @@ public class InteractiveTest {
             int op = getNextOperation();
 
             switch(op) {
-//                case -5:
-//                    LOG.info("OPTIONS MENU selected...");
-//                    optionsOperation();
                 case -4:
                     LOG.info("Clearing statistics packages...");
                     clearStatisticsPackages(hdfs);
@@ -926,12 +945,6 @@ public class InteractiveTest {
 
         System.out.print("Max subdirs:\n> ");
         int maxSubDirs = Integer.parseInt(scanner.nextLine());
-
-//        System.out.print("Files per directory:\n> ");
-//        int filesPerDirectory = Integer.parseInt(scanner.nextLine());
-//
-//        System.out.print("File contents:\n> ");
-//        String fileContents = scanner.nextLine();
 
         int height = subtreeDepth + 1;
         double totalPossibleDirectories = (Math.pow(maxSubDirs, height + 1) - 1) / (maxSubDirs - 1);

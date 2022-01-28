@@ -1,5 +1,6 @@
 package com.gmail.benrcarver;
 
+import com.gmail.benrcarver.distributed.util.Utils;
 import com.google.gson.JsonObject;
 import org.apache.commons.cli.*;
 import org.apache.hadoop.conf.Configuration;

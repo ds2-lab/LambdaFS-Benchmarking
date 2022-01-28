@@ -1,6 +1,6 @@
 package com.gmail.benrcarver;
 
-import com.google.gson.JsonObject;
+import com.gmail.benrcarver.distributed.util.Utils;
 import org.apache.commons.cli.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -12,10 +12,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 
 public class TCPConnectionTest {
     /**

@@ -1,5 +1,6 @@
 package com.gmail.benrcarver;
 
+import com.gmail.benrcarver.distributed.util.Utils;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
@@ -14,7 +15,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.Callable;
 
 /**
  * Executed as a thread by a thread pool executor. Issues RPC requests to a HopsFS NameNode.

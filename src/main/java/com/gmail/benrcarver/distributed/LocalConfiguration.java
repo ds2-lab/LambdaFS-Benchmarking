@@ -1,0 +1,35 @@
+package com.gmail.benrcarver.distributed;
+
+import org.apache.commons.lang3.StringUtils;
+
+import java.util.List;
+
+/**
+ * Named `Local`Configuration to avoid conflict with HopsFS/HDFS Configuration class.
+ */
+public class LocalConfiguration {
+    private String namenodeEndpoint;
+    private List<FollowerConfig> followers;
+
+    public String getNamenodeEndpoint() {
+        return namenodeEndpoint;
+    }
+
+    public void setNamenodeEndpoint(String namenodeEndpoint) {
+        this.namenodeEndpoint = namenodeEndpoint;
+    }
+
+    public List<FollowerConfig> getFollowers() {
+        return followers;
+    }
+
+    public void setFollowers(List<FollowerConfig> followers) {
+        this.followers = followers;
+    }
+
+    @Override
+    public String toString() {
+        return "LocalConfiguration(namenodeEndpoint=" + namenodeEndpoint + ", followers=" +
+                StringUtils.join(followers, ",") + ")";
+    }
+}
