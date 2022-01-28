@@ -12,7 +12,7 @@ import java.io.IOException;
 public class Follower {
     public static final Log LOG = LogFactory.getLog(Follower.class);
 
-    private static final int CONN_TIMEOUT_MILLISECONDS = 10000;
+    private static final int CONN_TIMEOUT_MILLISECONDS = 5000;
 
     private final Client client;
 
@@ -39,6 +39,13 @@ public class Follower {
             connectThread.join();
         } catch (InterruptedException ex) {
             LOG.warn("InterruptedException encountered while trying to connect to HopsFS Client via TCP:", ex);
+        }
+
+        if (client.isConnected())
+            LOG.info("Successfully connected to master at " + masterIp + ":" + masterPort + ".");
+        else {
+            LOG.error("Failed to connect to master at " + masterIp + ":" + masterPort + ".");
+            System.exit(1);
         }
     }
 }

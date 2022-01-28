@@ -158,10 +158,10 @@ public class Commander {
 
                 LOG.debug("Executed command: " + fullCommand);
 
-                ByteArrayOutputStream output = IOUtils.readFully(cmd.getInputStream());
-                LOG.debug("Output: " + output);
+                ByteArrayOutputStream inputStream = IOUtils.readFully(cmd.getInputStream());
+                LOG.debug("Output: " + inputStream);
 
-                con.writer().print(output);
+                con.writer().print(inputStream);
                 cmd.join(5, TimeUnit.SECONDS);
                 con.writer().print("\n** exit status: " + cmd.getExitStatus());
             } finally {
