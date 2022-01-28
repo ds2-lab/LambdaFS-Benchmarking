@@ -5,8 +5,8 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.gmail.benrcarver.distributed.util.Utils;
 import com.gmail.benrcarver.distributed.util.TreeNode;
-import com.gmail.benrcarver.distributed.util.Utils;
-import org.apache.commons.cli.*;
+import net.schmizz.sshj.SSHClient;
+import net.schmizz.sshj.connection.channel.direct.Session;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import io.hops.metrics.TransactionEvent;
@@ -40,13 +40,19 @@ import java.util.concurrent.TimeUnit;
  */
 public class Commander {
     public static final Log LOG = LogFactory.getLog(Commander.class);
+    private static final Console con = System.console();
 
     private static final String LEADER_PREFIX = "[LEADER TCP SERVER]";
 
     /**
+     * Use with String.format(LAUNCH_FOLLOWER_CMD, leader_ip, leader_port)
+     */
+    private static final String LAUNCH_FOLLOWER_CMD = "java -cp \".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/share/hadoop/hdfs/lib/*:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0-SNAPSHOT/share/hadoop/common/lib/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hops-leader-election/target/hops-leader-election-3.2.0.3-SNAPSHOT.jar:/home/ben/openwhisk-runtime-java/core/java8/libs/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hadoop-common-project/hadoop-common/target/hadoop-common-3.2.0.3-SNAPSHOT.jar\" com.gmail.benrcarver.InteractiveTest --worker --leader_ip %s --leader_port %d";
+
+    /**
      * Has a default value.
      */
-    private String namenodeEndpoint = "hdfs://10.150.0.17:9000/";
+    private String nameNodeEndpoint = "hdfs://10.150.0.17:9000/";
 
     private final Scanner scanner = new Scanner(System.in);
 
@@ -56,7 +62,12 @@ public class Commander {
 
     private final int port;
 
-    private List<FollowerConfig> followerConfigs;
+    private final List<FollowerConfig> followerConfigs;
+
+    /**
+     * Map from follower IP to the associated SSH client.
+     */
+    private HashMap<String, SSHClient> sshClients;
 
     public Commander(String ip, int port, String yamlPath) throws IOException {
         this.ip = ip;
@@ -76,7 +87,7 @@ public class Commander {
         try (InputStream in = Files.newInputStream(Paths.get(yamlPath))) {
             LocalConfiguration config = yaml.loadAs(in, LocalConfiguration.class);
 
-            namenodeEndpoint = config.getNamenodeEndpoint();
+            nameNodeEndpoint = config.getNamenodeEndpoint();
             followerConfigs = config.getFollowers();
 
             LOG.info("Loaded configuration!");
@@ -93,10 +104,36 @@ public class Commander {
     /**
      * Using SSH, launch the follower processes.
      */
-    private void launchFollowers() {
+    private void launchFollowers() throws IOException {
+        final String fullCommand = String.format(LAUNCH_FOLLOWER_CMD, ip, port);
+
         for (FollowerConfig config : followerConfigs) {
             LOG.info("Starting follower at " + config.getUser() + ":" + config.getIp() + " now.");
 
+            SSHClient ssh = new SSHClient();
+            ssh.loadKnownHosts();
+            ssh.connect(config.getIp());
+
+            LOG.debug("Connected to follower at " + config.getUser() + ":" + config.getIp() + " now.");
+
+            Session session = null;
+
+            try {
+                ssh.authPublickey(config.getUser());
+
+                LOG.debug("Authenticated with follower at " + config.getUser() + ":" + config.getIp() + " now.");
+
+                session = ssh.startSession();
+
+                LOG.debug("Started session with follower at " + config.getUser() + ":" + config.getIp() + " now.");
+
+                Session.Command cmd = session.exec(fullCommand);
+            } finally {
+                if (session != null)
+                    session.close();
+
+                ssh.disconnect();
+            }
         }
     }
 
@@ -105,7 +142,11 @@ public class Commander {
         tcpServer.bind(port);
     }
 
+    /**
+     * Stop the TCP server. Also sends 'STOP' commands to all the followers.
+     */
     private void stopServer() {
+        // TODO: Send 'STOP' commands to each follower.
         tcpServer.stop();
     }
 
@@ -147,6 +188,7 @@ public class Commander {
                         LOG.info("Encountered exception while closing file system...");
                         ex.printStackTrace();
                     }
+                    stopServer();
                     System.exit(0);
                 case 1:
                     LOG.info("CREATE FILE selected!");
@@ -343,7 +385,7 @@ public class Commander {
                 DistributedFileSystem hdfs = new DistributedFileSystem();
 
                 try {
-                    hdfs.initialize(new URI(namenodeEndpoint), configuration);
+                    hdfs.initialize(new URI(nameNodeEndpoint), configuration);
                 } catch (URISyntaxException | IOException ex) {
                     LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
                     ex.printStackTrace();
@@ -457,7 +499,7 @@ public class Commander {
                 DistributedFileSystem hdfs = new DistributedFileSystem();
 
                 try {
-                    hdfs.initialize(new URI(namenodeEndpoint), configuration);
+                    hdfs.initialize(new URI(nameNodeEndpoint), configuration);
                 } catch (URISyntaxException | IOException ex) {
                     LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
                     ex.printStackTrace();
@@ -616,7 +658,7 @@ public class Commander {
 
         for (String path : paths) {
             try {
-                Path filePath = new Path(namenodeEndpoint + path);
+                Path filePath = new Path(nameNodeEndpoint + path);
                 boolean success = sharedHdfs.delete(filePath, true);
                 LOG.info("\t Delete was successful: " + success);
             } catch (IOException ex) {
@@ -677,7 +719,7 @@ public class Commander {
                 DistributedFileSystem hdfs = new DistributedFileSystem();
 
                 try {
-                    hdfs.initialize(new URI(namenodeEndpoint), configuration);
+                    hdfs.initialize(new URI(nameNodeEndpoint), configuration);
                 } catch (URISyntaxException | IOException ex) {
                     LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
                     ex.printStackTrace();
@@ -851,7 +893,7 @@ public class Commander {
                     DistributedFileSystem hdfs = new DistributedFileSystem();
 
                     try {
-                        hdfs.initialize(new URI(namenodeEndpoint), configuration);
+                        hdfs.initialize(new URI(nameNodeEndpoint), configuration);
                     } catch (URISyntaxException | IOException ex) {
                         LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
                         ex.printStackTrace();
@@ -1035,7 +1077,7 @@ public class Commander {
      * @param contents The content to be written to the file.
      */
     private void createFile(String name, String contents, DistributedFileSystem hdfs) {
-        Path filePath = new Path(namenodeEndpoint + name);
+        Path filePath = new Path(nameNodeEndpoint + name);
 
         try {
             FSDataOutputStream outputStream = hdfs.create(filePath);
@@ -1060,8 +1102,8 @@ public class Commander {
         System.out.print("Renamed file path:\n> ");
         String renamedFileName = scanner.nextLine();
 
-        Path filePath = new Path(namenodeEndpoint + originalFileName);
-        Path filePathRename = new Path(namenodeEndpoint + renamedFileName);
+        Path filePath = new Path(nameNodeEndpoint + originalFileName);
+        Path filePathRename = new Path(nameNodeEndpoint + renamedFileName);
 
         try {
             LOG.info("\t Original file path: \"" + originalFileName + "\"");
@@ -1078,7 +1120,7 @@ public class Commander {
         String targetDirectory = scanner.nextLine();
 
         try {
-            FileStatus[] fileStatus = hdfs.listStatus(new Path(namenodeEndpoint + targetDirectory));
+            FileStatus[] fileStatus = hdfs.listStatus(new Path(nameNodeEndpoint + targetDirectory));
             LOG.info("Directory '" + targetDirectory + "' contains " + fileStatus.length + " files.");
             for(FileStatus status : fileStatus)
                 LOG.info(status.getPath().toString());
@@ -1093,7 +1135,7 @@ public class Commander {
      * @param path The path of the new directory.
      */
     private void mkdir(String path, DistributedFileSystem hdfs) {
-        Path filePath = new Path(namenodeEndpoint + path);
+        Path filePath = new Path(nameNodeEndpoint + path);
 
         try {
             LOG.info("\t Attempting to create new directory: \"" + path + "\"");
@@ -1117,7 +1159,7 @@ public class Commander {
         System.out.print("Content to append:\n> ");
         String fileContents = scanner.nextLine();
 
-        Path filePath = new Path(namenodeEndpoint + fileName);
+        Path filePath = new Path(nameNodeEndpoint + fileName);
 
         try {
             FSDataOutputStream outputStream = hdfs.append(filePath);
@@ -1171,7 +1213,7 @@ public class Commander {
      * @param fileName The path to the file to read.
      */
     private void readFile(String fileName, DistributedFileSystem hdfs) {
-        Path filePath = new Path(namenodeEndpoint + fileName);
+        Path filePath = new Path(nameNodeEndpoint + fileName);
 
         try {
             FSDataInputStream inputStream = hdfs.open(filePath);
@@ -1204,7 +1246,7 @@ public class Commander {
         System.out.print("File or directory path:\n> ");
         String targetPath = scanner.nextLine();
 
-        Path filePath = new Path(namenodeEndpoint + targetPath);
+        Path filePath = new Path(nameNodeEndpoint + targetPath);
 
         try {
             boolean success = hdfs.delete(filePath, true);
@@ -1241,7 +1283,7 @@ public class Commander {
         LOG.info("Created DistributedFileSystem object.");
 
         try {
-            hdfs.initialize(new URI(namenodeEndpoint), configuration);
+            hdfs.initialize(new URI(nameNodeEndpoint), configuration);
             LOG.info("Called initialize() successfully.");
         } catch (URISyntaxException | IOException ex) {
             LOG.error("");
