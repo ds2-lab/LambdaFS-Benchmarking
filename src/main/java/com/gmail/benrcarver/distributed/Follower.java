@@ -236,11 +236,17 @@ public class Follower {
     }
 
     private void sendResultToLeader(DistributedBenchmarkResult result) {
-        this.client.sendTCP(result);
+        assert result != null;
+        LOG.debug("Sending result for operation " + result.opId + " now...");
+        int bytesSent = this.client.sendTCP(result);
+        LOG.debug("Successfully sent " + bytesSent + " byte(s) to leader.");
     }
 
     private void sendMessageToLeader(JsonObject payload) {
-        this.client.sendTCP(new Gson().toJson(payload));
+        assert payload != null;
+        LOG.debug("Sending message to Leader now...");
+        int bytesSent = this.client.sendTCP(new Gson().toJson(payload));
+        LOG.debug("Successfully sent " + bytesSent + " byte(s) to leader.");
     }
 
     private void handleRegistration(JsonObject message) {

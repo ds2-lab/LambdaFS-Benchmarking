@@ -1,6 +1,7 @@
 package com.gmail.benrcarver.distributed;
 
 import com.esotericsoftware.kryonet.Connection;
+import com.esotericsoftware.kryonet.FrameworkMessage;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.gmail.benrcarver.distributed.util.Utils;
@@ -605,6 +606,12 @@ public class Commander {
 
                 BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(opId);
                 resultQueue.add(result);
+            }
+            else if (object instanceof FrameworkMessage.KeepAlive) {
+                // Do nothing...
+            }
+            else {
+                LOG.error("Received object of unexpected/unsupported type " + object.getClass().getSimpleName());
             }
         }
     }
