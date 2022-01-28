@@ -215,6 +215,8 @@ public class Follower {
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString());
+                LOG.info("Obtained local result for WEAK SCALING benchmark: " + result);
+                sendResultToLeader(result);
                 break;
             case OP_STRONG_SCALING:
                 LOG.info("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
@@ -224,6 +226,8 @@ public class Follower {
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString());
+                LOG.info("Obtained local result for STRONG SCALING benchmark: " + result);
+                sendResultToLeader(result);
                 break;
             default:
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
