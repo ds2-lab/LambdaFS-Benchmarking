@@ -281,7 +281,7 @@ public class Commander {
                     break;
                 case 14:
                     LOG.info("WRITE FILES TO DIRECTORIES selected!");
-                    Commands.writeFilesToDirectories(hdfs, hdfsConfiguration);
+                    Commands.writeFilesToDirectories(hdfs, hdfsConfiguration, nameNodeEndpoint);
                     break;
                 case 15:
                     LOG.info("'Read n Files with n Threads (Weak Scaling)' selected!");
