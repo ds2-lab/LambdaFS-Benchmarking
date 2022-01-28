@@ -24,6 +24,21 @@ public class Utils {
     }
 
     /**
+     * Create and return an HDFS Configuration object with the hdfs-site.xml file added as a resource.
+     *
+     * @param path Fully-qualified path to the configuration file.
+     */
+    public static Configuration getConfiguration(String path) {
+        Configuration configuration = new Configuration();
+        try {
+            configuration.addResource(new File(path).toURI().toURL());
+        } catch (MalformedURLException ex) {
+            ex.printStackTrace();
+        }
+        return configuration;
+    }
+
+    /**
      * Read a file containing HopsFS file paths. Return a list containing those paths.
      * @param path Path to file on local FS containing HopsFS file paths.
      * @return List of HopsFS file paths read in from the specified local file.

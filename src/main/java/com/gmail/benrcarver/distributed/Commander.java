@@ -54,15 +54,40 @@ public class Commander {
      */
     private String nameNodeEndpoint = "hdfs://10.150.0.17:9000/";
 
+    /**
+     * Used to obtain input from the user.
+     */
     private final Scanner scanner = new Scanner(System.in);
 
+    /**
+     * Used to communicate with followers.
+     */
     private final Server tcpServer;
 
+    /**
+     * The leader's IP address.
+     */
     private final String ip;
 
+    /**
+     * Port that we are listening on.
+     */
     private final int port;
 
+    /**
+     * Configurations of the followers. Used when launching them via SSH.
+     */
     private final List<FollowerConfig> followerConfigs;
+
+    /**
+     * Fully-qualified path of hdfs-site.xml configuration file.
+     */
+    private final String hdfsConfigFilePath;
+
+    /**
+     * The hdfs-site.xml configuration file.
+     */
+    private Configuration hdfsConfiguration;
 
     /**
      * Map from follower IP to the associated SSH client.
@@ -89,6 +114,7 @@ public class Commander {
 
             nameNodeEndpoint = config.getNamenodeEndpoint();
             followerConfigs = config.getFollowers();
+            hdfsConfigFilePath = config.getHdfsConfigFile();
 
             LOG.info("Loaded configuration!");
             LOG.info(config);
@@ -232,11 +258,11 @@ public class Commander {
                     break;
                 case 11:
                     LOG.info("WRITE FILES TO DIRECTORY selected!");
-                    writeFilesToDirectory(hdfs, configuration);
+                    writeFilesToDirectory(hdfs, hdfsConfiguration);
                     break;
                 case 12:
                     LOG.info("READ FILES selected!");
-                    readFilesOperation(configuration, hdfs);
+                    readFilesOperation(hdfsConfiguration, hdfs);
                     break;
                 case 13:
                     LOG.info("DELETE FILES selected!");
@@ -244,15 +270,15 @@ public class Commander {
                     break;
                 case 14:
                     LOG.info("WRITE FILES TO DIRECTORIES selected!");
-                    writeFilesToDirectories(hdfs, configuration);
+                    writeFilesToDirectories(hdfs, hdfsConfiguration);
                     break;
                 case 15:
                     LOG.info("'Read n Files with n Threads (Weak Scaling)' selected!");
-                    readNFilesOperation(configuration, hdfs);
+                    readNFilesOperation(hdfsConfiguration, hdfs);
                     break;
                 case 16:
                     LOG.info("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
-                    strongScalingBenchmark(configuration, hdfs);
+                    strongScalingBenchmark(hdfsConfiguration, hdfs);
                     break;
                 default:
                     LOG.info("ERROR: Unknown or invalid operation specified: " + op);
@@ -1270,11 +1296,11 @@ public class Commander {
         }
     }
 
-    private static DistributedFileSystem initDfsClient() {
+    private DistributedFileSystem initDfsClient() {
         LOG.debug("Creating HDFS client now...");
-        Configuration configuration = Utils.getConfiguration();
+        hdfsConfiguration = Utils.getConfiguration(hdfsConfigFilePath);
         try {
-            configuration.addResource(new File("/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml").toURI().toURL());
+            configuration.addResource(new File(hdfsConfigFilePath).toURI().toURL());
         } catch (MalformedURLException ex) {
             ex.printStackTrace();
         }

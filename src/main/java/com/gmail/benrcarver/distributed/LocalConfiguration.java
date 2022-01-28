@@ -10,6 +10,7 @@ import java.util.List;
 public class LocalConfiguration {
     private String namenodeEndpoint;
     private List<FollowerConfig> followers;
+    private String hdfsConfigFile;
 
     public String getNamenodeEndpoint() {
         return namenodeEndpoint;
@@ -29,7 +30,15 @@ public class LocalConfiguration {
 
     @Override
     public String toString() {
-        return "LocalConfiguration(namenodeEndpoint=" + namenodeEndpoint + ", followers=" +
-                StringUtils.join(followers, ",") + ")";
+        return "LocalConfiguration(namenodeEndpoint=" + namenodeEndpoint + ", hdfsConfigFile=" + hdfsConfigFile +
+                ", followers=" + StringUtils.join(followers, ",") + ")";
+    }
+
+    public String getHdfsConfigFile() {
+        return hdfsConfigFile;
+    }
+
+    public void setHdfsConfigFile(String hdfsConfigFile) {
+        this.hdfsConfigFile = hdfsConfigFile;
     }
 }
