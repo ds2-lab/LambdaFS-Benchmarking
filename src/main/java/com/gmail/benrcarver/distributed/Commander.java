@@ -164,6 +164,7 @@ public class Commander {
                 con.writer().print(inputStream);
                 cmd.join(5, TimeUnit.SECONDS);
                 con.writer().print("\n** exit status: " + cmd.getExitStatus());
+                LOG.debug("Exit status: " + cmd.getExitStatus());
             } finally {
                 if (session != null)
                     session.close();
