@@ -564,7 +564,9 @@ public class Commands {
      *
      * @param sharedHdfs Passed by main thread. We only use this if we're doing single-threaded.
      */
-    public static void writeFilesToDirectory(DistributedFileSystem sharedHdfs, final Configuration configuration)
+    public static void writeFilesToDirectory(DistributedFileSystem sharedHdfs,
+                                             final Configuration configuration,
+                                             final String nameNodeEndpoint)
             throws InterruptedException, IOException {
         System.out.print("Target directory:\n> ");
         String targetDirectory = scanner.nextLine();
@@ -589,7 +591,8 @@ public class Commands {
             numThreads = Integer.parseInt(scanner.nextLine());
         }
 
-        writeFilesInternal(n, minLength, maxLength, numThreads, Collections.singletonList(targetDirectory), sharedHdfs, configuration);
+        writeFilesInternal(n, minLength, maxLength, numThreads, Collections.singletonList(targetDirectory),
+                sharedHdfs, configuration, nameNodeEndpoint);
     }
 
     /**
@@ -605,7 +608,8 @@ public class Commands {
      */
     public static void writeFilesInternal(int n, int minLength, int maxLength, int numThreads,
                                     List<String> targetDirectories, DistributedFileSystem sharedHdfs,
-                                    Configuration configuration) throws IOException, InterruptedException {
+                                    Configuration configuration, final String nameNodeEndpoint)
+            throws IOException, InterruptedException {
         // Generate the file contents and file names.
         int totalNumberOfFiles = n * targetDirectories.size();
         LOG.info("Generating " + n + " files for each directory (total of " + totalNumberOfFiles + " files.");
@@ -632,7 +636,7 @@ public class Commands {
         if (numThreads == 1) {
             start = Instant.now();
 
-            createFiles(targetPaths, content, sharedHdfs);
+            createFiles(targetPaths, content, sharedHdfs, nameNodeEndpoint);
 
             end = Instant.now();
         } else {
@@ -677,7 +681,7 @@ public class Commands {
                     }
 
                     latch.countDown();
-                    createFiles(targetPathsPerArray[idx], contentPerArray[idx], hdfs);
+                    createFiles(targetPathsPerArray[idx], contentPerArray[idx], hdfs, nameNodeEndpoint);
 
                     operationsPerformed.add(hdfs.getOperationsPerformed());
                     statisticsPackages.add(hdfs.getStatisticsPackages());
@@ -732,7 +736,7 @@ public class Commands {
         LOG.info("Aggregate throughput: " + filesPerSec + " ops/sec.");
     }
 
-    public static void createSubtree(DistributedFileSystem hdfs) {
+    public static void createSubtree(DistributedFileSystem hdfs, String nameNodeEndpoint) {
         System.out.print("Subtree root directory:\n> ");
         String subtreeRootPath = scanner.nextLine();
 
@@ -762,7 +766,7 @@ public class Commands {
 
         int currentDepth = 0;
 
-        mkdir(subtreeRootPath, hdfs);
+        mkdir(subtreeRootPath, hdfs, nameNodeEndpoint);
         directoriesCreated++;
 
         Stack<TreeNode> directoryStack = new Stack<TreeNode>();
@@ -780,7 +784,7 @@ public class Commands {
 
                 String basePath = directory.getPath() + "/dir";
 
-                Stack<TreeNode> stack = createChildDirectories(basePath, maxSubDirs, hdfs);
+                Stack<TreeNode> stack = createChildDirectories(basePath, maxSubDirs, hdfs, nameNodeEndpoint);
                 directory.addChildren(stack);
                 directoriesCreated += stack.size();
                 currentDepthStacks.add(stack);
@@ -807,11 +811,12 @@ public class Commands {
         LOG.info("==================================");
     }
 
-    public static Stack<TreeNode> createChildDirectories(String basePath, int subDirs, DistributedFileSystem hdfs) {
+    public static Stack<TreeNode> createChildDirectories(String basePath, int subDirs,
+                                                         DistributedFileSystem hdfs, String nameNodeEndpoint) {
         Stack<TreeNode> directoryStack = new Stack<TreeNode>();
         for (int i = 0; i < subDirs; i++) {
             String path = basePath + i;
-            mkdir(path, hdfs);
+            mkdir(path, hdfs, nameNodeEndpoint);
             TreeNode node = new TreeNode(path, new ArrayList<TreeNode>());
             directoryStack.push(node);
         }
@@ -819,13 +824,13 @@ public class Commands {
         return directoryStack;
     }
 
-    public static void createFileOperation(DistributedFileSystem hdfs) {
+    public static void createFileOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
         System.out.print("File contents:\n> ");
         String fileContents = scanner.nextLine().trim();
 
-        createFile(fileName, fileContents, hdfs);
+        createFile(fileName, fileContents, hdfs, nameNodeEndpoint);
     }
 
     /**
@@ -836,12 +841,12 @@ public class Commands {
      * @param names File names.
      * @param content File contents.
      */
-    public static void createFiles(String[] names, String[] content, DistributedFileSystem hdfs) {
+    public static void createFiles(String[] names, String[] content, DistributedFileSystem hdfs, String nameNodeEndpoint) {
         assert(names.length == content.length);
 
         for (int i = 0; i < names.length; i++) {
             LOG.info("Writing file " + i + "/" + names.length);
-            createFile(names[i], content[i], hdfs);
+            createFile(names[i], content[i], hdfs, nameNodeEndpoint);
         }
     }
 
@@ -850,7 +855,9 @@ public class Commands {
      * @param name The name of the file.
      * @param contents The content to be written to the file.
      */
-    public static void createFile(String name, String contents, DistributedFileSystem hdfs) {
+    public static void createFile(String name, String contents,
+                                  DistributedFileSystem hdfs,
+                                  String nameNodeEndpoint) {
         Path filePath = new Path(nameNodeEndpoint + name);
 
         try {
@@ -870,7 +877,7 @@ public class Commands {
         }
     }
 
-    public static void renameOperation(DistributedFileSystem hdfs) {
+    public static void renameOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
         System.out.print("Original file path:\n> ");
         String originalFileName = scanner.nextLine();
         System.out.print("Renamed file path:\n> ");
@@ -889,7 +896,7 @@ public class Commands {
         }
     }
 
-    public static void listOperation(DistributedFileSystem hdfs) {
+    public static void listOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
         System.out.print("Target directory:\n> ");
         String targetDirectory = scanner.nextLine();
 
@@ -908,7 +915,7 @@ public class Commands {
      * Create a new directory with the given path.
      * @param path The path of the new directory.
      */
-    public static void mkdir(String path, DistributedFileSystem hdfs) {
+    public static void mkdir(String path, DistributedFileSystem hdfs, String nameNodeEndpoint) {
         Path filePath = new Path(nameNodeEndpoint + path);
 
         try {
@@ -920,14 +927,14 @@ public class Commands {
         }
     }
 
-    public static void mkdirOperation(DistributedFileSystem hdfs) {
+    public static void mkdirOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
         System.out.print("New directory path:\n> ");
         String newDirectoryName = scanner.nextLine();
 
-        mkdir(newDirectoryName, hdfs);
+        mkdir(newDirectoryName, hdfs, nameNodeEndpoint);
     }
 
-    public static void appendOperation(DistributedFileSystem hdfs) {
+    public static void appendOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
         System.out.print("Content to append:\n> ");

@@ -229,11 +229,11 @@ public class Commander {
                     System.exit(0);
                 case 1:
                     LOG.info("CREATE FILE selected!");
-                    Commands.createFileOperation(hdfs);
+                    Commands.createFileOperation(hdfs, nameNodeEndpoint);
                     break;
                 case 2:
                     LOG.info("MAKE DIRECTORY selected!");
-                    Commands.mkdirOperation(hdfs);;
+                    Commands.mkdirOperation(hdfs, nameNodeEndpoint);;
                     break;
                 case 3:
                     LOG.info("READ FILE selected!");
@@ -241,7 +241,7 @@ public class Commander {
                     break;
                 case 4:
                     LOG.info("RENAME selected!");
-                    Commands.renameOperation(hdfs);
+                    Commands.renameOperation(hdfs, nameNodeEndpoint);
                     break;
                 case 5:
                     LOG.info("DELETE selected!");
@@ -249,15 +249,15 @@ public class Commander {
                     break;
                 case 6:
                     LOG.info("LIST selected!");
-                    Commands.listOperation(hdfs);
+                    Commands.listOperation(hdfs, nameNodeEndpoint);
                     break;
                 case 7:
                     LOG.info("APPEND selected!");
-                    Commands.appendOperation(hdfs);
+                    Commands.appendOperation(hdfs, nameNodeEndpoint);
                     break;
                 case 8:
                     LOG.info("CREATE SUBTREE selected!");
-                    Commands.createSubtree(hdfs);
+                    Commands.createSubtree(hdfs, nameNodeEndpoint);
                     break;
                 case 9:
                     LOG.info("PING selected!");
@@ -269,7 +269,7 @@ public class Commander {
                     break;
                 case 11:
                     LOG.info("WRITE FILES TO DIRECTORY selected!");
-                    Commands.writeFilesToDirectory(hdfs, hdfsConfiguration);
+                    Commands.writeFilesToDirectory(hdfs, hdfsConfiguration, nameNodeEndpoint);
                     break;
                 case 12:
                     LOG.info("READ FILES selected!");
