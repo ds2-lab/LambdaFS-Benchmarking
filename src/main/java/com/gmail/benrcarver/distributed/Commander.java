@@ -191,7 +191,7 @@ public class Commander {
     private void startServer() throws IOException {
         tcpServer.start();
         Network.register(tcpServer);
-        tcpServer.bind(port);
+        tcpServer.bind(port, port+1);
     }
 
     /**

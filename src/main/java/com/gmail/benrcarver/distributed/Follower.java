@@ -265,7 +265,7 @@ public class Follower {
             client.start();
 
             try {
-                client.connect(CONN_TIMEOUT_MILLISECONDS, masterIp, masterPort);
+                client.connect(CONN_TIMEOUT_MILLISECONDS, masterIp, masterPort, masterPort + 1);
             } catch (IOException e) {
                 LOG.error("Failed to connect to Leader.", e);
             }
