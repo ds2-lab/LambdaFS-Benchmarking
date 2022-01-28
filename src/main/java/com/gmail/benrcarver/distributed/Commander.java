@@ -1053,7 +1053,7 @@ public class Commander {
         LOG.info("Directories created: " + directoriesCreated);
         LOG.info("Files created: " + filesCreated + "\n");
 
-        LOG.info("subtreeRoot children: " + subtreeRoot.children.size());
+        LOG.info("subtreeRoot children: " + subtreeRoot.getChildren().size());
         LOG.info(subtreeRoot.toString());
 
         LOG.info("==================================");

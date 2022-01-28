@@ -21,6 +21,8 @@ public class TreeNode {
         this.children.add(node);
     }
 
+    public List<TreeNode> getChildren() { return this.children; }
+
     public String getPath() {
         return this.path;
     }
