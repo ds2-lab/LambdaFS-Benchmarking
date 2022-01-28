@@ -369,7 +369,7 @@ public class Commander {
             payload.addProperty("numThreads", numThreads);
             payload.addProperty("inputPath", inputPath);
 
-            issueCommandToFollowers("Read N Files with N Threads (Weak Scaling)", operationId, payload);
+            issueCommandToFollowers("Read n Files y Times with z Threads (Strong Scaling)", operationId, payload);
         }
         // TODO: Make this return some sort of 'result' object encapsulating the result.
         //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.

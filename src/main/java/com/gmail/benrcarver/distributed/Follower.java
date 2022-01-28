@@ -117,6 +117,12 @@ public class Follower {
     private void handleMessageFromLeader(JsonObject message, DistributedFileSystem hdfs) throws IOException, InterruptedException {
         int operation = message.getAsJsonPrimitive(OPERATION).getAsInt();
 
+        String operationId = "N/A";
+        if (message.has(OPERATION_ID)) {
+            operationId = message.getAsJsonPrimitive(OPERATION_ID).getAsString();
+            LOG.info("Received operation " + operationId + " from Leader.");
+        }
+
         switch(operation) {
             case OP_REGISTRATION:
                 handleRegistration(message);
@@ -215,6 +221,7 @@ public class Follower {
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString());
+                result.setOperationId(operationId);
                 LOG.info("Obtained local result for WEAK SCALING benchmark: " + result);
                 sendResultToLeader(result);
                 break;
@@ -226,6 +233,7 @@ public class Follower {
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString());
+                result.setOperationId(operationId);
                 LOG.info("Obtained local result for STRONG SCALING benchmark: " + result);
                 sendResultToLeader(result);
                 break;
