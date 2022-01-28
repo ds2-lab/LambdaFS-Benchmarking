@@ -237,7 +237,7 @@ public class Commander {
                     break;
                 case 3:
                     LOG.info("READ FILE selected!");
-                    Commands.readOperation(hdfs);
+                    Commands.readOperation(hdfs, nameNodeEndpoint);
                     break;
                 case 4:
                     LOG.info("RENAME selected!");

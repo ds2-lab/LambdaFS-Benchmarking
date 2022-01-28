@@ -981,10 +981,10 @@ public class Commands {
         }
     }
 
-    public static void readOperation(DistributedFileSystem hdfs) {
+    public static void readOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
-        readFile(fileName, hdfs);
+        readFile(fileName, hdfs, nameNodeEndpoint);
     }
 
     /**
@@ -993,7 +993,7 @@ public class Commands {
      * Read the HopsFS/HDFS file at the given path.
      * @param fileName The path to the file to read.
      */
-    public static void readFile(String fileName, DistributedFileSystem hdfs) {
+    public static void readFile(String fileName, DistributedFileSystem hdfs, String nameNodeEndpoint) {
         Path filePath = new Path(nameNodeEndpoint + fileName);
 
         try {
