@@ -112,7 +112,7 @@ public class Commands {
                                                 final DistributedFileSystem sharedHdfs,
                                                 final String nameNodeEndpoint,
                                                 int n, int readsPerFile, int numThreads, String inputPath)
-            throws FileNotFoundException {
+            throws FileNotFoundException, InterruptedException {
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
 
         if (paths.size() < n) {
