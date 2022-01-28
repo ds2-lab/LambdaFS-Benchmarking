@@ -577,6 +577,7 @@ public class Commander {
             JsonObject registrationPayload = new JsonObject();
             registrationPayload.addProperty(OPERATION, OP_REGISTRATION);
             registrationPayload.addProperty(NAMENODE_ENDPOINT, nameNodeEndpoint);
+            registrationPayload.addProperty(HDFS_CONFIG_PATH, hdfsConfigFilePath);
 
             conn.sendTCP(new Gson().toJson(registrationPayload));
         }
