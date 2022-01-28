@@ -6,6 +6,7 @@ import com.esotericsoftware.kryonet.Server;
 import com.gmail.benrcarver.distributed.util.Utils;
 import com.gmail.benrcarver.distributed.util.TreeNode;
 import net.schmizz.sshj.SSHClient;
+import net.schmizz.sshj.common.IOUtils;
 import net.schmizz.sshj.connection.channel.direct.Session;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -154,6 +155,10 @@ public class Commander {
                 LOG.debug("Started session with follower at " + config.getUser() + "@" + config.getIp() + " now.");
 
                 Session.Command cmd = session.exec(fullCommand);
+
+                con.writer().print(IOUtils.readFully(cmd.getInputStream()).toString());
+                cmd.join(5, TimeUnit.SECONDS);
+                con.writer().print("\n** exit status: " + cmd.getExitStatus());
             } finally {
                 if (session != null)
                     session.close();
