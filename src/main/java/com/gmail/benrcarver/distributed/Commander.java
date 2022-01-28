@@ -134,24 +134,24 @@ public class Commander {
         final String fullCommand = String.format(LAUNCH_FOLLOWER_CMD, ip, port);
 
         for (FollowerConfig config : followerConfigs) {
-            LOG.info("Starting follower at " + config.getUser() + ":" + config.getIp() + " now.");
+            LOG.info("Starting follower at " + config.getUser() + "@" + config.getIp() + " now.");
 
             SSHClient ssh = new SSHClient();
             ssh.loadKnownHosts();
             ssh.connect(config.getIp());
 
-            LOG.debug("Connected to follower at " + config.getUser() + ":" + config.getIp() + " now.");
+            LOG.debug("Connected to follower at " + config.getUser() + "@" + config.getIp() + " now.");
 
             Session session = null;
 
             try {
                 ssh.authPublickey(config.getUser());
 
-                LOG.debug("Authenticated with follower at " + config.getUser() + ":" + config.getIp() + " now.");
+                LOG.debug("Authenticated with follower at " + config.getUser() + "@" + config.getIp() + " now.");
 
                 session = ssh.startSession();
 
-                LOG.debug("Started session with follower at " + config.getUser() + ":" + config.getIp() + " now.");
+                LOG.debug("Started session with follower at " + config.getUser() + "@" + config.getIp() + " now.");
 
                 Session.Command cmd = session.exec(fullCommand);
             } finally {
