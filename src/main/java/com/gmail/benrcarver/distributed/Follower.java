@@ -27,6 +27,8 @@ public class Follower {
 
     public void connect() {
         Thread connectThread = new Thread(() -> {
+            client.start();
+
             try {
                 client.connect(CONN_TIMEOUT_MILLISECONDS, masterIp, masterPort);
             } catch (IOException e) {
