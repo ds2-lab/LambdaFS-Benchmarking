@@ -31,7 +31,10 @@ public class Commands {
     public static final Log LOG = LogFactory.getLog(Commands.class);
     private static Scanner scanner = new Scanner(System.in);
 
-    public static void writeFilesToDirectories(DistributedFileSystem hdfs, final Configuration configuration) throws IOException, InterruptedException {
+    public static void writeFilesToDirectories(DistributedFileSystem hdfs,
+                                               final Configuration configuration,
+                                               String nameNodeEndpoint)
+            throws IOException, InterruptedException {
         System.out.print("Manually input (comma-separated list) [1], or specify file containing directories [2]? \n>");
         int choice = Integer.parseInt(scanner.nextLine());
 
@@ -88,7 +91,7 @@ public class Commands {
         }
 
         assert directories != null;
-        writeFilesInternal(n, minLength, maxLength, numberOfThreads, directories, hdfs, configuration);
+        writeFilesInternal(n, minLength, maxLength, numberOfThreads, directories, hdfs, configuration, nameNodeEndpoint);
     }
 
     public static void clearStatisticsPackages(DistributedFileSystem hdfs) {
@@ -167,7 +170,7 @@ public class Commands {
 
                 for (String filePath : selectedPaths) {
                     for (int j = 0; j < readsPerFile; j++)
-                        readFile(filePath, hdfs);
+                        readFile(filePath, hdfs, nameNodeEndpoint);
                 }
 
                 operationsPerformed.add(hdfs.getOperationsPerformed());
@@ -282,7 +285,7 @@ public class Commands {
                 latch.countDown();
 
                 for (int j = 0; j < readsPerFile; j++)
-                    readFile(filePath, hdfs);
+                    readFile(filePath, hdfs, nameNodeEndpoint);
 
                 operationsPerformed.add(hdfs.getOperationsPerformed());
                 statisticsPackages.add(hdfs.getStatisticsPackages());
@@ -506,7 +509,7 @@ public class Commands {
 
                 for (String filePath : pathsForThread) {
                     for (int j = 0; j < readsPerFile; j++)
-                        readFile(filePath, hdfs);
+                        readFile(filePath, hdfs, nameNodeEndpoint);
                 }
 
                 operationsPerformed.add(hdfs.getOperationsPerformed());
