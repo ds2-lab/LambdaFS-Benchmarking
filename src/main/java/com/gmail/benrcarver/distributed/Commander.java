@@ -106,9 +106,12 @@ public class Commander {
      */
     private ConcurrentHashMap<String, BlockingQueue<DistributedBenchmarkResult>> resultQueues;
 
-    public Commander(String ip, int port, String yamlPath) throws IOException {
+    private final boolean nondistributed;
+
+    public Commander(String ip, int port, String yamlPath, boolean nondistributed) throws IOException {
         this.ip = ip;
         this.port = port;
+        this.nondistributed = nondistributed;
         // TODO: Maybe do book-keeping or fault-tolerance here.
         this.followers = new ArrayList<>();
         this.resultQueues = new ConcurrentHashMap<>();
@@ -137,8 +140,10 @@ public class Commander {
     }
 
     public void start() throws IOException, InterruptedException {
-        startServer();
-        launchFollowers();
+        if (!nondistributed) {
+            startServer();
+            launchFollowers();
+        }
         interactiveLoop();
     }
 

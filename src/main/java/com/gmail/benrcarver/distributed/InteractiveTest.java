@@ -54,6 +54,7 @@ public class InteractiveTest {
         Option workerOpt = new Option("w", "worker", false, "If true, run this program as a worker, listening to commands from a remote leader.");
         Option leaderIpOpt = new Option("l", "leader_ip", true, "The IP address of the Leader. Only used when this process is designated as a worker.");
         Option leaderPort = new Option("p", "leader_port", true, "The port of the Leader. Only used when this process is designated as a worker.");
+        Option localOption = new Option("n", "nondistributed", false, "Run in non-distributed mode, meaning we don't launch any followers.");
 
         Option yamlPath = new Option("y", "yaml_path", true, "Path to YAML configuration file.");
 
@@ -61,6 +62,7 @@ public class InteractiveTest {
         cmdLineOpts.addOption(leaderIpOpt);
         cmdLineOpts.addOption(leaderPort);
         cmdLineOpts.addOption(yamlPath);
+        cmdLineOpts.addOption(localOption);
 
         CommandLineParser parser = new GnuParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -86,7 +88,8 @@ public class InteractiveTest {
             Commander commander = new Commander(
                     cmd.getOptionValue("leader_ip"),
                     Integer.parseInt(cmd.getOptionValue("leader_port")),
-                    cmd.getOptionValue("yaml_path"));
+                    cmd.getOptionValue("yaml_path"),
+                    cmd.hasOption("nondistributed") /* If it has this option, then it is true */ );
             commander.start();
         }
     }
