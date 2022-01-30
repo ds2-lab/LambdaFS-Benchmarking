@@ -141,9 +141,11 @@ public class Commander {
 
     public void start() throws IOException, InterruptedException {
         if (!nondistributed) {
+            LOG.info("Commander is operating in DISTRIBUTED mode.");
             startServer();
             launchFollowers();
         }
+        LOG.info("Commander is operating in NON-DISTRIBUTED mode.");
         interactiveLoop();
     }
 
