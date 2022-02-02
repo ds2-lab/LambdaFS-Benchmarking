@@ -6,6 +6,7 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.gmail.benrcarver.distributed.util.Utils;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.schmizz.sshj.SSHClient;
@@ -301,17 +302,23 @@ public class Commander {
                     LOG.info("DELETE FILES selected!");
                     Commands.deleteFilesOperation(hdfs, nameNodeEndpoint);
                     break;
-                case OP_WRITE_FILS_TO_DIRS:
+                case OP_WRITE_FILES_TO_DIRS:
                     LOG.info("WRITE FILES TO DIRECTORIES selected!");
                     Commands.writeFilesToDirectories(hdfs, hdfsConfiguration, nameNodeEndpoint);
                     break;
-                case OP_WEAK_SCALING:
-                    LOG.info("'Read n Files with n Threads (Weak Scaling)' selected!");
+                case OP_WEAK_SCALING_READS:
+                    LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
                     readNFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                     break;
-                case OP_STRONG_SCALING:
-                    LOG.info("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
+                case OP_STRONG_SCALING_READS:
+                    LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
                     strongScalingOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                    break;
+                case OP_WEAK_SCALING_WRITES:
+                    LOG.info("'Read n Files with n Threads (Weak Scaling - Write)' selected!");
+                    break;
+                case OP_STRONG_SCALING_WRITES:
+                    LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Write)' selected!");
                     break;
                 default:
                     LOG.info("ERROR: Unknown or invalid operation specified: " + op);
@@ -343,8 +350,8 @@ public class Commander {
     }
 
     public void strongScalingOperation(final Configuration configuration,
-                                              final DistributedFileSystem sharedHdfs,
-                                              final String nameNodeEndpoint)
+                                       final DistributedFileSystem sharedHdfs,
+                                       final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         // User provides file containing HopsFS file paths.
         // Specifies how many files each thread should read.
@@ -369,7 +376,7 @@ public class Commander {
         int numDistributedResults = followers.size();
         if (followers.size() > 0) {
             JsonObject payload = new JsonObject();
-            payload.addProperty(OPERATION, OP_STRONG_SCALING);
+            payload.addProperty(OPERATION, OP_STRONG_SCALING_READS);
             payload.addProperty(OPERATION_ID, operationId);
             payload.addProperty("n", n);
             payload.addProperty("readsPerFile", readsPerFile);
@@ -378,8 +385,7 @@ public class Commander {
 
             issueCommandToFollowers("Read n Files y Times with z Threads (Strong Scaling)", operationId, payload);
         }
-        // TODO: Make this return some sort of 'result' object encapsulating the result.
-        //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
+
         DistributedBenchmarkResult localResult =
                 Commands.strongScalingBenchmark(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile,
                         numThreads, inputPath);
@@ -426,7 +432,146 @@ public class Commander {
     }
 
     /**
-     * Weak scaling benchmark.
+     * Weak scaling, writes.
+     */
+    public void writeNFilesOperation(final Configuration configuration,
+                                     final DistributedFileSystem sharedHdfs,
+                                     final String nameNodeEndpoint)
+            throws IOException, InterruptedException {
+        System.out.print("Should the threads write their files to the SAME DIRECTORY [1] or DIFFERENT DIRECTORIES [2]?\n> ");
+        int sameOrDiffDirectory = Integer.parseInt(scanner.nextLine());
+
+        // Validate input.
+        if (sameOrDiffDirectory < 1 || sameOrDiffDirectory > 2) {
+            LOG.error("Invalid argument specified. Should be \"1\" for same directory or \"2\" for different directories. " +
+                    "Instead, got \"" + sameOrDiffDirectory + "\"");
+            return;
+        }
+
+        System.out.print("Manually input (comma-separated list) [1], or specify file containing directories [2]? \n> ");
+        int choice = Integer.parseInt(scanner.nextLine());
+
+        List<String> directories = null;
+        if (choice == 1) {
+            System.out.print("Please enter the directories as a comma-separated list:\n> ");
+            String listOfDirectories = scanner.nextLine();
+            directories = Arrays.asList(listOfDirectories.split(","));
+
+            if (directories.size() == 1)
+                LOG.info("1 directory specified.");
+            else
+                LOG.info(directories.size() + " directories specified.");
+        }
+        else if (choice == 2) {
+            System.out.print("Please provide path to file containing HopsFS directories:\n> ");
+            String filePath = scanner.nextLine();
+            directories = Utils.getFilePathsFromFile(filePath);
+
+            if (directories.size() == 1)
+                LOG.info("1 directory specified in file.");
+            else
+                LOG.info(directories.size() + " directories specified in file.");
+        }
+        else {
+            LOG.error("Invalid option specified (" + choice + "). Please enter \"1\" or \"2\" for this prompt.");
+        }
+
+        System.out.print("Number of threads? \n> ");
+        int numberOfThreads = Integer.parseInt(scanner.nextLine());
+
+        // IMPORTANT: Make directories the same size as the number of threads, so we have one directory per thread.
+        //            This allows us to directly reuse the writeFilesInternal() function, which creates a certain
+        //            number of files per directory. If number of threads is equal to number of directories, then
+        //            we are essentially creating a certain number of files per thread, which is what we want.
+        assert(directories != null);
+        Collections.shuffle(directories);
+        directories = directories.subList(0, numberOfThreads);
+
+        System.out.print("Number of writes per thread? \n> ");
+        int writesPerThread = Integer.parseInt(scanner.nextLine());
+
+        int minLength = 0;
+        System.out.print("Min string length (default " + minLength + "):\n> ");
+        try {
+            minLength = Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException ex) {
+            LOG.info("Defaulting to " + minLength + ".");
+        }
+
+        int maxLength = 0;
+        System.out.print("Max string length (default " + maxLength + "):\n> ");
+        try {
+            maxLength = Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException ex) {
+            LOG.info("Defaulting to " + maxLength + ".");
+        }
+
+        assert directories != null;
+
+        String operationId = UUID.randomUUID().toString();
+        int numDistributedResults = followers.size();
+        if (followers.size() > 0) {
+            JsonObject payload = new JsonObject();
+            payload.addProperty(OPERATION, OP_STRONG_SCALING_READS);
+            payload.addProperty(OPERATION_ID, operationId);
+            payload.addProperty("n", n);
+            payload.addProperty("minLength", minLength);
+            payload.addProperty("maxLength", maxLength);
+            payload.addProperty("numberOfThreads", numberOfThreads);
+
+            JsonArray directoriesJson = new JsonArray();
+            for (String dir : directories)
+                directoriesJson.add(dir);
+
+            payload.add("directories", directoriesJson);
+
+            issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Write)", operationId, payload);
+        }
+
+        DistributedBenchmarkResult localResult =
+                Commands.writeFilesInternal(0, minLength, maxLength, numberOfThreads, directories,
+                        sharedHdfs, hdfsConfiguration, nameNodeEndpoint);
+        localResult.setOperationId(operationId);
+        localResult.setOperation(OP_WEAK_SCALING_WRITES);
+
+        LOG.info("LOCAL result of strong scaling benchmark: " + localResult);
+        localResult.setOperationId(operationId);
+
+        // Wait for followers' results if we had followers when we first started the operation.
+        if (numDistributedResults > 0) {
+            LOG.info("Waiting for " + numDistributedResults + " distributed result(s).");
+            BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
+            assert(resultQueue != null);
+
+            while (resultQueue.size() < numDistributedResults) {
+                Thread.sleep(50);
+            }
+
+            DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
+            DescriptiveStatistics duration = new DescriptiveStatistics();
+            DescriptiveStatistics throughput = new DescriptiveStatistics();
+
+            opsPerformed.addValue(localResult.numOpsPerformed);
+            duration.addValue(localResult.durationSeconds);
+            throughput.addValue(localResult.getOpsPerSecond());
+
+            for (DistributedBenchmarkResult res : resultQueue) {
+                LOG.debug("Received result: " + res);
+
+                opsPerformed.addValue(res.numOpsPerformed);
+                duration.addValue(res.durationSeconds);
+                throughput.addValue(res.getOpsPerSecond());
+            }
+
+            LOG.info("==== RESULTS ====");
+            LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
+            LOG.info("Aggregate Throughput (ops/sec): " + (opsPerformed.getSum() / (duration.getMean())));
+            LOG.info("Average Non-Aggregate Throughput (op/sec): " + throughput.getMean());
+        }
+    }
+
+    /**
+     * Weak scaling, reads.
      *
      * Query the user for:
      *  - An integer `n`, the number of files to read
@@ -436,8 +581,8 @@ public class Commander {
      * This function will use `n` threads to read those `n` files.
      */
     private void readNFilesOperation(final Configuration configuration,
-                                           final DistributedFileSystem sharedHdfs,
-                                           final String nameNodeEndpoint)
+                                     final DistributedFileSystem sharedHdfs,
+                                     final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         System.out.print("How many files should be read?\n> ");
         String inputN = scanner.nextLine();
@@ -455,13 +600,13 @@ public class Commander {
         int numDistributedResults = followers.size();
         if (followers.size() > 0) {
             JsonObject payload = new JsonObject();
-            payload.addProperty(OPERATION, OP_WEAK_SCALING);
+            payload.addProperty(OPERATION, OP_WEAK_SCALING_READS);
             payload.addProperty(OPERATION_ID, operationId);
             payload.addProperty("n", n);
             payload.addProperty("readsPerFile", readsPerFile);
             payload.addProperty("inputPath", inputPath);
 
-            issueCommandToFollowers("Read N Files with N Threads (Weak Scaling)", operationId, payload);
+            issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload);
         }
         // TODO: Make this return some sort of 'result' object encapsulating the result.
         //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
@@ -637,7 +782,8 @@ public class Commander {
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
-                "\n(15) Read n Files with n Threads (Weak Scaling)\n(16) Read n Files y Times with z Threads (Strong Scaling)");
+                "\n(15) Read n Files with n Threads (Weak Scaling - Read)\n(16) Read n Files y Times with z Threads (Strong Scaling - Read)" +
+                "\n(17) Read n Files with n Threads (Weak Scaling - Write)\n(18) Read n Files y Times with z Threads (Strong Scaling - Write)");
         System.out.println("==================");
         System.out.println("");
         System.out.println("What would you like to do?");

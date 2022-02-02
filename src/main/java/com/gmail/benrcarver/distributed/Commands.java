@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import io.hops.metrics.OperationPerformed;
 
-import static com.gmail.benrcarver.distributed.Constants.OP_STRONG_SCALING;
+import static com.gmail.benrcarver.distributed.Constants.OP_STRONG_SCALING_READS;
 
 public class Commands {
     public static final Log LOG = LogFactory.getLog(Commands.class);
@@ -76,7 +76,7 @@ public class Commands {
             LOG.info("Defaulting to " + n + ".");
         }
 
-        int minLength = 5;
+        int minLength = 0;
         System.out.print("Min string length (default " + minLength + "):\n> ");
         try {
             minLength = Integer.parseInt(scanner.nextLine());
@@ -84,7 +84,7 @@ public class Commands {
             LOG.info("Defaulting to " + minLength + ".");
         }
 
-        int maxLength = 10;
+        int maxLength = 0;
         System.out.print("Max string length (default " + maxLength + "):\n> ");
         try {
             maxLength = Integer.parseInt(scanner.nextLine());
@@ -209,12 +209,16 @@ public class Commands {
         LOG.info("Finished performing all " + totalReads + " file reads in " + duration);
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
-        return new DistributedBenchmarkResult(null, OP_STRONG_SCALING, (int)totalReads, durationSeconds,
+        return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
                 start.toEpochMilli(), end.toEpochMilli());
     }
 
+
+
     /**
      * Read N files using N threads (so, each thread reads 1 file). Each file is read a specified number of times.
+     *
+     * This is the WEAK SCALING (read) benchmark.
      *
      * @param n Number of files to read.
      * @param readsPerFile How many times each file should be read.
@@ -315,7 +319,7 @@ public class Commands {
         LOG.info("Finished performing all " + totalReads + " file reads in " + duration);
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
-        return new DistributedBenchmarkResult(null, OP_STRONG_SCALING, (int)totalReads, durationSeconds,
+        return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
                 start.toEpochMilli(), end.toEpochMilli());
     }
 
@@ -591,7 +595,7 @@ public class Commands {
      * @param sharedHdfs Shared/master DistributedFileSystem instance.
      * @param configuration Configuration for per-thread DistributedFileSystem objects.
      */
-    public static void writeFilesInternal(int n, int minLength, int maxLength, int numThreads,
+    public static DistributedBenchmarkResult writeFilesInternal(int n, int minLength, int maxLength, int numThreads,
                                     List<String> targetDirectories, DistributedFileSystem sharedHdfs,
                                     Configuration configuration, final String nameNodeEndpoint)
             throws IOException, InterruptedException {
@@ -607,8 +611,8 @@ public class Commands {
         for (String targetDirectory : targetDirectories) {
             String[] targetFiles = Utils.getFixedLengthRandomStrings(n, 15);
 
-            for (int i = 0; i < targetFiles.length; i++) {
-                targetPaths[counter++] = targetDirectory + "/" + targetFiles[i];
+            for (String targetFile : targetFiles) {
+                targetPaths[counter++] = targetDirectory + "/" + targetFile;
             }
         }
 
@@ -717,8 +721,11 @@ public class Commands {
         LOG.info("");
         LOG.info("");
         LOG.info("===============================");
-        LOG.info("Time elapsed: " + duration.toString());
+        LOG.info("Time elapsed: " + duration);
         LOG.info("Aggregate throughput: " + filesPerSec + " ops/sec.");
+
+        return new DistributedBenchmarkResult(null, 0, totalNumberOfFiles,
+                durationSeconds, start.toEpochMilli(), end.toEpochMilli());
     }
 
     public static void createSubtree(DistributedFileSystem hdfs, String nameNodeEndpoint) {

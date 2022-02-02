@@ -210,11 +210,11 @@ public class Follower {
                 LOG.info("DELETE FILES selected!");
                 Commands.deleteFilesOperation(hdfs, nameNodeEndpoint);
                 break;
-            case OP_WRITE_FILS_TO_DIRS:
+            case OP_WRITE_FILES_TO_DIRS:
                 LOG.info("WRITE FILES TO DIRECTORIES selected!");
                 Commands.writeFilesToDirectories(hdfs, hdfsConfiguration, nameNodeEndpoint);
                 break;
-            case OP_WEAK_SCALING:
+            case OP_WEAK_SCALING_READS:
                 LOG.info("'Read n Files with n Threads (Weak Scaling)' selected!");
                 DistributedBenchmarkResult result = Commands.readNFiles(hdfsConfiguration,
                         hdfs, nameNodeEndpoint,
@@ -225,7 +225,7 @@ public class Follower {
                 LOG.info("Obtained local result for WEAK SCALING benchmark: " + result);
                 sendResultToLeader(result);
                 break;
-            case OP_STRONG_SCALING:
+            case OP_STRONG_SCALING_READS:
                 LOG.info("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
                 result = Commands.strongScalingBenchmark(hdfsConfiguration,
                         hdfs, nameNodeEndpoint,

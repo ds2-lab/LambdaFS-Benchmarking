@@ -30,7 +30,9 @@ public class Constants {
     public static final int OP_WRITE_FILES_TO_DIR = 11;
     public static final int OP_READ_FILES = 12;
     public static final int OP_DELETE_FILES = 13;
-    public static final int OP_WRITE_FILS_TO_DIRS = 14;
-    public static final int OP_WEAK_SCALING = 15;
-    public static final int OP_STRONG_SCALING = 16;
+    public static final int OP_WRITE_FILES_TO_DIRS = 14;
+    public static final int OP_WEAK_SCALING_READS = 15;
+    public static final int OP_STRONG_SCALING_READS = 16;
+    public static final int OP_WEAK_SCALING_WRITES = 17;
+    public static final int OP_STRONG_SCALING_WRITES = 18;
 }
