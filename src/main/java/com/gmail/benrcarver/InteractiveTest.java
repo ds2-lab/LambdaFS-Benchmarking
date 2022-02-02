@@ -828,7 +828,7 @@ public class InteractiveTest {
         end = System.currentTimeMillis();
 
         double duration = (end - start) / 1000.0;
-        filesPerSec = totalNumberOfFiles / durationSeconds;
+        filesPerSec = totalNumberOfFiles / duration;
         LOG.debug("");
         LOG.debug("");
         LOG.debug("===============================");
