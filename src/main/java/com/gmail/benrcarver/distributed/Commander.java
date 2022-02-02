@@ -514,7 +514,7 @@ public class Commander {
             JsonObject payload = new JsonObject();
             payload.addProperty(OPERATION, OP_STRONG_SCALING_READS);
             payload.addProperty(OPERATION_ID, operationId);
-            payload.addProperty("n", n);
+            payload.addProperty("n", writesPerThread);
             payload.addProperty("minLength", minLength);
             payload.addProperty("maxLength", maxLength);
             payload.addProperty("numberOfThreads", numberOfThreads);
@@ -525,21 +525,23 @@ public class Commander {
 
             payload.add("directories", directoriesJson);
 
-            issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Write)", operationId, payload);
+            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload);
         }
 
+        LOG.info("Each thread should be writing " + writesPerThread + " files...");
+
         DistributedBenchmarkResult localResult =
-                Commands.writeFilesInternal(0, minLength, maxLength, numberOfThreads, directories,
+                Commands.writeFilesInternal(writesPerThread, minLength, maxLength, numberOfThreads, directories,
                         sharedHdfs, hdfsConfiguration, nameNodeEndpoint);
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
-        LOG.info("LOCAL result of strong scaling benchmark: " + localResult);
+        LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
         localResult.setOperationId(operationId);
 
         // Wait for followers' results if we had followers when we first started the operation.
         if (numDistributedResults > 0) {
-            LOG.info("Waiting for " + numDistributedResults + " distributed result(s).");
+            LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
             BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
             assert(resultQueue != null);
 
