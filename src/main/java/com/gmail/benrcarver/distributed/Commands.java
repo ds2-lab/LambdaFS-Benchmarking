@@ -205,7 +205,7 @@ public class Commands {
         }
 
         // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
-        double durationSeconds = duration.toMillis() / 1000.0;
+        double durationSeconds = duration.toMillis() / 1e9;
         double totalReads = (double)n * (double)readsPerFile * (double)numThreads;
         double throughput = (totalReads / durationSeconds);
         LOG.info("Finished performing all " + totalReads + " file reads in " + duration);
@@ -539,7 +539,7 @@ public class Commands {
         Duration duration = Duration.between(start, end);
 
         // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
-        double durationSeconds = duration.toMillis() / 1000.0;
+        double durationSeconds = duration.toMillis() / 1e9;
 
         LOG.info("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + duration);
         double totalReads = (double)n * (double)readsPerFile;
@@ -732,7 +732,7 @@ public class Commands {
         }
 
         Duration duration = Duration.between(start, end);
-        double durationSeconds = duration.toMillis() / 1000.0;
+        double durationSeconds = duration.toMillis() / 1e9;
         filesPerSec = totalNumberOfFiles / durationSeconds;
         LOG.info("");
         LOG.info("");
