@@ -228,7 +228,7 @@ public class InteractiveTest {
         }
 
         LOG.info("Starting threads.");
-        Instant start = Instant.now();
+        long start = System.currentTimeMillis();
         for (Thread thread : threads) {
             thread.start();
         }
@@ -237,13 +237,12 @@ public class InteractiveTest {
         for (Thread thread : threads) {
             thread.join();
         }
-        Instant end = Instant.now();
-        Duration duration = Duration.between(start, end);
+        long end = System.currentTimeMillis();
 
-        double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
+        double durationSeconds = (end - start) / 1000.0;
         double totalReads = (double)n * (double)readsPerFile * (double)numThreads;
         double throughput = (totalReads / durationSeconds);
-        LOG.info("Finished performing all " + totalReads + " file reads in " + duration);
+        LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds + " seconds");
         LOG.info("Throughput: " + throughput + " ops/sec.");
     }
 
@@ -595,7 +594,7 @@ public class InteractiveTest {
         }
 
         LOG.debug("Starting threads.");
-        Instant start = Instant.now();
+        long start = System.currentTimeMillis();
         for (Thread thread : threads) {
             thread.start();
         }
@@ -604,13 +603,12 @@ public class InteractiveTest {
         for (Thread thread : threads) {
             thread.join();
         }
-        Instant end = Instant.now();
-        Duration duration = Duration.between(start, end);
+        long end = System.currentTimeMillis();
 
-        double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
+        double durationSeconds = (end - start) / 1000.0;
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
-        LOG.debug("Finished performing all " + totalReads + " file reads in " + duration);
+        LOG.debug("Finished performing all " + totalReads + " file reads in " + durationSeconds);
         LOG.debug("Throughput: " + throughput + " ops/sec.");
     }
 
@@ -677,7 +675,7 @@ public class InteractiveTest {
         }
 
         LOG.debug("Starting threads.");
-        Instant start = Instant.now();
+        long start = System.currentTimeMillis();
         for (Thread thread : threads) {
             thread.start();
         }
@@ -686,11 +684,11 @@ public class InteractiveTest {
         for (Thread thread : threads) {
             thread.join();
         }
-        Instant end = Instant.now();
-        Duration duration = Duration.between(start, end);
+        long end = System.currentTimeMillis();
 
-        double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
-        LOG.debug("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + duration);
+        double durationSeconds = (end - start) / 1000.0;
+        LOG.debug("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " +
+                durationSeconds + " seconds.");
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
         LOG.debug("Throughput: " + throughput + " ops/sec.");
@@ -764,14 +762,12 @@ public class InteractiveTest {
 
         Utils.write("./output/writeToDirectoryPaths-" + Instant.now().toEpochMilli()+ ".txt", targetPaths);
 
-        Instant start;
-        Instant end;
+        long start, end;
         if (numThreads == 1) {
-            start = Instant.now();
+            start = System.currentTimeMillis();
 
             createFiles(targetPaths, content, sharedHdfs);
 
-            end = Instant.now();
         } else {
             int filesPerArray = (int)Math.floor((double)totalNumberOfFiles / numThreads);
             int remainder = totalNumberOfFiles % numThreads;
@@ -819,7 +815,7 @@ public class InteractiveTest {
             }
 
             LOG.debug("Starting threads.");
-            start = Instant.now();
+            start = System.currentTimeMillis();
             for (Thread thread : threads) {
                 thread.start();
             }
@@ -828,16 +824,15 @@ public class InteractiveTest {
             for (Thread thread : threads) {
                 thread.join();
             }
-            end = Instant.now();
         }
+        end = System.currentTimeMillis();
 
-        Duration duration = Duration.between(start, end);
-        float durationSeconds = duration.getSeconds() + TimeUnit.NANOSECONDS.toSeconds(duration.getNano());
+        double duration = (end - start) / 1000.0;
         filesPerSec = totalNumberOfFiles / durationSeconds;
         LOG.debug("");
         LOG.debug("");
         LOG.debug("===============================");
-        LOG.debug("Time elapsed: " + duration.toString());
+        LOG.debug("Time elapsed: " + duration + " seconds");
         LOG.debug("Aggregate throughput: " + filesPerSec + " ops/sec.");
     }
 
@@ -875,7 +870,7 @@ public class InteractiveTest {
         int directoriesCreated = 0;
         int filesCreated = 0;
 
-        Instant start = Instant.now();
+        long start = System.currentTimeMillis();
 
         int currentDepth = 0;
 
@@ -910,11 +905,11 @@ public class InteractiveTest {
             currentDepth++;
         }
 
-        Instant end = Instant.now();
-        Duration subtreeCreationDuration = Duration.between(start, end);
+        long end = System.currentTimeMillis();
+        double subtreeCreationDuration = (end - start) / 1000.0;
 
         LOG.debug("=== Subtree Creation Completed ===");
-        LOG.debug("Time elapsed: " + subtreeCreationDuration.toString());
+        LOG.debug("Time elapsed: " + subtreeCreationDuration + " seconds");
         LOG.debug("Directories created: " + directoriesCreated);
         LOG.debug("Files created: " + filesCreated + "\n");
 
