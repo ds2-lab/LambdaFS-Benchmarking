@@ -315,10 +315,11 @@ public class Commander {
                     strongScalingOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                     break;
                 case OP_WEAK_SCALING_WRITES:
-                    LOG.info("'Read n Files with n Threads (Weak Scaling - Write)' selected!");
+                    LOG.info("'Write n Files with n Threads (Weak Scaling - Write)' selected!");
+                    writeNFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                     break;
                 case OP_STRONG_SCALING_WRITES:
-                    LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Write)' selected!");
+                    LOG.info("'Write n Files y Times with z Threads (Strong Scaling - Write)' selected!");
                     break;
                 default:
                     LOG.info("ERROR: Unknown or invalid operation specified: " + op);
