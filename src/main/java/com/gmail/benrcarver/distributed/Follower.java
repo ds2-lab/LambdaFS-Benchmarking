@@ -4,9 +4,7 @@ import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.gmail.benrcarver.distributed.util.Utils;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -26,6 +24,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.gmail.benrcarver.distributed.Constants.*;
 
@@ -215,18 +215,18 @@ public class Follower {
                 Commands.writeFilesToDirectories(hdfs, hdfsConfiguration, nameNodeEndpoint);
                 break;
             case OP_WEAK_SCALING_READS:
-                LOG.info("'Read n Files with n Threads (Weak Scaling)' selected!");
+                LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
                 DistributedBenchmarkResult result = Commands.readNFiles(hdfsConfiguration,
                         hdfs, nameNodeEndpoint,
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString());
                 result.setOperationId(operationId);
-                LOG.info("Obtained local result for WEAK SCALING benchmark: " + result);
+                LOG.info("Obtained local result for WEAK SCALING (READ) benchmark: " + result);
                 sendResultToLeader(result);
                 break;
             case OP_STRONG_SCALING_READS:
-                LOG.info("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
+                LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
                 result = Commands.strongScalingBenchmark(hdfsConfiguration,
                         hdfs, nameNodeEndpoint,
                         message.getAsJsonPrimitive("n").getAsInt(),
@@ -234,8 +234,29 @@ public class Follower {
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString());
                 result.setOperationId(operationId);
-                LOG.info("Obtained local result for STRONG SCALING benchmark: " + result);
+                LOG.info("Obtained local result for STRONG SCALING (READ) benchmark: " + result);
                 sendResultToLeader(result);
+                break;
+            case OP_WEAK_SCALING_WRITES:
+                LOG.info("'Write n Files with n Threads (Weak Scaling - Write)' selected!");
+                JsonArray directoriesJson = message.getAsJsonPrimitive("directories").getAsJsonArray();
+                List<String> directories = new ArrayList<>();
+                for (JsonElement elem : directoriesJson) {
+                    directories.add(elem.getAsString());
+                }
+                result = Commands.writeFilesInternal(
+                        message.getAsJsonPrimitive("n").getAsInt(),
+                        message.getAsJsonPrimitive("minLength").getAsInt(),
+                        message.getAsJsonPrimitive("maxLength").getAsInt(),
+                        message.getAsJsonPrimitive("numThreads").getAsInt(),
+                        directories,
+                        hdfs, hdfsConfiguration, nameNodeEndpoint);
+                result.setOperationId(operationId);
+                LOG.info("Obtained local result for WEAK SCALING (WRITE) benchmark: " + result);
+                sendResultToLeader(result);
+                break;
+            case OP_STRONG_SCALING_WRITES:
+                LOG.info("'Write n Files y Times with z Threads (Strong Scaling - Write)' selected!");
                 break;
             default:
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
