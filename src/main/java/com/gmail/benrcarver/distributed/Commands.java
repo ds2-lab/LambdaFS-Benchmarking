@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import io.hops.metrics.OperationPerformed;
 
+import static com.gmail.benrcarver.distributed.Constants.OP_DELETE_FILES;
 import static com.gmail.benrcarver.distributed.Constants.OP_STRONG_SCALING_READS;
 
 public class Commands {
@@ -401,25 +402,26 @@ public class Commands {
         readFiles(localFilePath, readsPerFile, numThreads, configuration, sharedHdfs, nameNodeEndpoint);
     }
 
-    public static void deleteFilesOperation(DistributedFileSystem sharedHdfs, final String nameNodeEndpoint) {
+    public static DistributedBenchmarkResult deleteFilesOperation(DistributedFileSystem sharedHdfs, final String nameNodeEndpoint) {
         System.out.print("Path to file containing HopsFS paths? \n> ");
         String input = scanner.nextLine();
-        deleteFiles(input, sharedHdfs, nameNodeEndpoint);
+        return deleteFiles(input, sharedHdfs, nameNodeEndpoint);
     }
 
     /**
      * Delete the files listed in the file specified by the path argument.
      * @param localPath Text file containing HopsFS file paths to delete.
      */
-    public static void deleteFiles(String localPath, DistributedFileSystem sharedHdfs, final String nameNodeEndpoint) {
+    public static DistributedBenchmarkResult deleteFiles(String localPath, DistributedFileSystem sharedHdfs, final String nameNodeEndpoint) {
         List<String> paths;
         try {
             paths = Utils.getFilePathsFromFile(localPath);
         } catch (FileNotFoundException ex) {
             LOG.error("Could not find file: '" + localPath + "'");
-            return;
+            return null;
         }
 
+        long s = System.currentTimeMillis();
         for (String path : paths) {
             try {
                 Path filePath = new Path(nameNodeEndpoint + path);
@@ -429,6 +431,16 @@ public class Commands {
                 ex.printStackTrace();
             }
         }
+        long t = System.currentTimeMillis();
+        double durationSeconds = (t - s) * 1000.0;
+
+        LOG.info("Finished performing all " + paths.size() + " delete operations in " + durationSeconds + " sec.");
+        double throughput = (paths.size() / durationSeconds);
+        LOG.info("Throughput: " + throughput + " ops/sec.");
+        LOG.info("(Note that, if we were deleting directories, then the number of 'actual' deletes " +
+                "-- and therefore the overall throughput -- could be far higher...");
+
+        return new DistributedBenchmarkResult(null, OP_DELETE_FILES, paths.size(), durationSeconds, s, t);
     }
 
     /**

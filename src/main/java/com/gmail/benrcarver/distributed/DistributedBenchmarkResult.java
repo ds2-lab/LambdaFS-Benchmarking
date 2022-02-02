@@ -24,6 +24,18 @@ public class DistributedBenchmarkResult implements Serializable {
 
     public DistributedBenchmarkResult() { }
 
+    /**
+     * Constructor.
+     *
+     * @param opId Unique ID of the operation.
+     * @param operation Internal ID of the operation (like the constant integer value that refers to this
+     *                  operation in the code).
+     * @param numOpsPerformed How many operations we performed (at a high/abstract level, as certain operations may
+     *                        actually perform a number of real FS calls).
+     * @param duration How long, in seconds.
+     * @param startTime Start time, epoch millisecond.
+     * @param stopTime End time, epoch millisecond.
+     */
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed,
                                       double duration, long startTime, long stopTime) {
         this.opId = opId;
