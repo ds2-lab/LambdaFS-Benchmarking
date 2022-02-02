@@ -1,7 +1,7 @@
 package com.gmail.benrcarver;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -11,8 +11,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 
-import javax.swing.*;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -20,7 +18,6 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -140,12 +137,20 @@ public class InteractiveTest {
                     writeFilesToDirectories(hdfs, configuration);
                     break;
                 case 15:
-                    LOG.debug("'Read n Files with n Threads (Weak Scaling)' selected!");
+                    LOG.debug("'Read n Files with n Threads (Weak Scaling Read)' selected!");
                     readNFilesOperation(configuration);
                     break;
                 case 16:
-                    LOG.debug("'Read n Files y Times with z Threads (Strong Scaling)' selected!");
-                    strongScalingBenchmark(configuration);
+                    LOG.debug("'Read n Files y Times with z Threads (Strong Scaling Read)' selected!");
+                    strongScalingReadBenchmark(configuration);
+                    break;
+                case 17:
+                    LOG.debug("'Write n Files with n Threads (Weak Scaling Write)' selected!");
+                    weakScalingWriteOperation(configuration, hdfs);
+                    break;
+                case 18:
+                    LOG.debug("'Write n Files y Times with z Threads (Strong Scaling Write)' selected!");
+                    strongScalingWriteOperation(configuration, hdfs);
                     break;
                 default:
                     LOG.debug("ERROR: Unknown or invalid operation specified: " + op);
@@ -154,7 +159,7 @@ public class InteractiveTest {
         }
     }
 
-    private static void strongScalingBenchmark(final Configuration configuration)
+    private static void strongScalingReadBenchmark(final Configuration configuration)
             throws InterruptedException, FileNotFoundException {
         // User provides file containing HopsFS file paths.
         // Specifies how many files each thread should read.
@@ -320,6 +325,191 @@ public class InteractiveTest {
         System.out.print("Path to file containing HopsFS paths? \n> ");
         String input = scanner.nextLine();
         deleteFiles(input, sharedHdfs);
+    }
+
+    private static int getIntFromUser(String prompt) {
+        System.out.print(prompt + "\n> ");
+        return Integer.parseInt(scanner.nextLine());
+    }
+
+    public static void strongScalingWriteOperation(final Configuration configuration,
+                                            final DistributedFileSystem sharedHdfs)
+            throws InterruptedException, IOException {
+        int totalNumberOfFiles = getIntFromUser("Total number of files to write?");
+        int numberOfThreads = getIntFromUser("Number of threads to use?");
+
+        if (totalNumberOfFiles < numberOfThreads) {
+            LOG.error("The number of files to be written (" + totalNumberOfFiles +
+                    ") should be less than the number of threads used to write said files (" + numberOfThreads + ").");
+            return;
+        }
+
+        int writesPerThread = totalNumberOfFiles / numberOfThreads;
+        int remainder = totalNumberOfFiles % numberOfThreads;
+
+        if (remainder != 0) {
+            LOG.error("Cannot cleanly divide " + totalNumberOfFiles + " writes among " + numberOfThreads + " threads.");
+            return;
+        }
+
+        int directoryChoice = getIntFromUser(
+                "Should threads all write to SAME DIRECTORY [1] or DIFFERENT DIRECTORIES [2]?");
+
+        if (directoryChoice < 1 || directoryChoice > 2) {
+            LOG.error("Invalid argument specified. Should be \"1\" for same directory or \"2\" for different directories. " +
+                    "Instead, got \"" + directoryChoice + "\"");
+            return;
+        }
+
+        int dirInputMethodChoice = getIntFromUser("Manually input (comma-separated list) [1], or specify file containing directories [2]?");
+
+        List<String> directories = null;
+        if (dirInputMethodChoice == 1) {
+            System.out.print("Please enter the directories as a comma-separated list:\n> ");
+            String listOfDirectories = scanner.nextLine();
+            directories = Arrays.asList(listOfDirectories.split(","));
+
+            if (directories.size() == 1)
+                LOG.info("1 directory specified.");
+            else
+                LOG.info(directories.size() + " directories specified.");
+        }
+        else if (dirInputMethodChoice == 2) {
+            System.out.print("Please provide path to file containing HopsFS directories:\n> ");
+            String filePath = scanner.nextLine();
+            directories = Utils.getFilePathsFromFile(filePath);
+
+            if (directories.size() == 1)
+                LOG.info("1 directory specified in file.");
+            else
+                LOG.info(directories.size() + " directories specified in file.");
+        }
+        else {
+            LOG.error("Invalid option specified (" + dirInputMethodChoice +
+                    "). Please enter \"1\" or \"2\" for this prompt.");
+            return;
+        }
+
+        // IMPORTANT: Make directories the same size as the number of threads, so we have one directory per thread.
+        //            This allows us to directly reuse the writeFilesInternal() function, which creates a certain
+        //            number of files per directory. If number of threads is equal to number of directories, then
+        //            we are essentially creating a certain number of files per thread, which is what we want.
+        if (directoryChoice == 1) {
+            Random rng = new Random();
+            int idx = rng.nextInt(directories.size());
+            String dir = directories.get(idx);
+            directories = new ArrayList<>(numberOfThreads);
+            for (int i = 0; i < numberOfThreads; i++)
+                directories.add(dir); // This way, they'll all write to the same directory. We can reuse old code.
+        } else {
+            Collections.shuffle(directories);
+            directories = directories.subList(0, numberOfThreads);
+        }
+
+        int minLength = 0;
+        try {
+            minLength = getIntFromUser("Min string length (default: " + minLength + ")?");
+        } catch (NumberFormatException ex) {
+            LOG.info("Defaulting to " + minLength + ".");
+        }
+
+        int maxLength = 0;
+        try {
+            maxLength = getIntFromUser("Max string length (default: " + maxLength + ")?");
+        } catch (NumberFormatException ex) {
+            LOG.info("Defaulting to " + maxLength + ".");
+        }
+
+        writeFilesInternal(writesPerThread, minLength, maxLength, numberOfThreads, directories, sharedHdfs, configuration);
+    }
+
+    /**
+     * Weak scaling, writes.
+     */
+    public static void weakScalingWriteOperation(final Configuration configuration,
+                                          final DistributedFileSystem sharedHdfs)
+            throws IOException, InterruptedException {
+        System.out.print("Should the threads write their files to the SAME DIRECTORY [1] or DIFFERENT DIRECTORIES [2]?\n> ");
+        int directoryChoice = Integer.parseInt(scanner.nextLine());
+
+        // Validate input.
+        if (directoryChoice < 1 || directoryChoice > 2) {
+            LOG.error("Invalid argument specified. Should be \"1\" for same directory or \"2\" for different directories. " +
+                    "Instead, got \"" + directoryChoice + "\"");
+            return;
+        }
+
+        System.out.print("Manually input (comma-separated list) [1], or specify file containing directories [2]? \n> ");
+        int dirInputMethodChoice = Integer.parseInt(scanner.nextLine());
+
+        List<String> directories = null;
+        if (dirInputMethodChoice == 1) {
+            System.out.print("Please enter the directories as a comma-separated list:\n> ");
+            String listOfDirectories = scanner.nextLine();
+            directories = Arrays.asList(listOfDirectories.split(","));
+
+            if (directories.size() == 1)
+                LOG.info("1 directory specified.");
+            else
+                LOG.info(directories.size() + " directories specified.");
+        }
+        else if (dirInputMethodChoice == 2) {
+            System.out.print("Please provide path to file containing HopsFS directories:\n> ");
+            String filePath = scanner.nextLine();
+            directories = Utils.getFilePathsFromFile(filePath);
+
+            if (directories.size() == 1)
+                LOG.info("1 directory specified in file.");
+            else
+                LOG.info(directories.size() + " directories specified in file.");
+        }
+        else {
+            LOG.error("Invalid option specified (" + dirInputMethodChoice +
+                    "). Please enter \"1\" or \"2\" for this prompt.");
+            return;
+        }
+
+        System.out.print("Number of threads? \n> ");
+        int numberOfThreads = Integer.parseInt(scanner.nextLine());
+
+        // IMPORTANT: Make directories the same size as the number of threads, so we have one directory per thread.
+        //            This allows us to directly reuse the writeFilesInternal() function, which creates a certain
+        //            number of files per directory. If number of threads is equal to number of directories, then
+        //            we are essentially creating a certain number of files per thread, which is what we want.
+        assert(directories != null);
+
+        if (directoryChoice == 1) {
+            Random rng = new Random();
+            int idx = rng.nextInt(directories.size());
+            String dir = directories.get(idx);
+            directories = new ArrayList<>(numberOfThreads);
+            for (int i = 0; i < numberOfThreads; i++)
+                directories.add(dir); // This way, they'll all write to the same directory. We can reuse old code.
+        } else {
+            Collections.shuffle(directories);
+            directories = directories.subList(0, numberOfThreads);
+        }
+
+        System.out.print("Number of writes per thread? \n> ");
+        int writesPerThread = Integer.parseInt(scanner.nextLine());
+
+        int minLength = 0;
+        System.out.print("Min string length (default " + minLength + "):\n> ");
+        try {
+            minLength = Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException ex) {
+            LOG.info("Defaulting to " + minLength + ".");
+        }
+
+        int maxLength = 0;
+        System.out.print("Max string length (default " + maxLength + "):\n> ");
+        try {
+            maxLength = Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException ex) {
+            LOG.info("Defaulting to " + maxLength + ".");
+        }
+
+        writeFilesInternal(writesPerThread, minLength, maxLength, numberOfThreads, directories, sharedHdfs, configuration);
     }
 
     /**
@@ -948,7 +1138,8 @@ public class InteractiveTest {
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping [NOT SUPPORTED]\n(10) Prewarm [NOT SUPPORTED]" +
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
-                "\n(15) Read n Files with n Threads (Weak Scaling)\n(16) Read n Files y Times with z Threads (Strong Scaling)");
+                "\n(15) Read n Files with n Threads (Weak Scaling Read)\n(16) Read n Files y Times with z Threads (Strong Scaling Read)" +
+                "\n(17) Write n Files with n Threads (Weak Scaling Write)\n(18) Write n Files y Times with z Threads (Strong Scaling Write)");
         System.out.println("==================");
         System.out.println("");
         System.out.println("What would you like to do?");
