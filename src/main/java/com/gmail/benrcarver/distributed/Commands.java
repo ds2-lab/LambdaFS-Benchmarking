@@ -204,7 +204,10 @@ public class Commands {
             sharedHdfs.mergeTransactionEvents(txEvents, true);
         }
 
-        double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
+        // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
+        long seconds = duration.getSeconds();
+        long milliSeconds = duration.toMillis();
+        double durationSeconds = seconds + (milliSeconds / 1000.0);
         double totalReads = (double)n * (double)readsPerFile * (double)numThreads;
         double throughput = (totalReads / durationSeconds);
         LOG.info("Finished performing all " + totalReads + " file reads in " + duration);
@@ -314,7 +317,10 @@ public class Commands {
             sharedHdfs.mergeTransactionEvents(txEvents, true);
         }
 
-        double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
+        // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
+        long seconds = duration.getSeconds();
+        long milliSeconds = duration.toMillis();
+        double durationSeconds = seconds + (milliSeconds / 1000.0);
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
         LOG.info("Finished performing all " + totalReads + " file reads in " + duration);
@@ -536,7 +542,12 @@ public class Commands {
         Instant end = Instant.now();
         Duration duration = Duration.between(start, end);
 
-        double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
+        // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
+
+        long seconds = duration.getSeconds();
+        long milliSeconds = duration.toMillis();
+        double durationSeconds = seconds + (milliSeconds / 1000.0);
+
         LOG.info("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + duration);
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
@@ -728,7 +739,9 @@ public class Commands {
         }
 
         Duration duration = Duration.between(start, end);
-        double durationSeconds = duration.getSeconds() + TimeUnit.NANOSECONDS.toSeconds(duration.getNano());
+        long seconds = duration.getSeconds();
+        long milliSeconds = duration.toMillis();
+        double durationSeconds = seconds + (milliSeconds / 1000.0);
         filesPerSec = totalNumberOfFiles / durationSeconds;
         LOG.info("");
         LOG.info("");
