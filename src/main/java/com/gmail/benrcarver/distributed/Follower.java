@@ -258,7 +258,6 @@ public class Follower {
             case OP_STRONG_SCALING_WRITES:
                 LOG.info("'Write n Files y Times with z Threads (Strong Scaling - Write)' selected!");
 
-                // TODO: Change this to match strong scaling (write) implementation.
                 directoriesJson = message.getAsJsonPrimitive("directories").getAsJsonArray();
                 directories = new ArrayList<>();
                 for (JsonElement elem : directoriesJson) {
