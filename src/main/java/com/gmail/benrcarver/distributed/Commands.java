@@ -210,7 +210,7 @@ public class Commands {
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
-                start.toEpochMilli(), end.toEpochMilli());
+                start, end);
     }
 
 
@@ -320,7 +320,7 @@ public class Commands {
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
-                start.toEpochMilli(), end.toEpochMilli());
+                start, end);
     }
 
     /**
@@ -735,7 +735,7 @@ public class Commands {
         LOG.info("Aggregate throughput: " + filesPerSec + " ops/sec.");
 
         return new DistributedBenchmarkResult(null, 0, totalNumberOfFiles,
-                durationSeconds, start.toEpochMilli(), end.toEpochMilli());
+                durationSeconds, start, end);
     }
 
     public static void createSubtree(DistributedFileSystem hdfs, String nameNodeEndpoint) {
