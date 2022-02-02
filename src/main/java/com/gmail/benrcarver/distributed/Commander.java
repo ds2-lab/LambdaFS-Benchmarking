@@ -399,36 +399,8 @@ public class Commander {
         localResult.setOperationId(operationId);
 
         // Wait for followers' results if we had followers when we first started the operation.
-        if (numDistributedResults > 0) {
-            LOG.info("Waiting for " + numDistributedResults + " distributed result(s).");
-            BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
-            assert(resultQueue != null);
-
-            while (resultQueue.size() < numDistributedResults) {
-                Thread.sleep(50);
-            }
-
-            DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
-            DescriptiveStatistics duration = new DescriptiveStatistics();
-            DescriptiveStatistics throughput = new DescriptiveStatistics();
-
-            opsPerformed.addValue(localResult.numOpsPerformed);
-            duration.addValue(localResult.durationSeconds);
-            throughput.addValue(localResult.getOpsPerSecond());
-
-            for (DistributedBenchmarkResult res : resultQueue) {
-                LOG.debug("Received result: " + res);
-
-                opsPerformed.addValue(res.numOpsPerformed);
-                duration.addValue(res.durationSeconds);
-                throughput.addValue(res.getOpsPerSecond());
-            }
-
-            LOG.info("==== RESULTS ====");
-            LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
-            LOG.info("Aggregate Throughput (ops/sec): " + (opsPerformed.getSum() / (duration.getMean())));
-            LOG.info("Average Non-Aggregate Throughput (op/sec): " + throughput.getMean());
-        }
+        if (numDistributedResults > 0)
+            waitForDistributedResult(numDistributedResults, operationId, localResult);
     }
 
     /**
@@ -506,8 +478,6 @@ public class Commander {
             LOG.info("Defaulting to " + maxLength + ".");
         }
 
-        assert directories != null;
-
         String operationId = UUID.randomUUID().toString();
         int numDistributedResults = followers.size();
         if (followers.size() > 0) {
@@ -540,36 +510,54 @@ public class Commander {
         localResult.setOperationId(operationId);
 
         // Wait for followers' results if we had followers when we first started the operation.
-        if (numDistributedResults > 0) {
-            LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
-            BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
-            assert(resultQueue != null);
+        if (numDistributedResults > 0)
+            waitForDistributedResult(numDistributedResults, operationId, localResult);
+    }
 
-            while (resultQueue.size() < numDistributedResults) {
-                Thread.sleep(50);
-            }
-
-            DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
-            DescriptiveStatistics duration = new DescriptiveStatistics();
-            DescriptiveStatistics throughput = new DescriptiveStatistics();
-
-            opsPerformed.addValue(localResult.numOpsPerformed);
-            duration.addValue(localResult.durationSeconds);
-            throughput.addValue(localResult.getOpsPerSecond());
-
-            for (DistributedBenchmarkResult res : resultQueue) {
-                LOG.debug("Received result: " + res);
-
-                opsPerformed.addValue(res.numOpsPerformed);
-                duration.addValue(res.durationSeconds);
-                throughput.addValue(res.getOpsPerSecond());
-            }
-
-            LOG.info("==== RESULTS ====");
-            LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
-            LOG.info("Aggregate Throughput (ops/sec): " + (opsPerformed.getSum() / (duration.getMean())));
-            LOG.info("Average Non-Aggregate Throughput (op/sec): " + throughput.getMean());
+    /**
+     * Wait for distributed results. Aggregate them as they are received. Print the results at the end.
+     *
+     * @param numDistributedResults The number of results that we're waiting for.
+     * @param operationId Unique ID of this distributed operation.
+     * @param localResult The result obtained by our local execution of the operation.
+     */
+    private void waitForDistributedResult(
+            int numDistributedResults,
+            String operationId,
+            DistributedBenchmarkResult localResult) throws InterruptedException {
+        if (numDistributedResults <= 1) {
+            LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
+            return;
         }
+
+        LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
+        BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
+        assert(resultQueue != null);
+
+        while (resultQueue.size() < numDistributedResults) {
+            Thread.sleep(50);
+        }
+
+        DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
+        DescriptiveStatistics duration = new DescriptiveStatistics();
+        DescriptiveStatistics throughput = new DescriptiveStatistics();
+
+        opsPerformed.addValue(localResult.numOpsPerformed);
+        duration.addValue(localResult.durationSeconds);
+        throughput.addValue(localResult.getOpsPerSecond());
+
+        for (DistributedBenchmarkResult res : resultQueue) {
+            LOG.debug("Received result: " + res);
+
+            opsPerformed.addValue(res.numOpsPerformed);
+            duration.addValue(res.durationSeconds);
+            throughput.addValue(res.getOpsPerSecond());
+        }
+
+        LOG.info("==== RESULTS ====");
+        LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
+        LOG.info("Aggregate Throughput (ops/sec): " + (opsPerformed.getSum() / (duration.getMean())));
+        LOG.info("Average Non-Aggregate Throughput (op/sec): " + throughput.getMean());
     }
 
     /**
@@ -624,36 +612,8 @@ public class Commander {
         localResult.setOperationId(operationId);
 
         // Wait for followers' results if we had followers when we first started the operation.
-        if (numDistributedResults > 0) {
-            LOG.info("Waiting for " + numDistributedResults + " distributed result(s).");
-            BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
-            assert(resultQueue != null);
-
-            while (resultQueue.size() < numDistributedResults) {
-                Thread.sleep(50);
-            }
-
-            DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
-            DescriptiveStatistics duration = new DescriptiveStatistics();
-            DescriptiveStatistics throughput = new DescriptiveStatistics();
-
-            opsPerformed.addValue(localResult.numOpsPerformed);
-            duration.addValue(localResult.durationSeconds);
-            throughput.addValue(localResult.getOpsPerSecond());
-
-            for (DistributedBenchmarkResult res : resultQueue) {
-                LOG.debug("Received result: " + res);
-
-                opsPerformed.addValue(res.numOpsPerformed);
-                duration.addValue(res.durationSeconds);
-                throughput.addValue(res.getOpsPerSecond());
-            }
-
-            LOG.info("==== RESULTS ====");
-            LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
-            LOG.info("Aggregate Throughput (ops/sec): " + (opsPerformed.getSum() / (duration.getMean())));
-            LOG.info("Average Non-Aggregate Throughput (op/sec): " + throughput.getMean());
-        }
+        if (numDistributedResults > 0)
+            waitForDistributedResult(numDistributedResults, operationId, localResult);
     }
 
     private int getNextOperation() {

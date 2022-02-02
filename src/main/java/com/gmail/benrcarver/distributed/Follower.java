@@ -257,6 +257,23 @@ public class Follower {
                 break;
             case OP_STRONG_SCALING_WRITES:
                 LOG.info("'Write n Files y Times with z Threads (Strong Scaling - Write)' selected!");
+
+                // TODO: Change this to match strong scaling (write) implementation.
+                directoriesJson = message.getAsJsonPrimitive("directories").getAsJsonArray();
+                directories = new ArrayList<>();
+                for (JsonElement elem : directoriesJson) {
+                    directories.add(elem.getAsString());
+                }
+                result = Commands.writeFilesInternal(
+                        message.getAsJsonPrimitive("n").getAsInt(),
+                        message.getAsJsonPrimitive("minLength").getAsInt(),
+                        message.getAsJsonPrimitive("maxLength").getAsInt(),
+                        message.getAsJsonPrimitive("numThreads").getAsInt(),
+                        directories,
+                        hdfs, hdfsConfiguration, nameNodeEndpoint);
+                result.setOperationId(operationId);
+                LOG.info("Obtained local result for STRONG SCALING (WRITE) benchmark: " + result);
+                sendResultToLeader(result);
                 break;
             default:
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
