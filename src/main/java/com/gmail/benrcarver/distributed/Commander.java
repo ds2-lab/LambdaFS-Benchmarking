@@ -12,6 +12,7 @@ import com.google.gson.JsonParser;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.common.IOUtils;
 import net.schmizz.sshj.connection.channel.direct.Session;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import io.hops.metrics.TransactionEvent;
@@ -308,18 +309,19 @@ public class Commander {
                     break;
                 case OP_WEAK_SCALING_READS:
                     LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
-                    readNFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                    weakScalingReadOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                     break;
                 case OP_STRONG_SCALING_READS:
                     LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
-                    strongScalingOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                    strongScalingReadOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                     break;
                 case OP_WEAK_SCALING_WRITES:
                     LOG.info("'Write n Files with n Threads (Weak Scaling - Write)' selected!");
-                    writeNFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                    weakScalingWriteOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                     break;
                 case OP_STRONG_SCALING_WRITES:
                     LOG.info("'Write n Files y Times with z Threads (Strong Scaling - Write)' selected!");
+                    throw new NotImplementedException("Not yet implemented.");
                     break;
                 default:
                     LOG.info("ERROR: Unknown or invalid operation specified: " + op);
@@ -350,9 +352,9 @@ public class Commander {
         }
     }
 
-    public void strongScalingOperation(final Configuration configuration,
-                                       final DistributedFileSystem sharedHdfs,
-                                       final String nameNodeEndpoint)
+    public void strongScalingReadOperation(final Configuration configuration,
+                                           final DistributedFileSystem sharedHdfs,
+                                           final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         // User provides file containing HopsFS file paths.
         // Specifies how many files each thread should read.
@@ -407,9 +409,9 @@ public class Commander {
     /**
      * Weak scaling, writes.
      */
-    public void writeNFilesOperation(final Configuration configuration,
-                                     final DistributedFileSystem sharedHdfs,
-                                     final String nameNodeEndpoint)
+    public void weakScalingWriteOperation(final Configuration configuration,
+                                          final DistributedFileSystem sharedHdfs,
+                                          final String nameNodeEndpoint)
             throws IOException, InterruptedException {
         System.out.print("Should the threads write their files to the SAME DIRECTORY [1] or DIFFERENT DIRECTORIES [2]?\n> ");
         int sameOrDiffDirectory = Integer.parseInt(scanner.nextLine());
@@ -571,9 +573,9 @@ public class Commander {
      *
      * This function will use `n` threads to read those `n` files.
      */
-    private void readNFilesOperation(final Configuration configuration,
-                                     final DistributedFileSystem sharedHdfs,
-                                     final String nameNodeEndpoint)
+    private void weakScalingReadOperation(final Configuration configuration,
+                                          final DistributedFileSystem sharedHdfs,
+                                          final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         System.out.print("How many files should be read?\n> ");
         String inputN = scanner.nextLine();
