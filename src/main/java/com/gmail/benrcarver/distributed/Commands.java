@@ -851,7 +851,7 @@ public class Commands {
             long s = System.currentTimeMillis();
             createFile(names[i], content[i], hdfs, nameNodeEndpoint);
             long t = System.currentTimeMillis();
-            LOG.info("Wrote file " + i + "/" + names.length + " in " + (t - s) + " ms.");
+            LOG.info("Wrote file " + (i+1) + "/" + names.length + " in " + (t - s) + " ms.");
         }
     }
 
