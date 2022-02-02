@@ -884,7 +884,7 @@ public class Commander {
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
                 "\n(15) Read n Files with n Threads (Weak Scaling - Read)\n(16) Read n Files y Times with z Threads (Strong Scaling - Read)" +
-                "\n(17) Read n Files with n Threads (Weak Scaling - Write)\n(18) Read n Files y Times with z Threads (Strong Scaling - Write)");
+                "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)");
         System.out.println("==================");
         System.out.println("");
         System.out.println("What would you like to do?");
