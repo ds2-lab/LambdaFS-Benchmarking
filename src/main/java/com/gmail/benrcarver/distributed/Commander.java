@@ -322,7 +322,6 @@ public class Commander {
                 case OP_STRONG_SCALING_WRITES:
                     LOG.info("'Write n Files y Times with z Threads (Strong Scaling - Write)' selected!");
                     throw new NotImplementedException("Not yet implemented.");
-                    break;
                 default:
                     LOG.info("ERROR: Unknown or invalid operation specified: " + op);
                     break;
