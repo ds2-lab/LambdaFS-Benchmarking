@@ -175,7 +175,7 @@ public class Commands {
         }
 
         LOG.info("Starting threads.");
-        Instant start = Instant.now();
+        long start = System.currentTimeMillis();
         for (Thread thread : threads) {
             thread.start();
         }
@@ -184,8 +184,7 @@ public class Commands {
         for (Thread thread : threads) {
             thread.join();
         }
-        Instant end = Instant.now();
-        Duration duration = Duration.between(start, end);
+        long end = System.currentTimeMillis();
 
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
             LOG.info("Adding list of " + opsPerformed.size() +
@@ -204,11 +203,10 @@ public class Commands {
             sharedHdfs.mergeTransactionEvents(txEvents, true);
         }
 
-        // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
-        double durationSeconds = duration.toMillis() / 1e9;
+        double durationSeconds = (end - start) / 1000.0;
         double totalReads = (double)n * (double)readsPerFile * (double)numThreads;
         double throughput = (totalReads / durationSeconds);
-        LOG.info("Finished performing all " + totalReads + " file reads in " + duration);
+        LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
@@ -286,7 +284,7 @@ public class Commands {
         }
 
         LOG.info("Starting threads.");
-        Instant start = Instant.now();
+        long start = System.currentTimeMillis();
         for (Thread thread : threads) {
             thread.start();
         }
@@ -295,8 +293,7 @@ public class Commands {
         for (Thread thread : threads) {
             thread.join();
         }
-        Instant end = Instant.now();
-        Duration duration = Duration.between(start, end);
+        long end = System.currentTimeMillis();
 
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
             LOG.info("Adding list of " + opsPerformed.size() +
@@ -316,10 +313,10 @@ public class Commands {
         }
 
         // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
-        double durationSeconds = duration.toMillis() / 1000.0;
+        double durationSeconds = (end - start) / 1000.0;
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
-        LOG.info("Finished performing all " + totalReads + " file reads in " + duration);
+        LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
@@ -434,7 +431,7 @@ public class Commands {
             }
         }
         long t = System.currentTimeMillis();
-        double durationSeconds = (t - s) * 1000.0;
+        double durationSeconds = (t - s) / 1000.0;
 
         LOG.info("Finished performing all " + paths.size() + " delete operations in " + durationSeconds + " sec.");
         double throughput = (paths.size() / durationSeconds);
@@ -526,7 +523,7 @@ public class Commands {
         }
 
         LOG.info("Starting threads.");
-        Instant start = Instant.now();
+        long start = System.currentTimeMillis();
         for (Thread thread : threads) {
             thread.start();
         }
@@ -535,13 +532,12 @@ public class Commands {
         for (Thread thread : threads) {
             thread.join();
         }
-        Instant end = Instant.now();
-        Duration duration = Duration.between(start, end);
+        long end = System.currentTimeMillis();
 
         // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
-        double durationSeconds = duration.toMillis() / 1e9;
+        double durationSeconds = end - start;
 
-        LOG.info("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + duration);
+        LOG.info("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + durationSeconds);
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
         LOG.info("Throughput: " + throughput + " ops/sec.");
@@ -636,14 +632,13 @@ public class Commands {
 
         Utils.write("./output/writeToDirectoryPaths-" + Instant.now().toEpochMilli()+ ".txt", targetPaths);
 
-        Instant start;
-        Instant end;
+        long start, end;
         if (numThreads == 1) {
-            start = Instant.now();
+            start = System.currentTimeMillis();
 
             createFiles(targetPaths, content, sharedHdfs, nameNodeEndpoint);
 
-            end = Instant.now();
+            end = System.currentTimeMillis();
         } else {
             int filesPerArray = (int)Math.floor((double)totalNumberOfFiles / numThreads);
             int remainder = totalNumberOfFiles % numThreads;
@@ -702,7 +697,7 @@ public class Commands {
             }
 
             LOG.info("Starting threads.");
-            start = Instant.now();
+            start = System.currentTimeMillis();
             for (Thread thread : threads) {
                 thread.start();
             }
@@ -711,7 +706,7 @@ public class Commands {
             for (Thread thread : threads) {
                 thread.join();
             }
-            end = Instant.now();
+            end = System.currentTimeMillis();
 
             for (List<OperationPerformed> opsPerformed : operationsPerformed) {
                 LOG.info("Adding list of " + opsPerformed.size() +
@@ -731,13 +726,12 @@ public class Commands {
             }
         }
 
-        Duration duration = Duration.between(start, end);
-        double durationSeconds = duration.toMillis() / 1e9;
+        double durationSeconds = (end - start) / 1000.0;
         filesPerSec = totalNumberOfFiles / durationSeconds;
         LOG.info("");
         LOG.info("");
         LOG.info("===============================");
-        LOG.info("Time elapsed: " + duration + " (" + durationSeconds + " seconds)");
+        LOG.info("Time elapsed: " + durationSeconds);
         LOG.info("Aggregate throughput: " + filesPerSec + " ops/sec.");
 
         return new DistributedBenchmarkResult(null, 0, totalNumberOfFiles,
