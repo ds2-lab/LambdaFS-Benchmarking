@@ -728,12 +728,12 @@ public class Commands {
         }
 
         Duration duration = Duration.between(start, end);
-        float durationSeconds = duration.getSeconds() + TimeUnit.NANOSECONDS.toSeconds(duration.getNano());
+        double durationSeconds = duration.getSeconds() + TimeUnit.NANOSECONDS.toSeconds(duration.getNano());
         filesPerSec = totalNumberOfFiles / durationSeconds;
         LOG.info("");
         LOG.info("");
         LOG.info("===============================");
-        LOG.info("Time elapsed: " + duration);
+        LOG.info("Time elapsed: " + duration + " (" + durationSeconds + " seconds)");
         LOG.info("Aggregate throughput: " + filesPerSec + " ops/sec.");
 
         return new DistributedBenchmarkResult(null, 0, totalNumberOfFiles,
@@ -850,7 +850,10 @@ public class Commands {
 
         for (int i = 0; i < names.length; i++) {
             LOG.info("Writing file " + i + "/" + names.length);
+            long s = System.currentTimeMillis();
             createFile(names[i], content[i], hdfs, nameNodeEndpoint);
+            long t = System.currentTimeMillis();
+            LOG.info("Wrote file " + i + "/" + names.length + " in " + (t - s) + " ms.");
         }
     }
 
