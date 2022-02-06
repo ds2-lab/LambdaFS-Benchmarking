@@ -12,7 +12,6 @@ import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import io.hops.metrics.TransactionEvent;
 import io.hops.metrics.TransactionAttempt;
@@ -144,15 +143,15 @@ public class Commands {
 
         for (int i = 0; i < numThreads; i++) {
             Thread thread = new Thread(() -> {
-                DistributedFileSystem hdfs = new DistributedFileSystem();
+                DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
 
-                try {
-                    hdfs.initialize(new URI(nameNodeEndpoint), configuration);
-                } catch (URISyntaxException | IOException ex) {
-                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
-                    ex.printStackTrace();
-                    System.exit(1);
-                }
+//                try {
+//                    hdfs.initialize(new URI(nameNodeEndpoint), configuration);
+//                } catch (URISyntaxException | IOException ex) {
+//                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
+//                    ex.printStackTrace();
+//                    System.exit(1);
+//                }
 
                 latch.countDown();
 
@@ -255,15 +254,15 @@ public class Commands {
         for (int i = 0; i < n; i++) {
             final String filePath = paths.get(i);
             Thread thread = new Thread(() -> {
-                DistributedFileSystem hdfs = new DistributedFileSystem();
+                DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
 
-                try {
-                    hdfs.initialize(new URI(nameNodeEndpoint), configuration);
-                } catch (URISyntaxException | IOException ex) {
-                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
-                    ex.printStackTrace();
-                    System.exit(1);
-                }
+//                try {
+//                    hdfs.initialize(new URI(nameNodeEndpoint), configuration);
+//                } catch (URISyntaxException | IOException ex) {
+//                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
+//                    ex.printStackTrace();
+//                    System.exit(1);
+//                }
 
                 latch.countDown();
 
@@ -492,15 +491,15 @@ public class Commands {
         for (int i = 0; i < numThreads; i++) {
             final String[] pathsForThread = pathsPerThread[i];
             Thread thread = new Thread(() -> {
-                DistributedFileSystem hdfs = new DistributedFileSystem();
+                DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
 
-                try {
-                    hdfs.initialize(new URI(nameNodeEndpoint), configuration);
-                } catch (URISyntaxException | IOException ex) {
-                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
-                    ex.printStackTrace();
-                    System.exit(1);
-                }
+//                try {
+//                    hdfs.initialize(new URI(nameNodeEndpoint), configuration);
+//                } catch (URISyntaxException | IOException ex) {
+//                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
+//                    ex.printStackTrace();
+//                    System.exit(1);
+//                }
 
                 latch.countDown();
 
@@ -670,15 +669,15 @@ public class Commands {
             for (int i = 0; i < numThreads; i++) {
                 final int idx = i;
                 Thread thread = new Thread(() -> {
-                    DistributedFileSystem hdfs = new DistributedFileSystem();
+                    DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
 
-                    try {
-                        hdfs.initialize(new URI(nameNodeEndpoint), configuration);
-                    } catch (URISyntaxException | IOException ex) {
-                        LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
-                        ex.printStackTrace();
-                        System.exit(1);
-                    }
+//                    try {
+//                        hdfs.initialize(new URI(nameNodeEndpoint), configuration);
+//                    } catch (URISyntaxException | IOException ex) {
+//                        LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
+//                        ex.printStackTrace();
+//                        System.exit(1);
+//                    }
 
                     latch.countDown();
                     createFiles(targetPathsPerArray[idx], contentPerArray[idx], hdfs, nameNodeEndpoint);

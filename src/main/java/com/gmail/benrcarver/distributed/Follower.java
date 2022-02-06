@@ -48,14 +48,20 @@ public class Follower {
     private Configuration hdfsConfiguration;
     private DistributedFileSystem hdfs;
 
+    // TODO: Make it so we can change these dynamically.
+    private String serverlessLogLevel = "DEBUG";
+    private boolean consistencyEnabled = true;
+
     public synchronized void waitUntilDone() throws InterruptedException {
         this.wait();
     }
 
-    public Follower(String masterIp, int masterPort) {
+    public Follower(String masterIp, int masterPort, String serverlessLogLevel, boolean disableConsistency) {
         client = new Client(32000, 32000);
         this.masterIp = masterIp;
         this.masterPort = masterPort;
+        this.serverlessLogLevel = serverlessLogLevel;
+        this.consistencyEnabled = !disableConsistency;
 
         client.addListener(new Listener() {
             /**
@@ -110,6 +116,9 @@ public class Follower {
             ex.printStackTrace();
             System.exit(1);
         }
+
+        hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
+        hdfs.setServerlessFunctionLogLevel(serverlessLogLevel);
 
         return hdfs;
     }

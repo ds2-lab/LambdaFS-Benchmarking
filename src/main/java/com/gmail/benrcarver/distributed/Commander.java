@@ -91,7 +91,7 @@ public class Commander {
     /**
      * Fully-qualified path of hdfs-site.xml configuration file.
      */
-    private final String hdfsConfigFilePath;
+    public static String hdfsConfigFilePath;
 
     /**
      * The hdfs-site.xml configuration file.
@@ -110,7 +110,23 @@ public class Commander {
 
     private final boolean nondistributed;
 
-    public Commander(String ip, int port, String yamlPath, boolean nondistributed) throws IOException {
+    private static String serverlessLogLevel = "DEBUG";
+    private static boolean consistencyEnabled = true;
+
+    private static Commander instanace;
+
+    public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
+                                          String logLevel, boolean disableConsistency) throws IOException {
+        if (instanace == null) {
+            serverlessLogLevel = logLevel;
+            consistencyEnabled = !disableConsistency;
+            instanace = new Commander(ip, port, yamlPath, nondistributed);
+        }
+
+        return instanace;
+    }
+
+    private Commander(String ip, int port, String yamlPath, boolean nondistributed) throws IOException {
         this.ip = ip;
         this.port = port;
         this.nondistributed = nondistributed;
@@ -214,7 +230,7 @@ public class Commander {
     private void interactiveLoop() throws InterruptedException, IOException {
         LOG.info("Beginning execution as LEADER now.");
 
-        DistributedFileSystem hdfs = initDfsClient();
+        DistributedFileSystem hdfs = initDfsClient(nameNodeEndpoint);
 
         while (true) {
             Thread.sleep(250);
@@ -222,6 +238,12 @@ public class Commander {
             int op = getNextOperation();
 
             switch(op) {
+                case OP_SET_CONSISTENCY_PROTOCOL_ENABLED:
+                    handleSetConsistencyProtocolEnabled(hdfs);
+                    break;
+                case OP_SET_LOG_LEVEL:
+                    handleSetLogLevel(hdfs);
+                    break;
                 case OP_CLEAR_STATISTICS:
                     LOG.info("Clearing statistics packages...");
                     Commands.clearStatisticsPackages(hdfs);
@@ -326,6 +348,61 @@ public class Commander {
                     LOG.info("ERROR: Unknown or invalid operation specified: " + op);
                     break;
             }
+        }
+    }
+
+    private void handleSetLogLevel(DistributedFileSystem hdfs) {
+        String currentLogLevel = hdfs.getServerlessFunctionLogLevel();
+        LOG.info("");
+        LOG.info("Current log level: " + currentLogLevel);
+
+        System.out.print("Please enter the new log level, or nothing to keep it the same:\n> ");
+        String newLogLevel = scanner.nextLine();
+        newLogLevel = newLogLevel.trim();
+
+        if (newLogLevel.isEmpty())
+            return;
+
+        if (!(newLogLevel.equalsIgnoreCase("INFO") ||
+                newLogLevel.equalsIgnoreCase("DEBUG") ||
+                newLogLevel.equalsIgnoreCase("WARN") ||
+                newLogLevel.equalsIgnoreCase("ERROR") ||
+                newLogLevel.equalsIgnoreCase("FATAL") ||
+                newLogLevel.equalsIgnoreCase("ALL") ||
+                newLogLevel.equalsIgnoreCase("TRACE"))) {
+            LOG.error("Invalid log level specified: '" + newLogLevel + "'");
+        } else {
+            serverlessLogLevel = newLogLevel;
+            hdfs.setServerlessFunctionLogLevel(newLogLevel);
+        }
+    }
+
+    private void handleSetConsistencyProtocolEnabled(DistributedFileSystem hdfs) {
+        boolean currentFlag = hdfs.getConsistencyProtocolEnabled();
+        LOG.info("");
+        LOG.info("Consistency protocol is currently " + (currentFlag ? "ENABLED." : "DISABLED."));
+
+        System.out.print("Enable [t/y] or Disable [f/n] consistency protocol? (Enter anything else to keep it the same):\n> ");
+        String newFlag = scanner.nextLine();
+        newFlag = newFlag.trim();
+
+        if (newFlag.equalsIgnoreCase("t") || newFlag.equalsIgnoreCase("y")) {
+            if (!currentFlag)
+                LOG.info("ENABLING consistency protocol.");
+            else
+                LOG.info("Consistency protocol is already enabled.");
+
+            hdfs.setConsistencyProtocolEnabled(true);
+            consistencyEnabled = true;
+        }
+        else if (newFlag.equalsIgnoreCase("f") || newFlag.equalsIgnoreCase("n")) {
+            if (currentFlag)
+                LOG.info("DISABLING consistency protocol.");
+            else
+                LOG.info("Consistency protocol is already disabled.");
+
+            hdfs.setConsistencyProtocolEnabled(false);
+            consistencyEnabled = false;
         }
     }
 
@@ -769,9 +846,9 @@ public class Commander {
         }
     }
 
-    private DistributedFileSystem initDfsClient() {
+    public static DistributedFileSystem initDfsClient(String nameNodeEndpoint) {
         LOG.debug("Creating HDFS client now...");
-        hdfsConfiguration = Utils.getConfiguration(hdfsConfigFilePath);
+        Configuration hdfsConfiguration = Utils.getConfiguration(hdfsConfigFilePath);
         try {
             hdfsConfiguration.addResource(new File(hdfsConfigFilePath).toURI().toURL());
         } catch (MalformedURLException ex) {
@@ -791,6 +868,9 @@ public class Commander {
             ex.printStackTrace();
             System.exit(1);
         }
+
+        hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
+        hdfs.setServerlessFunctionLogLevel(serverlessLogLevel);
 
         return hdfs;
     }
