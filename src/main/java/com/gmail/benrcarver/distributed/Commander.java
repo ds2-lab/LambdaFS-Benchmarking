@@ -957,7 +957,9 @@ public class Commander {
         System.out.println("");
         System.out.println("====== MENU ======");
         System.out.println("Debug Operations:");
-        System.out.println("\n(-4) Clear statistics\n(-3) Output statistics packages to CSV\n" +
+        System.out.println(
+                "\n(-6) Get/set consistency protocol enabled flag.\n(-5) Get/set serverless log4j debug level.\n" +
+                "\n(-4) Clear statistics\n(-3) Output statistics packages to CSV\n" +
                 "(-2) Output operations performed + write to file\n(-1) Print TCP debug information.");
         System.out.println("\nStandard Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
