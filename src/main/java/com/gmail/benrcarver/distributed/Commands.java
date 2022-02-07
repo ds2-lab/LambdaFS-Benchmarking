@@ -632,10 +632,11 @@ public class Commands {
         Utils.write("./output/writeToDirectoryPaths-" + Instant.now().toEpochMilli()+ ".txt", targetPaths);
 
         long start, end;
+        int numSuccess = 0;
         if (numThreads == 1) {
             start = System.currentTimeMillis();
 
-            createFiles(targetPaths, content, sharedHdfs, nameNodeEndpoint);
+            numSuccess = createFiles(targetPaths, content, sharedHdfs, nameNodeEndpoint);
 
             end = System.currentTimeMillis();
         } else {
@@ -665,6 +666,7 @@ public class Commands {
                     = new ArrayBlockingQueue<>(numThreads);
             final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
                     = new ArrayBlockingQueue<>(numThreads);
+            final BlockingQueue<Integer> numSuccessPerThread = new ArrayBlockingQueue<>(numThreads);
 
             for (int i = 0; i < numThreads; i++) {
                 final int idx = i;
@@ -680,11 +682,12 @@ public class Commands {
 //                    }
 
                     latch.countDown();
-                    createFiles(targetPathsPerArray[idx], contentPerArray[idx], hdfs, nameNodeEndpoint);
+                    int localNumSuccess = createFiles(targetPathsPerArray[idx], contentPerArray[idx], hdfs, nameNodeEndpoint);
 
                     operationsPerformed.add(hdfs.getOperationsPerformed());
                     statisticsPackages.add(hdfs.getStatisticsPackages());
                     transactionEvents.add(hdfs.getTransactionEvents());
+                    numSuccessPerThread.add(localNumSuccess);
 
                     try {
                         hdfs.close();
@@ -723,17 +726,24 @@ public class Commands {
                 LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
                 sharedHdfs.mergeTransactionEvents(txEvents, true);
             }
+
+            for (Integer localNumSuccess : numSuccessPerThread) {
+                numSuccess += localNumSuccess;
+            }
         }
 
         double durationSeconds = (end - start) / 1000.0;
-        filesPerSec = totalNumberOfFiles / durationSeconds;
+        filesPerSec = numSuccess / durationSeconds;
         LOG.info("");
         LOG.info("");
         LOG.info("===============================");
+        LOG.info("Number of successful write operations: " + numSuccess);
+        LOG.info("Number of failed write operations: " + (totalNumberOfFiles - numSuccess));
         LOG.info("Time elapsed: " + durationSeconds);
         LOG.info("Aggregate throughput: " + filesPerSec + " ops/sec.");
+        LOG.info("Aggregate throughput including failures: " + (totalNumberOfFiles / durationSeconds) + " ops/sec.");
 
-        return new DistributedBenchmarkResult(null, 0, totalNumberOfFiles,
+        return new DistributedBenchmarkResult(null, 0, numSuccess,
                 durationSeconds, start, end);
     }
 
@@ -841,25 +851,34 @@ public class Commands {
      *
      * @param names File names.
      * @param content File contents.
+     *
+     * @return The number of successful create operations.
      */
-    public static void createFiles(String[] names, String[] content, DistributedFileSystem hdfs, String nameNodeEndpoint) {
+    public static int createFiles(String[] names, String[] content, DistributedFileSystem hdfs, String nameNodeEndpoint) {
         assert(names.length == content.length);
+
+        int numSuccess = 0;
 
         for (int i = 0; i < names.length; i++) {
             LOG.info("Writing file " + i + "/" + names.length);
             long s = System.currentTimeMillis();
-            createFile(names[i], content[i], hdfs, nameNodeEndpoint);
+            boolean success = createFile(names[i], content[i], hdfs, nameNodeEndpoint);
+            if (success) numSuccess++;
             long t = System.currentTimeMillis();
             LOG.info("Wrote file " + (i+1) + "/" + names.length + " in " + (t - s) + " ms.");
         }
+
+        return numSuccess;
     }
 
     /**
      * Create a new file with the given name and contents.
      * @param name The name of the file.
      * @param contents The content to be written to the file.
+     *
+     * @return True if the create operation succeeds, otherwise false.
      */
-    public static void createFile(String name, String contents,
+    public static boolean createFile(String name, String contents,
                                   DistributedFileSystem hdfs,
                                   String nameNodeEndpoint) {
         Path filePath = new Path(nameNodeEndpoint + name);
@@ -876,9 +895,13 @@ public class Commands {
                 LOG.info("\t Successfully created empty file '" + filePath + "'");
                 outputStream.close();
             }
+
+            return true;
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+
+        return false;
     }
 
     public static void renameOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
