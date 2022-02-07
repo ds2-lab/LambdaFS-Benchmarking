@@ -741,10 +741,32 @@ public class Commands {
         LOG.info("Number of failed write operations: " + (totalNumberOfFiles - numSuccess));
         LOG.info("Time elapsed: " + durationSeconds);
         LOG.info("Aggregate throughput: " + filesPerSec + " ops/sec.");
-        LOG.info("Aggregate throughput including failures: " + (totalNumberOfFiles / durationSeconds) + " ops/sec.");
+
+        // Print the throughput including failed ops if there was at least one failed op.
+        if (totalNumberOfFiles != numSuccess)
+            LOG.info("Aggregate throughput including failures: " + (totalNumberOfFiles / durationSeconds) + " ops/sec.");
 
         return new DistributedBenchmarkResult(null, 0, numSuccess,
                 durationSeconds, start, end);
+    }
+
+    public static void createDirectories(DistributedFileSystem hdfs, String nameNodeEndpoint) {
+        System.out.print("Base name for the directories:\n> ");
+        String baseDirName = scanner.nextLine();
+
+        int numDirectoriesToCreate = getIntFromUser("How many directories should be created?");
+
+        long s = System.currentTimeMillis();
+        for (int i = 0; i < numDirectoriesToCreate; i++) {
+            mkdir(baseDirName + i + "/", hdfs, nameNodeEndpoint);
+        }
+        long t = System.currentTimeMillis();
+
+        double durationSeconds = (t - s) / 1000.0;
+        double throughput = (double)numDirectoriesToCreate / durationSeconds;
+
+        LOG.info("Created " + numDirectoriesToCreate + " directories in " + durationSeconds + " seconds.");
+        LOG.info("Throughput: " + throughput + " ops/sec.");
     }
 
     public static void createSubtree(DistributedFileSystem hdfs, String nameNodeEndpoint) {
@@ -1048,6 +1070,11 @@ public class Commands {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+    }
+
+    private static int getIntFromUser(String prompt) {
+        System.out.print(prompt + "\n> ");
+        return Integer.parseInt(scanner.nextLine());
     }
 
     public static void deleteOperation(DistributedFileSystem hdfs, final String nameNodeEndpoint) {
