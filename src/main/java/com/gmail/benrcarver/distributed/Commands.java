@@ -1083,9 +1083,12 @@ public class Commands {
 
         Path filePath = new Path(nameNodeEndpoint + targetPath);
 
+        long s = System.currentTimeMillis();
         try {
             boolean success = hdfs.delete(filePath, true);
-            LOG.info("\t Delete was successful: " + success);
+            long t = System.currentTimeMillis();
+
+            LOG.info("Successfully deleted '" + filePath + "' in " + (t - s) + " milliseconds.");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
