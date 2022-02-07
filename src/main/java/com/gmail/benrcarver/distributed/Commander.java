@@ -347,6 +347,7 @@ public class Commander {
                 case OP_CREATE_DIRECTORIES:
                     LOG.info("CREATE DIRECTORIES selected!");
                     Commands.createDirectories(hdfs, nameNodeEndpoint);
+                    break;
                 default:
                     LOG.info("ERROR: Unknown or invalid operation specified: " + op);
                     break;
