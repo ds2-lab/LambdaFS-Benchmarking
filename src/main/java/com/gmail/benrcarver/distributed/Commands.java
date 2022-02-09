@@ -533,8 +533,7 @@ public class Commands {
         }
         long end = System.currentTimeMillis();
 
-        // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
-        double durationSeconds = end - start;
+        double durationSeconds = (end - start) / 1000.0;
 
         LOG.info("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + durationSeconds);
         double totalReads = (double)n * (double)readsPerFile;
