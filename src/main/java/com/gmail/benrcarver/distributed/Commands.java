@@ -1093,7 +1093,10 @@ public class Commands {
             boolean success = hdfs.delete(filePath, true);
             long t = System.currentTimeMillis();
 
-            LOG.info("Successfully deleted '" + filePath + "' in " + (t - s) + " milliseconds.");
+            if (success)
+                LOG.info("Successfully deleted '" + filePath + "' in " + (t - s) + " milliseconds.");
+            else
+                LOG.error("Failed to delete '" + filePath + "' after " + (t - s) + " milliseconds.");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
