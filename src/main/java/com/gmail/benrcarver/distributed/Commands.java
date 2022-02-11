@@ -419,12 +419,16 @@ public class Commands {
             return null;
         }
 
+        int numSuccessfulDeletes = 0;
         long s = System.currentTimeMillis();
         for (String path : paths) {
             try {
                 Path filePath = new Path(nameNodeEndpoint + path);
                 boolean success = sharedHdfs.delete(filePath, true);
                 LOG.info("\t Delete was successful: " + success);
+
+                if (success)
+                    numSuccessfulDeletes++;
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -433,8 +437,10 @@ public class Commands {
         double durationSeconds = (t - s) / 1000.0;
 
         LOG.info("Finished performing all " + paths.size() + " delete operations in " + durationSeconds + " sec.");
-        double throughput = (paths.size() / durationSeconds);
+        LOG.info("Total number of ops: " + paths.size() + ". Number of successful ops: " + numSuccessfulDeletes + ".");
+        double throughput = (numSuccessfulDeletes / durationSeconds);
         LOG.info("Throughput: " + throughput + " ops/sec.");
+        LOG.info("Throughput (ALL ops): " + (paths.size() / durationSeconds) + " ops/sec.");
         LOG.info("(Note that, if we were deleting directories, then the number of 'actual' deletes " +
                 "-- and therefore the overall throughput -- could be far higher...");
 
