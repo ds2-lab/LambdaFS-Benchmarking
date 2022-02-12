@@ -542,15 +542,29 @@ public class InteractiveTest {
     private static void deleteFiles(String localPath, DistributedFileSystem sharedHdfs) {
         List<String> paths = Utils.getFilePathsFromFile(localPath);
 
+        long startTime = System.currentTimeMillis();
+        int numSuccess = 0;
         for (String path : paths) {
             try {
+                long start = System.currentTimeMillis();
                 Path filePath = new Path(filesystemEndpoint + path);
                 boolean success = sharedHdfs.delete(filePath, true);
-                LOG.debug("\t Delete was successful: " + success);
+                long end = System.currentTimeMillis();
+
+                if (success) {
+                    LOG.debug("\t Successfully deleted '" + path + "' in " + (end - start) + " ms.");
+                    numSuccess++;
+                }
+                else
+                    LOG.error("\t Failed to delete '" + path + "' after " + (end - start) + " ms.");
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         }
+        long endTime = System.currentTimeMillis();
+        double durationSeconds = (endTime - startTime) / 1000.0;
+        LOG.info("Throughput: " + (numSuccess / durationSeconds) + " ops/sec.");
+        LOG.info("Throughput (including failed ops): " + (paths.size() / durationSeconds) + " ops/sec.");
     }
 
     /**
@@ -1126,8 +1140,14 @@ public class InteractiveTest {
         Path filePath = new Path(filesystemEndpoint + targetPath);
 
         try {
+            long s = System.currentTimeMillis();
             boolean success = hdfs.delete(filePath, true);
-            LOG.debug("\t Delete was successful: " + success);
+            long t = System.currentTimeMillis();
+
+            if (success)
+                LOG.info("Successfully deleted '" + targetPath + "' in " + (t - s) + " milliseconds.");
+            else
+                LOG.error("Failed to delete '" + targetPath + "' after " + (t - s) + " milliseconds.");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
