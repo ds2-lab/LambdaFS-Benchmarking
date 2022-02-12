@@ -542,6 +542,7 @@ public class InteractiveTest {
     private static void deleteFiles(String localPath, DistributedFileSystem sharedHdfs) {
         List<String> paths = Utils.getFilePathsFromFile(localPath);
 
+        List<Long> latencies = new ArrayList<>();
         long startTime = System.currentTimeMillis();
         int numSuccess = 0;
         for (String path : paths) {
@@ -557,6 +558,8 @@ public class InteractiveTest {
                 }
                 else
                     LOG.error("\t Failed to delete '" + path + "' after " + (end - start) + " ms.");
+
+                latencies.add(end - start);
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -565,6 +568,9 @@ public class InteractiveTest {
         double durationSeconds = (endTime - startTime) / 1000.0;
         LOG.info("Throughput: " + (numSuccess / durationSeconds) + " ops/sec.");
         LOG.info("Throughput (including failed ops): " + (paths.size() / durationSeconds) + " ops/sec.");
+        LOG.info("Latencies (ms): ");
+        for (Long latency : latencies)
+            System.out.println(latency);
     }
 
     /**
