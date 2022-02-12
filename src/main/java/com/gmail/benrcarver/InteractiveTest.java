@@ -153,11 +153,34 @@ public class InteractiveTest {
                     LOG.debug("'Write n Files y Times with z Threads (Strong Scaling Write)' selected!");
                     strongScalingWriteOperation(configuration, hdfs);
                     break;
+                case 19:
+                    LOG.debug("CREATE DIRECTORIES selected!");
+                    createDirectories(hdfs);
+                    break;
                 default:
                     LOG.debug("ERROR: Unknown or invalid operation specified: " + op);
                     break;
             }
         }
+    }
+
+    public static void createDirectories(DistributedFileSystem hdfs) {
+        System.out.print("Base name for the directories:\n> ");
+        String baseDirName = scanner.nextLine();
+
+        int numDirectoriesToCreate = getIntFromUser("How many directories should be created?");
+
+        long s = System.currentTimeMillis();
+        for (int i = 0; i < numDirectoriesToCreate; i++) {
+            mkdir(baseDirName + i + "/", hdfs);
+        }
+        long t = System.currentTimeMillis();
+
+        double durationSeconds = (t - s) / 1000.0;
+        double throughput = (double)numDirectoriesToCreate / durationSeconds;
+
+        LOG.info("Created " + numDirectoriesToCreate + " directories in " + durationSeconds + " seconds.");
+        LOG.info("Throughput: " + throughput + " ops/sec.");
     }
 
     private static void strongScalingReadBenchmark(final Configuration configuration)
@@ -1135,7 +1158,8 @@ public class InteractiveTest {
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping [NOT SUPPORTED]\n(10) Prewarm [NOT SUPPORTED]" +
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
                 "\n(15) Read n Files with n Threads (Weak Scaling Read)\n(16) Read n Files y Times with z Threads (Strong Scaling Read)" +
-                "\n(17) Write n Files with n Threads (Weak Scaling Write)\n(18) Write n Files y Times with z Threads (Strong Scaling Write)");
+                "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)" +
+                "\n(19) Create directories.");
         System.out.println("==================");
         System.out.println("");
         System.out.println("What would you like to do?");
