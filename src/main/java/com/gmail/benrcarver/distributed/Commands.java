@@ -421,14 +421,22 @@ public class Commands {
 
         int numSuccessfulDeletes = 0;
         long s = System.currentTimeMillis();
+        List<Long> latencies = new ArrayList<>();
         for (String path : paths) {
             try {
                 Path filePath = new Path(nameNodeEndpoint + path);
+                long start = System.currentTimeMillis();
                 boolean success = sharedHdfs.delete(filePath, true);
-                LOG.info("\t Delete was successful: " + success);
+                long end = System.currentTimeMillis();
 
-                if (success)
+                if (success) {
+                    LOG.debug("\t Successfully deleted '" + path + "' in " + (end - start) + " ms.");
                     numSuccessfulDeletes++;
+                }
+                else
+                    LOG.error("\t Failed to delete '" + path + "' after " + (end - start) + " ms.");
+
+                latencies.add(end - start);
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -441,8 +449,12 @@ public class Commands {
         double throughput = (numSuccessfulDeletes / durationSeconds);
         LOG.info("Throughput: " + throughput + " ops/sec.");
         LOG.info("Throughput (ALL ops): " + (paths.size() / durationSeconds) + " ops/sec.");
-        LOG.info("(Note that, if we were deleting directories, then the number of 'actual' deletes " +
-                "-- and therefore the overall throughput -- could be far higher...");
+        /*LOG.info("(Note that, if we were deleting directories, then the number of 'actual' deletes " +
+                "-- and therefore the overall throughput -- could be far higher...");*/
+
+        LOG.info("Latencies (ms): ");
+        for (Long latency : latencies)
+            System.out.println(latency);
 
         return new DistributedBenchmarkResult(null, OP_DELETE_FILES, paths.size(), durationSeconds, s, t);
     }
