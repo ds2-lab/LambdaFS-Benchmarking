@@ -432,6 +432,30 @@ public class Commander {
         }
     }
 
+    /**
+     * Display the provided prompt and accept input from the user, trying to convert it to a boolean value.
+     *
+     * The following user inputs will be converted to true (ignoring case):
+     * - y
+     * - yes
+     * - t
+     * - true
+     * - 1
+     *
+     * Any other input will be converted to false.
+     *
+     * @param prompt The prompt to be displayed to the user.
+     * @return True or false depending on the user's input.
+     */
+    private boolean getBooleanFromUser(String prompt) {
+        System.out.print(prompt + " [y/n]\n> ");
+        String input = scanner.nextLine().trim();
+
+        return input.equalsIgnoreCase("y") || input.equalsIgnoreCase("yes") ||
+                input.equalsIgnoreCase("t") || input.equalsIgnoreCase("true") ||
+                input.equalsIgnoreCase("1");
+    }
+
     private int getIntFromUser(String prompt) {
         System.out.print(prompt + "\n> ");
         return Integer.parseInt(scanner.nextLine());
@@ -806,6 +830,8 @@ public class Commander {
                 (n == 1 ? "path.\n> " : "paths.\n> "));
         String inputPath = scanner.nextLine();
 
+        boolean shuffle = getBooleanFromUser("Shuffle file paths around?");
+
         String operationId = UUID.randomUUID().toString();
         int numDistributedResults = followers.size();
         if (followers.size() > 0) {
@@ -815,13 +841,14 @@ public class Commander {
             payload.addProperty("n", n);
             payload.addProperty("readsPerFile", readsPerFile);
             payload.addProperty("inputPath", inputPath);
+            payload.addProperty("shuffle", shuffle);
 
             issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload);
         }
         // TODO: Make this return some sort of 'result' object encapsulating the result.
         //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
         DistributedBenchmarkResult localResult =
-                Commands.readNFiles(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile, inputPath);
+                Commands.readNFiles(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile, inputPath, shuffle);
 
         if (localResult == null) {
             LOG.warn("Local result is null. Aborting.");

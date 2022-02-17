@@ -229,7 +229,8 @@ public class Follower {
                         hdfs, nameNodeEndpoint,
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
-                        message.getAsJsonPrimitive("inputPath").getAsString());
+                        message.getAsJsonPrimitive("inputPath").getAsString(),
+                        message.getAsJsonPrimitive("shuffle").getAsBoolean());
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for WEAK SCALING (READ) benchmark: " + result);
                 sendResultToLeader(result);

@@ -224,12 +224,16 @@ public class Commands {
      * @param inputPath Path to local file containing HopsFS filepaths (of the files to read).
      */
     public static DistributedBenchmarkResult readNFiles(final Configuration configuration,
-                                  final DistributedFileSystem sharedHdfs,
-                                  final String nameNodeEndpoint,
-                                  int n,
-                                  int readsPerFile,
-                                  String inputPath) throws InterruptedException, FileNotFoundException {
+                                                        final DistributedFileSystem sharedHdfs,
+                                                        final String nameNodeEndpoint,
+                                                        int n,int readsPerFile, String inputPath, boolean shuffle)
+            throws InterruptedException, FileNotFoundException {
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
+
+        if (shuffle) {
+            LOG.debug("Shuffling paths.");
+            Collections.shuffle(paths);
+        }
 
         if (paths.size() < n) {
             LOG.error("ERROR: The file should contain at least " + n +
