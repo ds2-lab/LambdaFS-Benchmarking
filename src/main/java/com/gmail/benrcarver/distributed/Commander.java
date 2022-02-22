@@ -832,35 +832,50 @@ public class Commander {
 
         boolean shuffle = getBooleanFromUser("Shuffle file paths around?");
 
-        String operationId = UUID.randomUUID().toString();
-        int numDistributedResults = followers.size();
-        if (followers.size() > 0) {
-            JsonObject payload = new JsonObject();
-            payload.addProperty(OPERATION, OP_WEAK_SCALING_READS);
-            payload.addProperty(OPERATION_ID, operationId);
-            payload.addProperty("n", n);
-            payload.addProperty("readsPerFile", readsPerFile);
-            payload.addProperty("inputPath", inputPath);
-            payload.addProperty("shuffle", shuffle);
+        int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
 
-            issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload);
+        int currentTrial = 0;
+        DistributedBenchmarkResult[] results = new DistributedBenchmarkResult[numTrials];
+        while (currentTrial < numTrials) {
+            LOG.info("|====| TRIAL #%" + currentTrial + " |====|");
+            String operationId = UUID.randomUUID().toString();
+            int numDistributedResults = followers.size();
+            if (followers.size() > 0) {
+                JsonObject payload = new JsonObject();
+                payload.addProperty(OPERATION, OP_WEAK_SCALING_READS);
+                payload.addProperty(OPERATION_ID, operationId);
+                payload.addProperty("n", n);
+                payload.addProperty("readsPerFile", readsPerFile);
+                payload.addProperty("inputPath", inputPath);
+                payload.addProperty("shuffle", shuffle);
+
+                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload);
+            }
+
+            // TODO: Make this return some sort of 'result' object encapsulating the result.
+            //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
+            DistributedBenchmarkResult localResult =
+                    Commands.readNFiles(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile, inputPath, shuffle);
+
+            if (localResult == null) {
+                LOG.warn("Local result is null. Aborting.");
+                return;
+            }
+
+            LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
+            localResult.setOperationId(operationId);
+
+            // Wait for followers' results if we had followers when we first started the operation.
+            if (numDistributedResults > 0)
+                waitForDistributedResult(numDistributedResults, operationId, localResult);
+
+            results[currentTrial] = localResult;
+            currentTrial++;
         }
-        // TODO: Make this return some sort of 'result' object encapsulating the result.
-        //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
-        DistributedBenchmarkResult localResult =
-                Commands.readNFiles(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile, inputPath, shuffle);
 
-        if (localResult == null) {
-            LOG.warn("Local result is null. Aborting.");
-            return;
+        for (DistributedBenchmarkResult res : results) {
+            System.out.println(res.getOpsPerSecond());
         }
-
-        LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
-        localResult.setOperationId(operationId);
-
-        // Wait for followers' results if we had followers when we first started the operation.
-        if (numDistributedResults > 0)
-            waitForDistributedResult(numDistributedResults, operationId, localResult);
     }
 
     private int getNextOperation() {

@@ -62,7 +62,7 @@ public class DistributedBenchmarkResult implements Serializable {
     @Override
     public String toString() {
         return "DistributedBenchmarkResult(opId=" + opId + ", operation=" + operation + ", numOpsPerformed=" +
-                numOpsPerformed + ", duration=" + durationSeconds + "ms, startTime=" + startTime + ", stopTime=" +
+                numOpsPerformed + ", duration=" + durationSeconds + "sec, startTime=" + startTime + ", stopTime=" +
                 stopTime + ")";
     }
 }

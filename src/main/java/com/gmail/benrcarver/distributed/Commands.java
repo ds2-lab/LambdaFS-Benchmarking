@@ -260,14 +260,6 @@ public class Commands {
             Thread thread = new Thread(() -> {
                 DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
 
-//                try {
-//                    hdfs.initialize(new URI(nameNodeEndpoint), configuration);
-//                } catch (URISyntaxException | IOException ex) {
-//                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
-//                    ex.printStackTrace();
-//                    System.exit(1);
-//                }
-
                 latch.countDown();
 
                 for (int j = 0; j < readsPerFile; j++)
