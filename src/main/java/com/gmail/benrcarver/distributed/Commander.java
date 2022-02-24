@@ -773,8 +773,8 @@ public class Commander {
             int numDistributedResults,
             String operationId,
             DistributedBenchmarkResult localResult) throws InterruptedException {
-        if (numDistributedResults <= 1) {
-            LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
+        if (numDistributedResults < 1) {
+            // LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
             return localResult.getOpsPerSecond();
         }
 
