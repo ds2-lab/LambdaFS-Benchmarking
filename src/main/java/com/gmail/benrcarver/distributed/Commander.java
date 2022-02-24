@@ -148,6 +148,8 @@ public class Commander {
         try (InputStream in = Files.newInputStream(Paths.get(yamlPath))) {
             LocalConfiguration config = yaml.loadAs(in, LocalConfiguration.class);
 
+            LOG.info("Loaded configuration: " + config.toString());
+
             nameNodeEndpoint = config.getNamenodeEndpoint();
             followerConfigs = config.getFollowers();
             hdfsConfigFilePath = config.getHdfsConfigFile();
