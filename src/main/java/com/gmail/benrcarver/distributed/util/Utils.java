@@ -5,6 +5,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.io.*;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -31,7 +32,9 @@ public class Utils {
     public static Configuration getConfiguration(String path) {
         Configuration configuration = new Configuration();
         try {
-            configuration.addResource(new File(path).toURI().toURL());
+            File configFile = new File(path);
+            URL configFileURL = configFile.toURI().toURL();
+            configuration.addResource(configFileURL);
         } catch (MalformedURLException ex) {
             ex.printStackTrace();
         }
