@@ -764,14 +764,16 @@ public class Commander {
      * @param numDistributedResults The number of results that we're waiting for.
      * @param operationId Unique ID of this distributed operation.
      * @param localResult The result obtained by our local execution of the operation.
+     *
+     * @return The aggregated throughput.
      */
-    private void waitForDistributedResult(
+    private double waitForDistributedResult(
             int numDistributedResults,
             String operationId,
             DistributedBenchmarkResult localResult) throws InterruptedException {
         if (numDistributedResults <= 1) {
             LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
-            return;
+            return localResult.getOpsPerSecond();
         }
 
         LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
@@ -798,10 +800,14 @@ public class Commander {
             throughput.addValue(res.getOpsPerSecond());
         }
 
+        double aggregateThroughput = (opsPerformed.getSum() / duration.getMean());
+
         LOG.info("==== RESULTS ====");
         LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
-        LOG.info("Aggregate Throughput (ops/sec): " + (opsPerformed.getSum() / (duration.getMean())));
+        LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
         LOG.info("Average Non-Aggregate Throughput (op/sec): " + throughput.getMean());
+
+        return aggregateThroughput;
     }
 
     /**
@@ -835,7 +841,7 @@ public class Commander {
         int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
 
         int currentTrial = 0;
-        DistributedBenchmarkResult[] results = new DistributedBenchmarkResult[numTrials];
+        Double[] results = new Double[numTrials];
         while (currentTrial < numTrials) {
             LOG.info("|====| TRIAL #%" + currentTrial + " |====|");
             String operationId = UUID.randomUUID().toString();
@@ -865,16 +871,20 @@ public class Commander {
             LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
             localResult.setOperationId(operationId);
 
+            double throughput = 0.0;
             // Wait for followers' results if we had followers when we first started the operation.
-            if (numDistributedResults > 0)
-                waitForDistributedResult(numDistributedResults, operationId, localResult);
+            if (numDistributedResults > 0) {
+                throughput = waitForDistributedResult(numDistributedResults, operationId, localResult);
+            } else {
+                throughput = localResult.getOpsPerSecond();
+            }
 
-            results[currentTrial] = localResult;
+            results[currentTrial] = throughput;
             currentTrial++;
         }
 
-        for (DistributedBenchmarkResult res : results) {
-            System.out.println(res.getOpsPerSecond());
+        for (double throughputResult : results) {
+            System.out.println(throughputResult);
         }
     }
 
