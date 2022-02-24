@@ -974,6 +974,9 @@ public class Commander {
             registrationPayload.addProperty(NAMENODE_ENDPOINT, nameNodeEndpoint);
             registrationPayload.addProperty(HDFS_CONFIG_PATH, hdfsConfigFilePath);
 
+            LOG.debug("Sending '" + NAMENODE_ENDPOINT + "' as '" + NAMENODE_ENDPOINT + "'.");
+            LOG.debug("Sending '" + HDFS_CONFIG_PATH + "' as '" + hdfsConfigFilePath + "'.");
+
             conn.sendTCP(new Gson().toJson(registrationPayload));
         }
 

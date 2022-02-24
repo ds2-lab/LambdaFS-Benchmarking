@@ -309,6 +309,7 @@ public class Follower {
         nameNodeEndpoint = message.getAsJsonPrimitive(NAMENODE_ENDPOINT).getAsString();
         hdfsConfigFilePath = message.getAsJsonPrimitive(HDFS_CONFIG_PATH).getAsString();
         LOG.debug("NameNode Endpoint: " + nameNodeEndpoint);
+        LOG.debug("hdfsConfigFilePath: " + hdfsConfigFilePath);
 
         hdfs = initDfsClient();
     }
