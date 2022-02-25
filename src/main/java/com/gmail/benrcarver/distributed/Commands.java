@@ -12,6 +12,7 @@ import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 
 import io.hops.metrics.TransactionEvent;
 import io.hops.metrics.TransactionAttempt;
@@ -132,7 +133,8 @@ public class Commands {
 
         // Used to synchronize threads; they each connect to HopsFS and then
         // count down. So, they all cannot start until they are all connected.
-        final CountDownLatch latch = new CountDownLatch(numThreads);
+        final CountDownLatch startLatch = new CountDownLatch(numThreads);
+        final Semaphore endSemaphore = new Semaphore(numThreads * -1);
 
         final BlockingQueue<List<OperationPerformed>> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
@@ -145,20 +147,18 @@ public class Commands {
             Thread thread = new Thread(() -> {
                 DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
 
-//                try {
-//                    hdfs.initialize(new URI(nameNodeEndpoint), configuration);
-//                } catch (URISyntaxException | IOException ex) {
-//                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
-//                    ex.printStackTrace();
-//                    System.exit(1);
-//                }
-
-                latch.countDown();
+                startLatch.countDown();
 
                 for (String filePath : selectedPaths) {
                     for (int j = 0; j < readsPerFile; j++)
                         readFile(filePath, hdfs, nameNodeEndpoint);
                 }
+
+                // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+                // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+                // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+                // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+                endSemaphore.release();
 
                 operationsPerformed.add(hdfs.getOperationsPerformed());
                 statisticsPackages.add(hdfs.getStatisticsPackages());
@@ -179,11 +179,17 @@ public class Commands {
             thread.start();
         }
 
-        LOG.info("Joining threads.");
+        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+        endSemaphore.acquire();
+        long end = System.currentTimeMillis();
+
+        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
         for (Thread thread : threads) {
             thread.join();
         }
-        long end = System.currentTimeMillis();
 
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
             LOG.info("Adding list of " + opsPerformed.size() +
@@ -247,6 +253,7 @@ public class Commands {
         // Used to synchronize threads; they each connect to HopsFS and then
         // count down. So, they all cannot start until they are all connected.
         final CountDownLatch latch = new CountDownLatch(n);
+        final Semaphore endSemaphore = new Semaphore(n * -1);
 
         final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(n);
@@ -264,6 +271,12 @@ public class Commands {
 
                 for (int j = 0; j < readsPerFile; j++)
                     readFile(filePath, hdfs, nameNodeEndpoint);
+
+                // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+                // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+                // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+                // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+                endSemaphore.release();
 
                 operationsPerformed.add(hdfs.getOperationsPerformed());
                 statisticsPackages.add(hdfs.getStatisticsPackages());
@@ -284,11 +297,17 @@ public class Commands {
             thread.start();
         }
 
-        LOG.info("Joining threads.");
+        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+        endSemaphore.acquire();
+        long end = System.currentTimeMillis();
+
+        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
         for (Thread thread : threads) {
             thread.join();
         }
-        long end = System.currentTimeMillis();
 
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
             LOG.info("Adding list of " + opsPerformed.size() +
@@ -494,6 +513,7 @@ public class Commands {
         // Used to synchronize threads; they each connect to HopsFS and then
         // count down. So, they all cannot start until they are all connected.
         final CountDownLatch latch = new CountDownLatch(numThreads);
+        final Semaphore endSemaphore = new Semaphore(numThreads * -1);
 
         final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
@@ -522,6 +542,12 @@ public class Commands {
                         readFile(filePath, hdfs, nameNodeEndpoint);
                 }
 
+                // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+                // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+                // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+                // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+                endSemaphore.release();
+
                 operationsPerformed.add(hdfs.getOperationsPerformed());
                 statisticsPackages.add(hdfs.getStatisticsPackages());
                 transactionEvents.add(hdfs.getTransactionEvents());
@@ -541,11 +567,17 @@ public class Commands {
             thread.start();
         }
 
-        LOG.info("Joining threads.");
+        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+        endSemaphore.acquire();
+        long end = System.currentTimeMillis();
+
+        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
         for (Thread thread : threads) {
             thread.join();
         }
-        long end = System.currentTimeMillis();
 
         double durationSeconds = (end - start) / 1000.0;
 
@@ -670,6 +702,7 @@ public class Commands {
             assert contentPerArray != null;
 
             final CountDownLatch latch = new CountDownLatch(numThreads);
+            final Semaphore endSemaphore = new Semaphore(numThreads * -1);
 
             Thread[] threads = new Thread[numThreads];
 
@@ -686,16 +719,10 @@ public class Commands {
                 Thread thread = new Thread(() -> {
                     DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
 
-//                    try {
-//                        hdfs.initialize(new URI(nameNodeEndpoint), configuration);
-//                    } catch (URISyntaxException | IOException ex) {
-//                        LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
-//                        ex.printStackTrace();
-//                        System.exit(1);
-//                    }
-
                     latch.countDown();
                     int localNumSuccess = createFiles(targetPathsPerArray[idx], contentPerArray[idx], hdfs, nameNodeEndpoint);
+
+                    endSemaphore.release();
 
                     operationsPerformed.add(hdfs.getOperationsPerformed());
                     statisticsPackages.add(hdfs.getStatisticsPackages());
@@ -717,11 +744,17 @@ public class Commands {
                 thread.start();
             }
 
-            LOG.info("Joining threads.");
+            // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+            // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+            // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+            // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+            endSemaphore.acquire();
+            end = System.currentTimeMillis();
+
+            LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
             for (Thread thread : threads) {
                 thread.join();
             }
-            end = System.currentTimeMillis();
 
             for (List<OperationPerformed> opsPerformed : operationsPerformed) {
                 LOG.info("Adding list of " + opsPerformed.size() +
