@@ -135,7 +135,7 @@ public class Commands {
         // Used to synchronize threads; they each connect to HopsFS and then
         // count down. So, they all cannot start until they are all connected.
         final CountDownLatch startLatch = new CountDownLatch(numThreads);
-        final Semaphore endSemaphore = new Semaphore(numThreads * -1);
+        final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
 
         final BlockingQueue<List<OperationPerformed>> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
@@ -275,7 +275,7 @@ public class Commands {
         // Used to synchronize threads; they each connect to HopsFS and then
         // count down. So, they all cannot start until they are all connected.
         final CountDownLatch latch = new CountDownLatch(n);
-        final Semaphore endSemaphore = new Semaphore(n * -1);
+        final Semaphore endSemaphore = new Semaphore((n * -1) + 1);
 
         final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(n);
@@ -556,7 +556,7 @@ public class Commands {
         // Used to synchronize threads; they each connect to HopsFS and then
         // count down. So, they all cannot start until they are all connected.
         final CountDownLatch latch = new CountDownLatch(numThreads);
-        final Semaphore endSemaphore = new Semaphore(numThreads * -1);
+        final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
 
         final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
@@ -761,7 +761,7 @@ public class Commands {
             assert contentPerArray != null;
 
             final CountDownLatch latch = new CountDownLatch(numThreads);
-            final Semaphore endSemaphore = new Semaphore(numThreads * -1);
+            final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
 
             Thread[] threads = new Thread[numThreads];
 
