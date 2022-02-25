@@ -19,6 +19,7 @@ import io.hops.metrics.TransactionAttempt;
 import io.hops.transaction.context.TransactionsStats;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -143,6 +144,10 @@ public class Commands {
         final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
                 = new ArrayBlockingQueue<>(numThreads);
 
+        final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
+        final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
+        final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
+
         for (int i = 0; i < numThreads; i++) {
             Thread thread = new Thread(() -> {
                 DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
@@ -163,6 +168,18 @@ public class Commands {
                 operationsPerformed.add(hdfs.getOperationsPerformed());
                 statisticsPackages.add(hdfs.getStatisticsPackages());
                 transactionEvents.add(hdfs.getTransactionEvents());
+
+                for (double latency : hdfs.getLatencyStatistics().getValues()) {
+                    latencyBoth.addValue(latency);
+                }
+
+                for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
+                    latencyHttp.addValue(latency);
+                }
+
+                for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
+                    latencyTcp.addValue(latency);
+                }
 
                 try {
                     hdfs.close();
@@ -192,25 +209,30 @@ public class Commands {
         }
 
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            LOG.info("Adding list of " + opsPerformed.size() +
-                    " operations performed to master/shared HDFS object.");
+            //LOG.info("Adding list of " + opsPerformed.size() + " operations performed to master/shared HDFS object.");
             sharedHdfs.addOperationPerformeds(opsPerformed);
         }
 
         for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            LOG.info("Adding list of " + statPackages.size() +
-                    " statistics packages to master/shared HDFS object.");
+            //LOG.info("Adding list of " + statPackages.size() + " statistics packages to master/shared HDFS object.");
             sharedHdfs.mergeStatisticsPackages(statPackages, true);
         }
 
         for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
+            // LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
             sharedHdfs.mergeTransactionEvents(txEvents, true);
         }
 
         double durationSeconds = (end - start) / 1000.0;
         double totalReads = (double)n * (double)readsPerFile * (double)numThreads;
         double throughput = (totalReads / durationSeconds);
+
+        LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
+                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation());
+        LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
+                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation());
+        LOG.info("Latency TCP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
+                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation());
         LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
@@ -262,6 +284,10 @@ public class Commands {
         final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
                 = new ArrayBlockingQueue<>(n);
 
+        final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
+        final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
+        final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
+
         for (int i = 0; i < n; i++) {
             final String filePath = paths.get(i);
             Thread thread = new Thread(() -> {
@@ -281,6 +307,18 @@ public class Commands {
                 operationsPerformed.add(hdfs.getOperationsPerformed());
                 statisticsPackages.add(hdfs.getStatisticsPackages());
                 transactionEvents.add(hdfs.getTransactionEvents());
+
+                for (double latency : hdfs.getLatencyStatistics().getValues()) {
+                    latencyBoth.addValue(latency);
+                }
+
+                for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
+                    latencyHttp.addValue(latency);
+                }
+
+                for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
+                    latencyTcp.addValue(latency);
+                }
 
                 try {
                     hdfs.close();
@@ -310,19 +348,17 @@ public class Commands {
         }
 
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            LOG.info("Adding list of " + opsPerformed.size() +
-                    " operations performed to master/shared HDFS object.");
+            //LOG.info("Adding list of " + opsPerformed.size() + " operations performed to master/shared HDFS object.");
             sharedHdfs.addOperationPerformeds(opsPerformed);
         }
 
         for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            LOG.info("Adding list of " + statPackages.size() +
-                    " statistics packages to master/shared HDFS object.");
+            //LOG.info("Adding list of " + statPackages.size() + " statistics packages to master/shared HDFS object.");
             sharedHdfs.mergeStatisticsPackages(statPackages, true);
         }
 
         for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
+            //LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
             sharedHdfs.mergeTransactionEvents(txEvents, true);
         }
 
@@ -331,6 +367,13 @@ public class Commands {
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
         LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
+
+        LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
+                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation());
+        LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
+                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation());
+        LOG.info("Latency TCP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
+                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation());
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
@@ -522,18 +565,14 @@ public class Commands {
         final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
                 = new ArrayBlockingQueue<>(numThreads);
 
+        final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
+        final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
+        final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
+
         for (int i = 0; i < numThreads; i++) {
             final String[] pathsForThread = pathsPerThread[i];
             Thread thread = new Thread(() -> {
                 DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
-
-//                try {
-//                    hdfs.initialize(new URI(nameNodeEndpoint), configuration);
-//                } catch (URISyntaxException | IOException ex) {
-//                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
-//                    ex.printStackTrace();
-//                    System.exit(1);
-//                }
 
                 latch.countDown();
 
@@ -551,6 +590,18 @@ public class Commands {
                 operationsPerformed.add(hdfs.getOperationsPerformed());
                 statisticsPackages.add(hdfs.getStatisticsPackages());
                 transactionEvents.add(hdfs.getTransactionEvents());
+
+                for (double latency : hdfs.getLatencyStatistics().getValues()) {
+                    latencyBoth.addValue(latency);
+                }
+
+                for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
+                    latencyHttp.addValue(latency);
+                }
+
+                for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
+                    latencyTcp.addValue(latency);
+                }
 
                 try {
                     hdfs.close();
@@ -579,29 +630,34 @@ public class Commands {
             thread.join();
         }
 
+        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
+            // LOG.info("Adding list of " + opsPerformed.size() + " operations performed to master/shared HDFS object.");
+            sharedHdfs.addOperationPerformeds(opsPerformed);
+        }
+
+        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
+            // LOG.info("Adding list of " + statPackages.size() +" statistics packages to master/shared HDFS object.");
+            sharedHdfs.mergeStatisticsPackages(statPackages, true);
+        }
+
+        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
+            // LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
+            sharedHdfs.mergeTransactionEvents(txEvents, true);
+        }
+
         double durationSeconds = (end - start) / 1000.0;
 
         LOG.info("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + durationSeconds);
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
+
+        LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
+                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation());
+        LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
+                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation());
+        LOG.info("Latency TCP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
+                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation());
         LOG.info("Throughput: " + throughput + " ops/sec.");
-
-        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            LOG.info("Adding list of " + opsPerformed.size() +
-                    " operations performed to master/shared HDFS object.");
-            sharedHdfs.addOperationPerformeds(opsPerformed);
-        }
-
-        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            LOG.info("Adding list of " + statPackages.size() +
-                    " statistics packages to master/shared HDFS object.");
-            sharedHdfs.mergeStatisticsPackages(statPackages, true);
-        }
-
-        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
-            sharedHdfs.mergeTransactionEvents(txEvents, true);
-        }
     }
 
     /**
@@ -684,6 +740,9 @@ public class Commands {
             numSuccess = createFiles(targetPaths, content, sharedHdfs, nameNodeEndpoint);
 
             end = System.currentTimeMillis();
+            LOG.info("");
+            LOG.info("");
+            LOG.info("===============================");
         } else {
             int filesPerArray = (int)Math.floor((double)totalNumberOfFiles / numThreads);
             int remainder = totalNumberOfFiles % numThreads;
@@ -714,6 +773,10 @@ public class Commands {
                     = new ArrayBlockingQueue<>(numThreads);
             final BlockingQueue<Integer> numSuccessPerThread = new ArrayBlockingQueue<>(numThreads);
 
+            final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
+            final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
+            final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
+
             for (int i = 0; i < numThreads; i++) {
                 final int idx = i;
                 Thread thread = new Thread(() -> {
@@ -728,6 +791,18 @@ public class Commands {
                     statisticsPackages.add(hdfs.getStatisticsPackages());
                     transactionEvents.add(hdfs.getTransactionEvents());
                     numSuccessPerThread.add(localNumSuccess);
+
+                    for (double latency : hdfs.getLatencyStatistics().getValues()) {
+                        latencyBoth.addValue(latency);
+                    }
+
+                    for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
+                        latencyHttp.addValue(latency);
+                    }
+
+                    for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
+                        latencyTcp.addValue(latency);
+                    }
 
                     try {
                         hdfs.close();
@@ -756,20 +831,28 @@ public class Commands {
                 thread.join();
             }
 
+            LOG.info("");
+            LOG.info("");
+            LOG.info("===============================");
+            LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
+                    ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation());
+            LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
+                    ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation());
+            LOG.info("Latency TCP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
+                    ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation());
+
             for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-                LOG.info("Adding list of " + opsPerformed.size() +
-                        " operations performed to master/shared HDFS object.");
+                //LOG.info("Adding list of " + opsPerformed.size() + " operations performed to master/shared HDFS object.");
                 sharedHdfs.addOperationPerformeds(opsPerformed);
             }
 
             for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-                LOG.info("Adding list of " + statPackages.size() +
-                        " statistics packages to master/shared HDFS object.");
+                //LOG.info("Adding list of " + statPackages.size() + " statistics packages to master/shared HDFS object.");
                 sharedHdfs.mergeStatisticsPackages(statPackages, true);
             }
 
             for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-                LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
+                //LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
                 sharedHdfs.mergeTransactionEvents(txEvents, true);
             }
 
@@ -780,9 +863,6 @@ public class Commands {
 
         double durationSeconds = (end - start) / 1000.0;
         filesPerSec = numSuccess / durationSeconds;
-        LOG.info("");
-        LOG.info("");
-        LOG.info("===============================");
         LOG.info("Number of successful write operations: " + numSuccess);
         LOG.info("Number of failed write operations: " + (totalNumberOfFiles - numSuccess));
         LOG.info("Time elapsed: " + durationSeconds);
