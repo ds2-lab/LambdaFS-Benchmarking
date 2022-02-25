@@ -104,6 +104,9 @@ public class Commands {
 
         if (input.equalsIgnoreCase("y")) {
             hdfs.clearStatistics(true, true, true);
+            hdfs.clearLatencyValues();
+
+            LOG.debug("Cleared both statistics and latency values.");
         } else {
             LOG.info("NOT clearing statistics packages.");
         }
@@ -228,11 +231,14 @@ public class Commands {
         double throughput = (totalReads / durationSeconds);
 
         LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
-                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation());
+                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation() +
+                ", N: " + latencyBoth.getN() + "]");
         LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
-                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation());
+                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
+                ", N: " + latencyTcp.getN() + "]");
         LOG.info("Latency TCP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
-                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation());
+                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
+                ", N: " + latencyHttp.getN() + "]");
         LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
@@ -369,11 +375,14 @@ public class Commands {
         LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
 
         LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
-                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation());
+                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation() +
+                ", N: " + latencyBoth.getN() + "]");
         LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
-                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation());
+                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
+                ", N: " + latencyTcp.getN() + "]");
         LOG.info("Latency TCP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
-                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation());
+                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
+                ", N: " + latencyHttp.getN() + "]");
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
@@ -652,11 +661,14 @@ public class Commands {
         double throughput = (totalReads / durationSeconds);
 
         LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
-                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation());
+                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation() +
+                ", N: " + latencyBoth.getN() + "]");
         LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
-                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation());
+                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
+                ", N: " + latencyTcp.getN() + "]");
         LOG.info("Latency TCP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
-                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation());
+                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
+                ", N: " + latencyHttp.getN() + "]");
         LOG.info("Throughput: " + throughput + " ops/sec.");
     }
 
@@ -835,11 +847,14 @@ public class Commands {
             LOG.info("");
             LOG.info("===============================");
             LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
-                    ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation());
+                    ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation() +
+                    ", N: " + latencyBoth.getN() + "]");
             LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
-                    ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation());
+                    ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
+                    ", N: " + latencyTcp.getN() + "]");
             LOG.info("Latency TCP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
-                    ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation());
+                    ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
+                    ", N: " + latencyHttp.getN() + "]");
 
             for (List<OperationPerformed> opsPerformed : operationsPerformed) {
                 //LOG.info("Adding list of " + opsPerformed.size() + " operations performed to master/shared HDFS object.");
