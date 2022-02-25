@@ -236,7 +236,7 @@ public class Commands {
         LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
                 ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
                 ", N: " + latencyTcp.getN() + "]");
-        LOG.info("Latency TCP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
+        LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
                 ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
                 ", N: " + latencyHttp.getN() + "]");
         LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
@@ -380,7 +380,7 @@ public class Commands {
         LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
                 ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
                 ", N: " + latencyTcp.getN() + "]");
-        LOG.info("Latency TCP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
+        LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
                 ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
                 ", N: " + latencyHttp.getN() + "]");
         LOG.info("Throughput: " + throughput + " ops/sec.");
@@ -666,7 +666,7 @@ public class Commands {
         LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
                 ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
                 ", N: " + latencyTcp.getN() + "]");
-        LOG.info("Latency TCP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
+        LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
                 ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
                 ", N: " + latencyHttp.getN() + "]");
         LOG.info("Throughput: " + throughput + " ops/sec.");
@@ -852,7 +852,7 @@ public class Commands {
             LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
                     ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
                     ", N: " + latencyTcp.getN() + "]");
-            LOG.info("Latency TCP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
+            LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
                     ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
                     ", N: " + latencyHttp.getN() + "]");
 
