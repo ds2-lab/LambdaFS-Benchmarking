@@ -1192,17 +1192,17 @@ public class Commands {
             String line = null;
             long readStart = System.currentTimeMillis();
 
-            LOG.info("");
+            //LOG.info("");
             LOG.info("CONTENTS OF FILE '" + fileName + "': ");
             while ((line = br.readLine()) != null)
                 LOG.info(line);
-            LOG.info("");
+            //LOG.info("");
             long readEnd = System.currentTimeMillis();
             inputStream.close();
             br.close();
             long readDuration = readEnd - readStart;
 
-            LOG.info("Read contents of file \"" + fileName + "\" from DataNode in " + readDuration + " milliseconds.");
+            //LOG.info("Read contents of file \"" + fileName + "\" from DataNode in " + readDuration + " milliseconds.");
 
 //            OperationPerformed operationPerformed = new OperationPerformed(
 //                    "ReadBlocksFromDataNode", UUID.randomUUID().toString(), readStart, readEnd,
