@@ -580,7 +580,7 @@ public class Commander {
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
-        LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
+        //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
         localResult.setOperationId(operationId);
 
         // Wait for followers' results if we had followers when we first started the operation.
@@ -752,7 +752,7 @@ public class Commander {
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
-        LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
+        //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
         localResult.setOperationId(operationId);
 
         // Wait for followers' results if we had followers when we first started the operation.
@@ -870,7 +870,7 @@ public class Commander {
                 return;
             }
 
-            LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
+            //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
             localResult.setOperationId(operationId);
 
             double throughput = 0.0;
