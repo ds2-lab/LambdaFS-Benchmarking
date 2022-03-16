@@ -19,6 +19,7 @@ import io.hops.metrics.TransactionAttempt;
 import io.hops.transaction.context.TransactionsStats;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -242,6 +243,8 @@ public class Commands {
         LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
+        sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
+
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
                 start, end);
     }
@@ -385,6 +388,8 @@ public class Commands {
                 ", N: " + latencyHttp.getN() + "]");
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
+        sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
+
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
                 start, end);
     }
@@ -400,6 +405,10 @@ public class Commands {
 
         HashMap<String, List<TransactionEvent>> transactionEvents = hdfs.getTransactionEvents();
         ArrayList<TransactionEvent> allTransactionEvents = new ArrayList<TransactionEvent>();
+
+        DescriptiveStatistics httpStatistics = new DescriptiveStatistics();
+        DescriptiveStatistics tcpStatistics = new DescriptiveStatistics();
+
         for (Map.Entry<String, List<TransactionEvent>> entry : transactionEvents.entrySet()) {
             allTransactionEvents.addAll(entry.getValue());
         }
@@ -432,16 +441,12 @@ public class Commands {
 
             BufferedWriter txEventsWriter = new BufferedWriter(new FileWriter(baseFilePath + "-txevents.csv"));
 
-            // LOG.info("Writing " + transactionEvents.size() + " transaction event lists to CSV.");
-
             txEventsWriter.write(TransactionEvent.getHeader());
             txEventsWriter.newLine();
 
             for (Map.Entry<String, List<TransactionEvent>> entry : transactionEvents.entrySet()) {
-                String requestId = entry.getKey();
                 List<TransactionEvent> txEvents = entry.getValue();
 
-                // LOG.info("Adding " + txEvents.size() + " transaction events to CSV.");
                 for (TransactionEvent transactionEvent : txEvents) {
                     transactionEvent.write(txEventsWriter);
                 }
@@ -670,6 +675,8 @@ public class Commands {
                 ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
                 ", N: " + latencyHttp.getN() + "]");
         LOG.info("Throughput: " + throughput + " ops/sec.");
+
+        sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
     }
 
     /**
@@ -855,6 +862,8 @@ public class Commands {
             LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
                     ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
                     ", N: " + latencyHttp.getN() + "]");
+
+            sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
 
             for (List<OperationPerformed> opsPerformed : operationsPerformed) {
                 //LOG.info("Adding list of " + opsPerformed.size() + " operations performed to master/shared HDFS object.");
@@ -1190,24 +1199,12 @@ public class Commands {
             FSDataInputStream inputStream = hdfs.open(filePath);
             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
             String line = null;
-            long readStart = System.currentTimeMillis();
 
-            //LOG.info("");
             LOG.info("CONTENTS OF FILE '" + fileName + "': ");
             while ((line = br.readLine()) != null)
                 LOG.info(line);
-            //LOG.info("");
-            long readEnd = System.currentTimeMillis();
             inputStream.close();
             br.close();
-            long readDuration = readEnd - readStart;
-
-            //LOG.info("Read contents of file \"" + fileName + "\" from DataNode in " + readDuration + " milliseconds.");
-
-//            OperationPerformed operationPerformed = new OperationPerformed(
-//                    "ReadBlocksFromDataNode", UUID.randomUUID().toString(), readStart, readEnd,
-//                    readStart, readEnd, readStart, readEnd, 999, false, true, "TCP", 0L, 0, 0);
-//            hdfs.addOperationPerformed(operationPerformed);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
