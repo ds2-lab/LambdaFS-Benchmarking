@@ -1200,7 +1200,7 @@ public class Commands {
             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
             String line = null;
 
-            LOG.info("CONTENTS OF FILE '" + fileName + "': ");
+	    //LOG.info("CONTENTS OF FILE '" + fileName + "': ");
             while ((line = br.readLine()) != null)
                 LOG.info(line);
             inputStream.close();
