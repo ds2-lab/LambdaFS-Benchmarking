@@ -685,6 +685,8 @@ public class Commands {
         LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
                 ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
                 ", N: " + latencyHttp.getN() + "]");
+        LOG.info("Cache Hits: " + totalCacheHits + ", Cache Misses: " + totalCacheMisses + ". [Hitrate: " +
+                ((double)totalCacheHits / (totalCacheHits + totalCacheMisses)) + "]");
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
         sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
