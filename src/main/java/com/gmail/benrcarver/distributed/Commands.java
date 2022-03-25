@@ -356,18 +356,23 @@ public class Commands {
             thread.join();
         }
 
+        int totalCacheHits = 0;
+        int totalCacheMisses = 0;
+
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            //LOG.info("Adding list of " + opsPerformed.size() + " operations performed to master/shared HDFS object.");
             sharedHdfs.addOperationPerformeds(opsPerformed);
+
+            for (OperationPerformed op : opsPerformed) {
+                totalCacheHits += op.getMetadataCacheHits();
+                totalCacheMisses += op.getMetadataCacheMisses();
+            }
         }
 
         for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            //LOG.info("Adding list of " + statPackages.size() + " statistics packages to master/shared HDFS object.");
             sharedHdfs.mergeStatisticsPackages(statPackages, true);
         }
 
         for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            //LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
             sharedHdfs.mergeTransactionEvents(txEvents, true);
         }
 
@@ -386,6 +391,7 @@ public class Commands {
         LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
                 ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
                 ", N: " + latencyHttp.getN() + "]");
+        LOG.info("Cache Hits: " + totalCacheHits + ", Cache Misses: " + totalCacheMisses);
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
         sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
@@ -644,18 +650,23 @@ public class Commands {
             thread.join();
         }
 
+        int totalCacheHits = 0;
+        int totalCacheMisses = 0;
+
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            // LOG.info("Adding list of " + opsPerformed.size() + " operations performed to master/shared HDFS object.");
             sharedHdfs.addOperationPerformeds(opsPerformed);
+
+            for (OperationPerformed op : opsPerformed) {
+                totalCacheHits += op.getMetadataCacheHits();
+                totalCacheMisses += op.getMetadataCacheMisses();
+            }
         }
 
         for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            // LOG.info("Adding list of " + statPackages.size() +" statistics packages to master/shared HDFS object.");
             sharedHdfs.mergeStatisticsPackages(statPackages, true);
         }
 
         for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            // LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
             sharedHdfs.mergeTransactionEvents(txEvents, true);
         }
 
@@ -1200,7 +1211,7 @@ public class Commands {
             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
             String line = null;
 
-            LOG.info("CONTENTS OF FILE '" + fileName + "': ");
+            // LOG.info("CONTENTS OF FILE '" + fileName + "': ");
             while ((line = br.readLine()) != null)
                 LOG.info(line);
             inputStream.close();
