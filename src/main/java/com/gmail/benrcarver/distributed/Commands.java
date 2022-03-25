@@ -398,7 +398,7 @@ public class Commands {
         sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
 
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
-                start, end);
+                start, end, totalCacheHits, totalCacheMisses);
     }
 
     /**
