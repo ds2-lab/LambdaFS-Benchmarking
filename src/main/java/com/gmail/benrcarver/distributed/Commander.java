@@ -789,6 +789,8 @@ public class Commander {
         DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
         DescriptiveStatistics duration = new DescriptiveStatistics();
         DescriptiveStatistics throughput = new DescriptiveStatistics();
+        DescriptiveStatistics cacheHits = new DescriptiveStatistics();
+        DescriptiveStatistics cacheMisses = new DescriptiveStatistics();
 
         opsPerformed.addValue(localResult.numOpsPerformed);
         duration.addValue(localResult.durationSeconds);
@@ -800,6 +802,8 @@ public class Commander {
             opsPerformed.addValue(res.numOpsPerformed);
             duration.addValue(res.durationSeconds);
             throughput.addValue(res.getOpsPerSecond());
+            cacheHits.addValue(res.cacheHits);
+            cacheMisses.addValue(res.cacheMisses);
         }
 
         double aggregateThroughput = (opsPerformed.getSum() / duration.getMean());
@@ -808,6 +812,9 @@ public class Commander {
         LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
         LOG.info("Average Non-Aggregate Throughput (op/sec): " + throughput.getMean());
+        LOG.info("Cache hits: " + cacheHits);
+        LOG.info("Cache misses: " + cacheMisses);
+        LOG.info("Cache hit percentage: " + (cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum())));
 
         return aggregateThroughput;
     }
@@ -844,6 +851,8 @@ public class Commander {
 
         int currentTrial = 0;
         Double[] results = new Double[numTrials];
+        Integer[] cacheHits = new Integer[numTrials];
+        Integer[] cacheMisses = new Integer[numTrials];
         while (currentTrial < numTrials) {
             LOG.info("|====| TRIAL #%" + currentTrial + " |====|");
             String operationId = UUID.randomUUID().toString();
@@ -873,7 +882,7 @@ public class Commander {
             //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
             localResult.setOperationId(operationId);
 
-            double throughput = 0.0;
+            double throughput;
             // Wait for followers' results if we had followers when we first started the operation.
             if (numDistributedResults > 0) {
                 throughput = waitForDistributedResult(numDistributedResults, operationId, localResult);
@@ -882,11 +891,18 @@ public class Commander {
             }
 
             results[currentTrial] = throughput;
+            cacheHits[currentTrial] = localResult.cacheHits;
+            cacheMisses[currentTrial] = localResult.cacheMisses;
             currentTrial++;
         }
 
+        System.out.println("[THROUGHPUT]");
         for (double throughputResult : results) {
             System.out.println(throughputResult);
+        }
+        System.out.println("\n[CACHE HITS]\t[CACHE MISSES]");
+        for (int i = 0; i < numTrials; i++) {
+            System.out.println(cacheHits[i] + "\t" + cacheMisses[i]);
         }
     }
 
