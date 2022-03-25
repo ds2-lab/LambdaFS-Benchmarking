@@ -901,7 +901,7 @@ public class Commander {
             System.out.println(throughputResult);
         }
         System.out.println("\n[CACHE HITS] [CACHE MISSES] [HIT RATE]");
-        String formatString = "%-12s %-12s %-10s";
+        String formatString = "%-12s %-14s %10f";
         for (int i = 0; i < numTrials; i++) {
             System.out.printf((formatString) + "%n", cacheHits[i], cacheMisses[i], ((double)cacheHits[i] / (cacheHits[i] + cacheMisses[i])));
         }
