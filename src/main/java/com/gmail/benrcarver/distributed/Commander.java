@@ -900,9 +900,10 @@ public class Commander {
         for (double throughputResult : results) {
             System.out.println(throughputResult);
         }
-        System.out.println("\n[CACHE HITS]\t[CACHE MISSES]");
+        System.out.println("\n[CACHE HITS] [CACHE MISSES] [HIT RATE]");
+        String formatString = "%-12s %-12s %-10s";
         for (int i = 0; i < numTrials; i++) {
-            System.out.println(cacheHits[i] + "\t" + cacheMisses[i]);
+            System.out.printf((formatString) + "%n", cacheHits[i], cacheMisses[i], ((double)cacheHits[i] / (cacheHits[i] + cacheMisses[i])));
         }
     }
 
