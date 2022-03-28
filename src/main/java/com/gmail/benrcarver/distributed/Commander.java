@@ -854,7 +854,7 @@ public class Commander {
         Integer[] cacheHits = new Integer[numTrials];
         Integer[] cacheMisses = new Integer[numTrials];
         while (currentTrial < numTrials) {
-            LOG.info("|====| TRIAL #%" + currentTrial + " |====|");
+            LOG.info("|====| TRIAL #" + currentTrial + " |====|");
             String operationId = UUID.randomUUID().toString();
             int numDistributedResults = followers.size();
             if (followers.size() > 0) {
@@ -894,6 +894,8 @@ public class Commander {
             cacheHits[currentTrial] = localResult.cacheHits;
             cacheMisses[currentTrial] = localResult.cacheMisses;
             currentTrial++;
+
+            Thread.sleep(500);
         }
 
         System.out.println("[THROUGHPUT]");
