@@ -610,8 +610,8 @@ public class InteractiveTest {
         }
 
         List<Double> throughputResults = new ArrayList<>();
-        for (int i = 0; i < numTrials; i++) {
-
+        for (int trial = 0; trial < numTrials; trial++) {
+            System.out.println("|==== TRIAL #" + trial + " ====|");
             Thread[] threads = new Thread[n];
 
             // Used to synchronize threads; they each connect to HopsFS and then
