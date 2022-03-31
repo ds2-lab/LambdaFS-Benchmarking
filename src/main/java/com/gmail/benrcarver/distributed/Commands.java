@@ -413,9 +413,6 @@ public class Commands {
         HashMap<String, List<TransactionEvent>> transactionEvents = hdfs.getTransactionEvents();
         ArrayList<TransactionEvent> allTransactionEvents = new ArrayList<TransactionEvent>();
 
-        DescriptiveStatistics httpStatistics = new DescriptiveStatistics();
-        DescriptiveStatistics tcpStatistics = new DescriptiveStatistics();
-
         for (Map.Entry<String, List<TransactionEvent>> entry : transactionEvents.entrySet()) {
             allTransactionEvents.addAll(entry.getValue());
         }
