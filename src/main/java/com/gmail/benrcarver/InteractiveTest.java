@@ -597,6 +597,11 @@ public class InteractiveTest {
 
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
 
+        Collections.shuffle(paths); // Randomize the order.
+
+        System.out.print("Number of trials?\n> ");
+        int numTrials = Integer.parseInt(scanner.nextLine());
+
         if (paths.size() < n) {
             LOG.error("ERROR: The file should contain at least " + n +
                     " HopsFS file path(s); however, it contains just " + paths.size() + " HopsFS file path(s).");
@@ -604,56 +609,67 @@ public class InteractiveTest {
             return;
         }
 
-        Thread[] threads = new Thread[n];
+        List<Double> throughputResults = new ArrayList<>();
+        for (int i = 0; i < numTrials; i++) {
 
-        // Used to synchronize threads; they each connect to HopsFS and then
-        // count down. So, they all cannot start until they are all connected.
-        final CountDownLatch latch = new CountDownLatch(n);
+            Thread[] threads = new Thread[n];
 
-        for (int i = 0; i < n; i++) {
-            final String filePath = paths.get(i);
-            Thread thread = new Thread(() -> {
-                DistributedFileSystem hdfs = new DistributedFileSystem();
+            // Used to synchronize threads; they each connect to HopsFS and then
+            // count down. So, they all cannot start until they are all connected.
+            final CountDownLatch latch = new CountDownLatch(n);
 
-                try {
-                    hdfs.initialize(new URI(filesystemEndpoint), configuration);
-                } catch (URISyntaxException | IOException ex) {
-                    LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
-                    ex.printStackTrace();
-                    System.exit(1);
-                }
+            for (int i = 0; i < n; i++) {
+                final String filePath = paths.get(i);
+                Thread thread = new Thread(() -> {
+                    DistributedFileSystem hdfs = new DistributedFileSystem();
 
-                latch.countDown();
+                    try {
+                        hdfs.initialize(new URI(filesystemEndpoint), configuration);
+                    } catch (URISyntaxException | IOException ex) {
+                        LOG.error("ERROR: Encountered exception while initializing DistributedFileSystem object.");
+                        ex.printStackTrace();
+                        System.exit(1);
+                    }
 
-                for (int j = 0; j < readsPerFile; j++)
-                    readFile(filePath, hdfs);
+                    latch.countDown();
 
-                try {
-                    hdfs.close();
-                } catch (IOException ex) {
-                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
-                }
-            });
-            threads[i] = thread;
+                    for (int j = 0; j < readsPerFile; j++)
+                        readFile(filePath, hdfs);
+
+                    try {
+                        hdfs.close();
+                    } catch (IOException ex) {
+                        LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+                    }
+                });
+                threads[i] = thread;
+            }
+
+            LOG.debug("Starting threads.");
+            long start = System.currentTimeMillis();
+            for (Thread thread : threads) {
+                thread.start();
+            }
+
+            LOG.debug("Joining threads.");
+            for (Thread thread : threads) {
+                thread.join();
+            }
+            long end = System.currentTimeMillis();
+
+            double durationSeconds = (end - start) / 1000.0;
+            double totalReads = (double) n * (double) readsPerFile;
+            double throughput = (totalReads / durationSeconds);
+            LOG.debug("Finished performing all " + totalReads + " file reads in " + durationSeconds);
+            LOG.debug("Throughput: " + throughput + " ops/sec.");
+
+            throughputResults.add(throughput);
         }
 
-        LOG.debug("Starting threads.");
-        long start = System.currentTimeMillis();
-        for (Thread thread : threads) {
-            thread.start();
+        System.out.println("Throughput results:");
+        for (double throughput : throughputResults) {
+            System.out.println(throughput);
         }
-
-        LOG.debug("Joining threads.");
-        for (Thread thread : threads) {
-            thread.join();
-        }
-        long end = System.currentTimeMillis();
-
-        double durationSeconds = (end - start) / 1000.0;
-        double totalReads = (double)n * (double)readsPerFile;
-        double throughput = (totalReads / durationSeconds);
-        LOG.debug("Finished performing all " + totalReads + " file reads in " + durationSeconds);
-        LOG.debug("Throughput: " + throughput + " ops/sec.");
     }
 
     /**
