@@ -660,8 +660,8 @@ public class InteractiveTest {
             double durationSeconds = (end - start) / 1000.0;
             double totalReads = (double) n * (double) readsPerFile;
             double throughput = (totalReads / durationSeconds);
-            LOG.debug("Finished performing all " + totalReads + " file reads in " + durationSeconds);
-            LOG.debug("Throughput: " + throughput + " ops/sec.");
+            LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
+            LOG.info("Throughput: " + throughput + " ops/sec.");
 
             throughputResults.add(throughput);
 
