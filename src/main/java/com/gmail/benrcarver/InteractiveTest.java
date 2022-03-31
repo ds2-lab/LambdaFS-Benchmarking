@@ -664,6 +664,9 @@ public class InteractiveTest {
             LOG.debug("Throughput: " + throughput + " ops/sec.");
 
             throughputResults.add(throughput);
+
+            if (trial < numTrials - 1) // Do not sleep for last trial.
+                Thread.sleep(500);
         }
 
         System.out.println("Throughput results:");
