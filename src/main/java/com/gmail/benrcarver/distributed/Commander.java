@@ -823,6 +823,94 @@ public class Commander {
      * Weak scaling, reads.
      *
      * Query the user for:
+     *  - An integer `n`, the number of threads.
+     *  - The path to a local file containing HopsFS file paths.
+     *  - The number of files each thread should read.
+     */
+    private void weakScalingReadOperationV2(final Configuration configuration,
+                                          final DistributedFileSystem sharedHdfs,
+                                          final String nameNodeEndpoint)
+            throws InterruptedException, FileNotFoundException {
+        System.out.print("How many threads should be used?\n> ");
+        String inputN = scanner.nextLine();
+        int n = Integer.parseInt(inputN);
+
+        System.out.print("How many files should each thread read?\n> ");
+        String inputFilesPerThread = scanner.nextLine();
+        int filesPerThread = Integer.parseInt(inputFilesPerThread);
+
+        System.out.print("Please provide a path to a local file containing at least " + inputN + " HopsFS file " +
+                (n == 1 ? "path.\n> " : "paths.\n> "));
+        String inputPath = scanner.nextLine();
+
+        boolean shuffle = getBooleanFromUser("Shuffle file paths around?");
+
+        int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
+
+        int currentTrial = 0;
+        Double[] results = new Double[numTrials];
+        Integer[] cacheHits = new Integer[numTrials];
+        Integer[] cacheMisses = new Integer[numTrials];
+        while (currentTrial < numTrials) {
+            LOG.info("|====| TRIAL #" + currentTrial + " |====|");
+            String operationId = UUID.randomUUID().toString();
+            int numDistributedResults = followers.size();
+            if (followers.size() > 0) {
+                JsonObject payload = new JsonObject();
+                payload.addProperty(OPERATION, OP_WEAK_SCALING_READS_V2);
+                payload.addProperty(OPERATION_ID, operationId);
+                payload.addProperty("n", n);
+                payload.addProperty("filesPerThread", filesPerThread);
+                payload.addProperty("inputPath", inputPath);
+                payload.addProperty("shuffle", shuffle);
+
+                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload);
+            }
+
+            // TODO: Make this return some sort of 'result' object encapsulating the result.
+            //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
+            DistributedBenchmarkResult localResult =
+                    Commands.weakScalingBenchmarkV2(configuration, sharedHdfs, nameNodeEndpoint, n, filesPerThread, inputPath, shuffle);
+
+            if (localResult == null) {
+                LOG.warn("Local result is null. Aborting.");
+                return;
+            }
+
+            //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
+            localResult.setOperationId(operationId);
+
+            double throughput;
+            // Wait for followers' results if we had followers when we first started the operation.
+            if (numDistributedResults > 0) {
+                throughput = waitForDistributedResult(numDistributedResults, operationId, localResult);
+            } else {
+                throughput = localResult.getOpsPerSecond();
+            }
+
+            results[currentTrial] = throughput;
+            cacheHits[currentTrial] = localResult.cacheHits;
+            cacheMisses[currentTrial] = localResult.cacheMisses;
+            currentTrial++;
+
+            Thread.sleep(500);
+        }
+
+        System.out.println("[THROUGHPUT]");
+        for (double throughputResult : results) {
+            System.out.println(throughputResult);
+        }
+        System.out.println("\n[CACHE HITS] [CACHE MISSES] [HIT RATE]");
+        String formatString = "%-12s %-14s %10f";
+        for (int i = 0; i < numTrials; i++) {
+            System.out.printf((formatString) + "%n", cacheHits[i], cacheMisses[i], ((double)cacheHits[i] / (cacheHits[i] + cacheMisses[i])));
+        }
+    }
+
+    /**
+     * Weak scaling, reads.
+     *
+     * Query the user for:
      *  - An integer `n`, the number of files to read
      *  - The path to a local file containing `n` or more HopsFS file paths.
      *  - The number of reads per file.
@@ -1047,7 +1135,7 @@ public class Commander {
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
                 "\n(15) Read n Files with n Threads (Weak Scaling - Read)\n(16) Read n Files y Times with z Threads (Strong Scaling - Read)" +
                 "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)" +
-                "\n(19) Create directories.");
+                "\n(19) Create directories.\n(20) Weak Scaling Reads v2");
         System.out.println("==================");
         System.out.println("");
         System.out.println("What would you like to do?");

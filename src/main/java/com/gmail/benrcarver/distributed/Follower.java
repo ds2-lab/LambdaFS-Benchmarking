@@ -284,6 +284,18 @@ public class Follower {
                 LOG.info("Obtained local result for STRONG SCALING (WRITE) benchmark: " + result);
                 sendResultToLeader(result);
                 break;
+            case OP_WEAK_SCALING_READS_V2:
+                LOG.info("OP_WEAK_SCALING_READS_V2 selected!");
+                result = Commands.weakScalingBenchmarkV2(hdfsConfiguration,
+                        hdfs, nameNodeEndpoint,
+                        message.getAsJsonPrimitive("n").getAsInt(),
+                        message.getAsJsonPrimitive("filesPerThread").getAsInt(),
+                        message.getAsJsonPrimitive("inputPath").getAsString(),
+                        message.getAsJsonPrimitive("shuffle").getAsBoolean());
+                result.setOperationId(operationId);
+                LOG.info("Obtained local result for OP_WEAK_SCALING_READS_V2 benchmark: " + result);
+                sendResultToLeader(result);
+                break;
             default:
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
                 break;

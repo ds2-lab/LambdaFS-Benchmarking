@@ -38,4 +38,5 @@ public class Constants {
     public static final int OP_WEAK_SCALING_WRITES = 17;
     public static final int OP_STRONG_SCALING_WRITES = 18;
     public static final int OP_CREATE_DIRECTORIES = 19;
+    public static final int OP_WEAK_SCALING_READS_V2 = 20;
 }

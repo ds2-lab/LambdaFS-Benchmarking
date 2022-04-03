@@ -249,7 +249,168 @@ public class Commands {
                 start, end);
     }
 
+    /**
+     * Each thread reads N files. There may be duplicates. We randomly select N files (with replacement) from
+     * the source set of files.
+     *
+     * This is the WEAK SCALING (read) benchmark.
+     *
+     * @param n Number of files to read.
+     * @param numFilesToRead How many files should be read.
+     * @param inputPath Path to local file containing HopsFS file paths (of the files to read).
+     */
+    public static DistributedBenchmarkResult weakScalingBenchmarkV2(final Configuration configuration,
+                                                        final DistributedFileSystem sharedHdfs,
+                                                        final String nameNodeEndpoint, int n,
+                                                        final int numFilesToRead, String inputPath,
+                                                        boolean shuffle)
+            throws InterruptedException, FileNotFoundException {
+        List<String> paths = Utils.getFilePathsFromFile(inputPath);
 
+        if (shuffle) {
+            LOG.debug("Shuffling paths.");
+            Collections.shuffle(paths);
+        }
+
+        if (paths.size() < n) {
+            LOG.error("ERROR: The file should contain at least " + n +
+                    " HopsFS file path(s); however, it contains just " + paths.size() + " HopsFS file path(s).");
+            LOG.error("Aborting operation.");
+            return null;
+        }
+
+        Thread[] threads = new Thread[n];
+
+        // Used to synchronize threads; they each connect to HopsFS and then
+        // count down. So, they all cannot start until they are all connected.
+        final CountDownLatch latch = new CountDownLatch(n);
+        final Semaphore endSemaphore = new Semaphore((n * -1) + 1);
+
+        final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
+                new java.util.concurrent.ArrayBlockingQueue<>(n);
+        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
+                = new ArrayBlockingQueue<>(n);
+        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
+                = new ArrayBlockingQueue<>(n);
+
+        final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
+        final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
+        final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
+
+        Random rng = new Random(); // TODO: Optionally seed this?
+
+        final String[][] fileBatches = new String[n][numFilesToRead];
+        for (int i = 0; i < n; i++) {
+            fileBatches[i] = new String[numFilesToRead]; // Prolly don't need to do this but oh well.
+            for (int j = 0; j < numFilesToRead; j++) {
+                int filePathIndex = rng.nextInt(paths.size() + 1);
+                fileBatches[i][j] = paths.get(filePathIndex);
+            }
+        }
+
+        for (int i = 0; i < n; i++) {
+            final String[] filesToRead = fileBatches[i];
+
+            Thread thread = new Thread(() -> {
+                DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
+
+                latch.countDown();
+
+                for (String s : filesToRead) readFile(s, hdfs, nameNodeEndpoint);
+
+                // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+                // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+                // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+                // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+                endSemaphore.release();
+
+                operationsPerformed.add(hdfs.getOperationsPerformed());
+                statisticsPackages.add(hdfs.getStatisticsPackages());
+                transactionEvents.add(hdfs.getTransactionEvents());
+
+                for (double latency : hdfs.getLatencyStatistics().getValues()) {
+                    latencyBoth.addValue(latency);
+                }
+
+                for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
+                    latencyHttp.addValue(latency);
+                }
+
+                for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
+                    latencyTcp.addValue(latency);
+                }
+
+                try {
+                    hdfs.close();
+                } catch (IOException ex) {
+                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+                }
+            });
+            threads[i] = thread;
+        }
+
+        LOG.info("Starting threads.");
+        long start = System.currentTimeMillis();
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
+        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+        endSemaphore.acquire();
+        long end = System.currentTimeMillis();
+
+        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
+        for (Thread thread : threads) {
+            thread.join();
+        }
+
+        int totalCacheHits = 0;
+        int totalCacheMisses = 0;
+
+        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
+            sharedHdfs.addOperationPerformeds(opsPerformed);
+
+            for (OperationPerformed op : opsPerformed) {
+                totalCacheHits += op.getMetadataCacheHits();
+                totalCacheMisses += op.getMetadataCacheMisses();
+            }
+        }
+
+        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
+            sharedHdfs.mergeStatisticsPackages(statPackages, true);
+        }
+
+        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
+            sharedHdfs.mergeTransactionEvents(txEvents, true);
+        }
+
+        // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
+        double durationSeconds = (end - start) / 1000.0;
+        double totalReads = (double)n * (double)readsPerFile;
+        double throughput = (totalReads / durationSeconds);
+        LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
+
+        LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
+                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation() +
+                ", N: " + latencyBoth.getN() + "]");
+        LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
+                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
+                ", N: " + latencyTcp.getN() + "]");
+        LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
+                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
+                ", N: " + latencyHttp.getN() + "]");
+        LOG.info("Cache Hits: " + totalCacheHits + ", Cache Misses: " + totalCacheMisses + ". [Hitrate: " +
+                ((double)totalCacheHits / (totalCacheHits + totalCacheMisses)) + "]");
+        LOG.info("Throughput: " + throughput + " ops/sec.");
+
+        sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
+
+        return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
+                start, end, totalCacheHits, totalCacheMisses);
+    }
 
     /**
      * Read N files using N threads (so, each thread reads 1 file). Each file is read a specified number of times.
@@ -262,8 +423,8 @@ public class Commands {
      */
     public static DistributedBenchmarkResult readNFiles(final Configuration configuration,
                                                         final DistributedFileSystem sharedHdfs,
-                                                        final String nameNodeEndpoint,
-                                                        int n,int readsPerFile, String inputPath, boolean shuffle)
+                                                        final String nameNodeEndpoint, int n,int readsPerFile,
+                                                        String inputPath, boolean shuffle)
             throws InterruptedException, FileNotFoundException {
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
 
