@@ -49,7 +49,7 @@ public class Commander {
     public static final Log LOG = LogFactory.getLog(Commander.class);
     private static final Console con = System.console();
 
-    private List<Connection> followers;
+    private final List<Connection> followers;
 
     private static final String LEADER_PREFIX = "[LEADER TCP SERVER]";
 

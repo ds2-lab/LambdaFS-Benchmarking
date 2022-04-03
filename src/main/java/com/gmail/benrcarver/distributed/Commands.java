@@ -953,7 +953,7 @@ public class Commands {
             return;
         }
 
-        int directoriesCreated = 0;
+        int numDirectoriesCreated = 0;
         int filesCreated = 0;
 
         Instant start = Instant.now();
@@ -961,8 +961,9 @@ public class Commands {
         int currentDepth = 0;
 
         mkdir(subtreeRootPath, hdfs, nameNodeEndpoint);
-        directoriesCreated++;
+        numDirectoriesCreated++;
 
+        List<String> directoriesCreated = new ArrayList<String>();
         Stack<TreeNode> directoryStack = new Stack<TreeNode>();
         TreeNode subtreeRoot = new TreeNode(subtreeRootPath, new ArrayList<TreeNode>());
         directoryStack.push(subtreeRoot);
@@ -970,17 +971,18 @@ public class Commands {
         while (currentDepth <= subtreeDepth) {
             LOG.info("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
             LOG.info("CURRENT DEPTH: " + currentDepth);
-            LOG.info("DIRECTORIES CREATED: " + directoriesCreated);
+            LOG.info("DIRECTORIES CREATED: " + numDirectoriesCreated);
             LOG.info("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
             List<Stack<TreeNode>> currentDepthStacks = new ArrayList<>();
             while (!directoryStack.empty()) {
                 TreeNode directory = directoryStack.pop();
+                directoriesCreated.add(directory.getPath());
 
                 String basePath = directory.getPath() + "/dir";
 
                 Stack<TreeNode> stack = createChildDirectories(basePath, maxSubDirs, hdfs, nameNodeEndpoint);
                 directory.addChildren(stack);
-                directoriesCreated += stack.size();
+                numDirectoriesCreated += stack.size();
                 currentDepthStacks.add(stack);
             }
 
@@ -996,11 +998,15 @@ public class Commands {
 
         LOG.info("=== Subtree Creation Completed ===");
         LOG.info("Time elapsed: " + subtreeCreationDuration.toString());
-        LOG.info("Directories created: " + directoriesCreated);
+        LOG.info("Directories created: " + numDirectoriesCreated);
         LOG.info("Files created: " + filesCreated + "\n");
 
         LOG.info("subtreeRoot children: " + subtreeRoot.getChildren().size());
-        LOG.info(subtreeRoot.toString());
+        //LOG.info(subtreeRoot.toString());
+
+        for (String path : directoriesCreated) {
+            System.out.println(path);
+        }
 
         LOG.info("==================================");
     }
