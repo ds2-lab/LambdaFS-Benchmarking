@@ -930,7 +930,7 @@ public class Commands {
         LOG.info("Throughput: " + throughput + " ops/sec.");
     }
 
-    public static void createSubtree(DistributedFileSystem hdfs, String nameNodeEndpoint) {
+    public static void createSubtree(DistributedFileSystem hdfs, String nameNodeEndpoint) throws IOException {
         System.out.print("Subtree root directory:\n> ");
         String subtreeRootPath = scanner.nextLine();
 
@@ -1002,11 +1002,13 @@ public class Commands {
         LOG.info("Files created: " + filesCreated + "\n");
 
         LOG.info("subtreeRoot children: " + subtreeRoot.getChildren().size());
-        //LOG.info(subtreeRoot.toString());
+        LOG.info(subtreeRoot.toString());
 
-        for (String path : directoriesCreated) {
-            System.out.println(path);
-        }
+//        for (String path : directoriesCreated) {
+//            System.out.println(path);
+//        }
+
+        Utils.write("./output/createSubtree-" + Instant.now().toEpochMilli()+ ".txt", directoriesCreated.toArray(new String[0]));
 
         LOG.info("==================================");
     }
