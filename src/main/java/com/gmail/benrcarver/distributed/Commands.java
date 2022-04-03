@@ -389,7 +389,7 @@ public class Commands {
 
         // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
         double durationSeconds = (end - start) / 1000.0;
-        double totalReads = (double)n * (double)readsPerFile;
+        double totalReads = (double)n * (double)numFilesToRead;
         double throughput = (totalReads / durationSeconds);
         LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
 
