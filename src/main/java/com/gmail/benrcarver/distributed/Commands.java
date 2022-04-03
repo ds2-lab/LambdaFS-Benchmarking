@@ -303,7 +303,7 @@ public class Commands {
         for (int i = 0; i < n; i++) {
             fileBatches[i] = new String[numFilesToRead]; // Prolly don't need to do this but oh well.
             for (int j = 0; j < numFilesToRead; j++) {
-                int filePathIndex = rng.nextInt(paths.size() + 1);
+                int filePathIndex = rng.nextInt(paths.size());
                 fileBatches[i][j] = paths.get(filePathIndex);
             }
         }
