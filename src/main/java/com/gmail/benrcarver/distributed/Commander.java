@@ -350,6 +350,10 @@ public class Commander {
                     LOG.info("CREATE DIRECTORIES selected!");
                     Commands.createDirectories(hdfs, nameNodeEndpoint);
                     break;
+                case OP_WEAK_SCALING_READS_V2:
+                    LOG.info("WeakScalingReadsV2 Selected!");
+                    weakScalingReadOperationV2(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                    break;
                 default:
                     LOG.info("ERROR: Unknown or invalid operation specified: " + op);
                     break;
