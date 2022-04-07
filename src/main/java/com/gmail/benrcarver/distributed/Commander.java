@@ -235,128 +235,133 @@ public class Commander {
         DistributedFileSystem hdfs = initDfsClient(nameNodeEndpoint);
 
         while (true) {
-            Thread.sleep(250);
-            printMenu();
-            int op = getNextOperation();
+            try {
+                Thread.sleep(50);
+                printMenu();
+                int op = getNextOperation();
 
-            switch(op) {
-                case OP_SET_CONSISTENCY_PROTOCOL_ENABLED:
-                    handleSetConsistencyProtocolEnabled(hdfs);
-                    break;
-                case OP_SET_LOG_LEVEL:
-                    handleSetLogLevel(hdfs);
-                    break;
-                case OP_CLEAR_STATISTICS:
-                    LOG.info("Clearing statistics packages...");
-                    Commands.clearStatisticsPackages(hdfs);
-                    break;
-                case OP_WRITE_STATISTICS:
-                    LOG.info("Writing statistics packages to files...");
-                    LOG.info("");
-                    hdfs.dumpStatisticsPackages(true);
-                    break;
-                case OP_PRINT_OPS_PERFORMED:
-                    LOG.info("Printing operations performed...");
-                    LOG.info("");
-                    Commands.printOperationsPerformed(hdfs);
-                    break;
-                case OP_PRINT_TCP_DEBUG:
-                    LOG.info("Printing TCP debug information...");
-                    LOG.info("");
-                    hdfs.printDebugInformation();
-                    break;
-                case OP_EXIT:
-                    LOG.info("Exiting now... goodbye!");
-                    try {
-                        hdfs.close();
-                    } catch (IOException ex) {
-                        LOG.info("Encountered exception while closing file system...");
-                        ex.printStackTrace();
-                    }
-                    stopServer();
-                    System.exit(0);
-                case OP_CREATE_FILE:
-                    LOG.info("CREATE FILE selected!");
-                    Commands.createFileOperation(hdfs, nameNodeEndpoint);
-                    break;
-                case OP_MKDIR:
-                    LOG.info("MAKE DIRECTORY selected!");
-                    Commands.mkdirOperation(hdfs, nameNodeEndpoint);;
-                    break;
-                case OP_READ_FILE:
-                    LOG.info("READ FILE selected!");
-                    Commands.readOperation(hdfs, nameNodeEndpoint);
-                    break;
-                case OP_RENAME:
-                    LOG.info("RENAME selected!");
-                    Commands.renameOperation(hdfs, nameNodeEndpoint);
-                    break;
-                case OP_DELETE:
-                    LOG.info("DELETE selected!");
-                    Commands.deleteOperation(hdfs, nameNodeEndpoint);
-                    break;
-                case OP_LIST:
-                    LOG.info("LIST selected!");
-                    Commands.listOperation(hdfs, nameNodeEndpoint);
-                    break;
-                case OP_APPEND:
-                    LOG.info("APPEND selected!");
-                    Commands.appendOperation(hdfs, nameNodeEndpoint);
-                    break;
-                case OP_CREATE_SUBTREE:
-                    LOG.info("CREATE SUBTREE selected!");
-                    Commands.createSubtree(hdfs, nameNodeEndpoint);
-                    break;
-                case OP_PING:
-                    LOG.info("PING selected!");
-                    Commands.pingOperation(hdfs);
-                    break;
-                case OP_PREWARM:
-                    LOG.info("PREWARM selected!");
-                    Commands.prewarmOperation(hdfs);
-                    break;
-                case OP_WRITE_FILES_TO_DIR:
-                    LOG.info("WRITE FILES TO DIRECTORY selected!");
-                    Commands.writeFilesToDirectory(hdfs, hdfsConfiguration, nameNodeEndpoint);
-                    break;
-                case OP_READ_FILES:
-                    LOG.info("READ FILES selected!");
-                    Commands.readFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
-                    break;
-                case OP_DELETE_FILES:
-                    LOG.info("DELETE FILES selected!");
-                    Commands.deleteFilesOperation(hdfs, nameNodeEndpoint);
-                    break;
-                case OP_WRITE_FILES_TO_DIRS:
-                    LOG.info("WRITE FILES TO DIRECTORIES selected!");
-                    Commands.writeFilesToDirectories(hdfs, hdfsConfiguration, nameNodeEndpoint);
-                    break;
-                case OP_WEAK_SCALING_READS:
-                    LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
-                    weakScalingReadOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
-                    break;
-                case OP_STRONG_SCALING_READS:
-                    LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
-                    strongScalingReadOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
-                    break;
-                case OP_WEAK_SCALING_WRITES:
-                    LOG.info("'Write n Files with n Threads (Weak Scaling - Write)' selected!");
-                    weakScalingWriteOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
-                    break;
-                case OP_STRONG_SCALING_WRITES:
-                    LOG.info("'Write n Files y Times with z Threads (Strong Scaling - Write)' selected!");
-                    throw new NotImplementedException("Not yet implemented.");
-                case OP_CREATE_DIRECTORIES:
-                    LOG.info("CREATE DIRECTORIES selected!");
-                    Commands.createDirectories(hdfs, nameNodeEndpoint);
-                    break;
-                case OP_WEAK_SCALING_READS_V2:
-                    LOG.info("WeakScalingReadsV2 Selected!");
-                    weakScalingReadOperationV2(hdfsConfiguration, hdfs, nameNodeEndpoint);
-                    break;
-                default:
-                    LOG.info("ERROR: Unknown or invalid operation specified: " + op);
-                    break;
+                switch (op) {
+                    case OP_SET_CONSISTENCY_PROTOCOL_ENABLED:
+                        handleSetConsistencyProtocolEnabled(hdfs);
+                        break;
+                    case OP_SET_LOG_LEVEL:
+                        handleSetLogLevel(hdfs);
+                        break;
+                    case OP_CLEAR_STATISTICS:
+                        LOG.info("Clearing statistics packages...");
+                        Commands.clearStatisticsPackages(hdfs);
+                        break;
+                    case OP_WRITE_STATISTICS:
+                        LOG.info("Writing statistics packages to files...");
+                        LOG.info("");
+                        hdfs.dumpStatisticsPackages(true);
+                        break;
+                    case OP_PRINT_OPS_PERFORMED:
+                        LOG.info("Printing operations performed...");
+                        LOG.info("");
+                        Commands.printOperationsPerformed(hdfs);
+                        break;
+                    case OP_PRINT_TCP_DEBUG:
+                        LOG.info("Printing TCP debug information...");
+                        LOG.info("");
+                        hdfs.printDebugInformation();
+                        break;
+                    case OP_EXIT:
+                        LOG.info("Exiting now... goodbye!");
+                        try {
+                            hdfs.close();
+                        } catch (IOException ex) {
+                            LOG.info("Encountered exception while closing file system...");
+                            ex.printStackTrace();
+                        }
+                        stopServer();
+                        System.exit(0);
+                    case OP_CREATE_FILE:
+                        LOG.info("CREATE FILE selected!");
+                        Commands.createFileOperation(hdfs, nameNodeEndpoint);
+                        break;
+                    case OP_MKDIR:
+                        LOG.info("MAKE DIRECTORY selected!");
+                        Commands.mkdirOperation(hdfs, nameNodeEndpoint);
+                        ;
+                        break;
+                    case OP_READ_FILE:
+                        LOG.info("READ FILE selected!");
+                        Commands.readOperation(hdfs, nameNodeEndpoint);
+                        break;
+                    case OP_RENAME:
+                        LOG.info("RENAME selected!");
+                        Commands.renameOperation(hdfs, nameNodeEndpoint);
+                        break;
+                    case OP_DELETE:
+                        LOG.info("DELETE selected!");
+                        Commands.deleteOperation(hdfs, nameNodeEndpoint);
+                        break;
+                    case OP_LIST:
+                        LOG.info("LIST selected!");
+                        Commands.listOperation(hdfs, nameNodeEndpoint);
+                        break;
+                    case OP_APPEND:
+                        LOG.info("APPEND selected!");
+                        Commands.appendOperation(hdfs, nameNodeEndpoint);
+                        break;
+                    case OP_CREATE_SUBTREE:
+                        LOG.info("CREATE SUBTREE selected!");
+                        Commands.createSubtree(hdfs, nameNodeEndpoint);
+                        break;
+                    case OP_PING:
+                        LOG.info("PING selected!");
+                        Commands.pingOperation(hdfs);
+                        break;
+                    case OP_PREWARM:
+                        LOG.info("PREWARM selected!");
+                        Commands.prewarmOperation(hdfs);
+                        break;
+                    case OP_WRITE_FILES_TO_DIR:
+                        LOG.info("WRITE FILES TO DIRECTORY selected!");
+                        Commands.writeFilesToDirectory(hdfs, hdfsConfiguration, nameNodeEndpoint);
+                        break;
+                    case OP_READ_FILES:
+                        LOG.info("READ FILES selected!");
+                        Commands.readFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        break;
+                    case OP_DELETE_FILES:
+                        LOG.info("DELETE FILES selected!");
+                        Commands.deleteFilesOperation(hdfs, nameNodeEndpoint);
+                        break;
+                    case OP_WRITE_FILES_TO_DIRS:
+                        LOG.info("WRITE FILES TO DIRECTORIES selected!");
+                        Commands.writeFilesToDirectories(hdfs, hdfsConfiguration, nameNodeEndpoint);
+                        break;
+                    case OP_WEAK_SCALING_READS:
+                        LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
+                        weakScalingReadOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        break;
+                    case OP_STRONG_SCALING_READS:
+                        LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
+                        strongScalingReadOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        break;
+                    case OP_WEAK_SCALING_WRITES:
+                        LOG.info("'Write n Files with n Threads (Weak Scaling - Write)' selected!");
+                        weakScalingWriteOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        break;
+                    case OP_STRONG_SCALING_WRITES:
+                        LOG.info("'Write n Files y Times with z Threads (Strong Scaling - Write)' selected!");
+                        throw new NotImplementedException("Not yet implemented.");
+                    case OP_CREATE_DIRECTORIES:
+                        LOG.info("CREATE DIRECTORIES selected!");
+                        Commands.createDirectories(hdfs, nameNodeEndpoint);
+                        break;
+                    case OP_WEAK_SCALING_READS_V2:
+                        LOG.info("WeakScalingReadsV2 Selected!");
+                        weakScalingReadOperationV2(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        break;
+                    default:
+                        LOG.info("ERROR: Unknown or invalid operation specified: " + op);
+                        break;
+                }
+            } catch (Exception ex) {
+                LOG.error("Exception encountered:", ex);
             }
         }
     }
