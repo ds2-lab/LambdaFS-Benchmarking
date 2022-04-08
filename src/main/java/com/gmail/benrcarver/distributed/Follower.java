@@ -57,7 +57,7 @@ public class Follower {
     }
 
     public Follower(String masterIp, int masterPort, String serverlessLogLevel, boolean disableConsistency) {
-        client = new Client(32000, 32000);
+        client = new Client(16000, 16000);
         this.masterIp = masterIp;
         this.masterPort = masterPort;
         this.serverlessLogLevel = serverlessLogLevel;
@@ -85,6 +85,10 @@ public class Follower {
                         LOG.error("Encountered InterruptedException while handling message from Leader:", e);
                     }
                 }
+            }
+
+            public void disconnected(Connection connection) {
+                LOG.error("Follower lost connection to the Leader.");
             }
         });
     }
