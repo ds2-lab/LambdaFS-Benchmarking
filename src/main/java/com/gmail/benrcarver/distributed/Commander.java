@@ -216,7 +216,7 @@ public class Commander {
     }
 
     private void startServer() throws IOException {
-        com.esotericsoftware.minlog.Log.set(com.esotericsoftware.minlog.Log.LEVEL_DEBUG);
+        //com.esotericsoftware.minlog.Log.set(com.esotericsoftware.minlog.Log.LEVEL_DEBUG);
         tcpServer.start();
         Network.register(tcpServer);
         tcpServer.bind(port, port+1);
