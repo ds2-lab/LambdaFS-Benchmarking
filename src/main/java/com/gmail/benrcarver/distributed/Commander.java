@@ -805,6 +805,8 @@ public class Commander {
         opsPerformed.addValue(localResult.numOpsPerformed);
         duration.addValue(localResult.durationSeconds);
         throughput.addValue(localResult.getOpsPerSecond());
+        cacheHits.addValue(localResult.cacheHits);
+        cacheMisses.addValue(localResult.cacheMisses);
 
         for (DistributedBenchmarkResult res : resultQueue) {
             LOG.debug("Received result: " + res);
