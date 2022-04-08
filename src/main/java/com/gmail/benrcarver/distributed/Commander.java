@@ -822,8 +822,8 @@ public class Commander {
         LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
         LOG.info("Average Non-Aggregate Throughput (op/sec): " + throughput.getMean());
-        LOG.info("Cache hits: " + cacheHits);
-        LOG.info("Cache misses: " + cacheMisses);
+//        LOG.info("Cache hits: " + cacheHits);
+//        LOG.info("Cache misses: " + cacheMisses);
         LOG.info("Cache hit percentage: " + (cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum())));
 
         return aggregateThroughput;
