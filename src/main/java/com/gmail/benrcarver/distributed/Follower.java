@@ -88,7 +88,8 @@ public class Follower {
             }
 
             public void disconnected(Connection connection) {
-                LOG.error("Follower lost connection to the Leader.");
+                LOG.error("Follower lost connection to the Leader. Exiting...");
+                System.exit(1);
             }
         });
     }
