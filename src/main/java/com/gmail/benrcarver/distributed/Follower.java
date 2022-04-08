@@ -49,7 +49,7 @@ public class Follower {
     private DistributedFileSystem hdfs;
 
     // TODO: Make it so we can change these dynamically.
-    private String serverlessLogLevel = "DEBUG";
+    private String serverlessLogLevel = "INFO";
     private boolean consistencyEnabled = true;
 
     public synchronized void waitUntilDone() throws InterruptedException {
