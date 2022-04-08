@@ -216,6 +216,7 @@ public class Commander {
     }
 
     private void startServer() throws IOException {
+        com.esotericsoftware.minlog.Log.set(com.esotericsoftware.minlog.Log.LEVEL_DEBUG);
         tcpServer.start();
         Network.register(tcpServer);
         tcpServer.bind(port, port+1);
@@ -229,7 +230,7 @@ public class Commander {
         tcpServer.stop();
     }
 
-    private void interactiveLoop() throws InterruptedException, IOException {
+    private void interactiveLoop() {
         LOG.info("Beginning execution as LEADER now.");
 
         DistributedFileSystem hdfs = initDfsClient(nameNodeEndpoint);
