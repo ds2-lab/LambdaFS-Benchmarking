@@ -142,7 +142,7 @@ public class Commander {
             }
         };
 
-        tcpServer.addListener(new ServerListener());
+        tcpServer.addListener(new Listener.ThreadedListener(new ServerListener()));
 
         Yaml yaml = new Yaml();
         try (InputStream in = Files.newInputStream(Paths.get(yamlPath))) {

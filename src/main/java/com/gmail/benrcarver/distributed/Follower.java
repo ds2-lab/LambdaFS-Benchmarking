@@ -63,7 +63,7 @@ public class Follower {
         this.serverlessLogLevel = serverlessLogLevel;
         this.consistencyEnabled = !disableConsistency;
 
-        client.addListener(new Listener() {
+        client.addListener(new Listener.ThreadedListener(new Listener() {
             /**
              * This listener is responsible for handling messages received from HopsFS clients. These messages will
              * generally be file system operation requests/directions. We will extract the information about the
@@ -91,7 +91,7 @@ public class Follower {
                 LOG.error("Follower lost connection to the Leader. Exiting...");
                 System.exit(1);
             }
-        });
+        }));
     }
 
     private void stopClient() {
