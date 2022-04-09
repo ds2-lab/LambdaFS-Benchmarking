@@ -12,6 +12,7 @@ public class Constants {
     ////////////////
     public static final int OP_RESULT = -101;
     public static final int OP_REGISTRATION = -100;
+    public static final int OP_GET_ACTIVE_NAMENODES = -7;
     public static final int OP_SET_CONSISTENCY_PROTOCOL_ENABLED = - 6;
     public static final int OP_SET_LOG_LEVEL = -5;
     public static final int OP_CLEAR_STATISTICS = -4;

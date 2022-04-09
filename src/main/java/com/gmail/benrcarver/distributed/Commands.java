@@ -17,10 +17,14 @@ import java.util.concurrent.Semaphore;
 import io.hops.metrics.TransactionEvent;
 import io.hops.metrics.TransactionAttempt;
 import io.hops.transaction.context.TransactionsStats;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
+import io.hops.leader_election.node.SortedActiveNodeList;
+import io.hops.leader_election.node.ActiveNode;
+import org.apache.hadoop.hdfs.serverless.operation.ActiveServerlessNameNodeList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -1303,6 +1307,40 @@ public class Commands {
             LOG.info("\t Directory created successfully: " + directoryCreated);
         } catch (IOException ex) {
             ex.printStackTrace();
+        }
+    }
+
+    public static void getActiveNameNodesOperation(DistributedFileSystem hdfs) {
+        SortedActiveNodeList activeNameNodes;
+        try {
+            activeNameNodes = hdfs.getActiveNamenodesForClient();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
+        if (activeNameNodes instanceof ActiveServerlessNameNodeList) {
+            ActiveServerlessNameNodeList activeServerlessNameNodes = (ActiveServerlessNameNodeList)activeNameNodes;
+            List<ActiveNode> activeNodes = activeServerlessNameNodes.getActiveNodes();
+            HashMap<Integer, List<Long>> nodesPerDeployment = new HashMap<>();
+            int numDeployments = activeServerlessNameNodes.getNumDeployments();
+            for (ActiveNode node : activeNodes) {
+                ActiveServerlessNameNode serverlessNode = (ActiveServerlessNameNode)node;
+                int deployment = serverlessNode.getDeploymentNumber();
+                long nnId = serverlessNode.getId();
+
+                List<Long> nodesInDeployment = nodesPerDeployment.computeIfAbsent(deployment, d -> new ArrayList<>());
+                nodesInDeployment.add(nnId);
+            }
+
+            System.out.println("== Active NNs per Deployment =============");
+            for (int i = 0; i < numDeployments; i++) {
+                List<Long> nodes = nodesPerDeployment.getOrDefault(i, new ArrayList<>());
+                int numNodes = nodes.size();
+                System.out.println("Deployment " + i + ": " + numNodes);
+                if (nodes.size() > 0)
+                    System.out.println("Nodes: " + StringUtils.join(", ", nodes));
+                System.out.println();
+            }
         }
     }
 

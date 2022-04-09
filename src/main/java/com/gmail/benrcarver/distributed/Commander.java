@@ -242,6 +242,9 @@ public class Commander {
                 int op = getNextOperation();
 
                 switch (op) {
+                    case OP_GET_ACTIVE_NAMENODES:
+                        Commands.getActiveNameNodesOperation(hdfs);
+                        break;
                     case OP_SET_CONSISTENCY_PROTOCOL_ENABLED:
                         handleSetConsistencyProtocolEnabled(hdfs);
                         break;
@@ -1138,6 +1141,7 @@ public class Commander {
         System.out.println("====== MENU ======");
         System.out.println("Debug Operations:");
         System.out.println(
+                "(-7) Print currently active NameNodes\n" +
                 "(-6) Get/set consistency protocol enabled flag.\n(-5) Get/set serverless log4j debug level.\n" +
                 "(-4) Clear statistics\n(-3) Output statistics packages to CSV\n" +
                 "(-2) Output operations performed + write to file\n(-1) Print TCP debug information.");
