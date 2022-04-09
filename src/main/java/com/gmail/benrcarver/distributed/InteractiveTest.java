@@ -1058,6 +1058,11 @@ public class InteractiveTest {
         }
     }
 
+    private static int getIntFromUser(String prompt) {
+        System.out.print(prompt + "\n> ");
+        return Integer.parseInt(scanner.nextLine());
+    }
+
     private static void prewarmOperation(DistributedFileSystem hdfs) {
         int threadsPerDeployment = getIntFromUser("Number of threads to use for each deployment?");
         int pingsPerThread = getIntFromUser("How many times should each thread pings its assigned deployment?");
