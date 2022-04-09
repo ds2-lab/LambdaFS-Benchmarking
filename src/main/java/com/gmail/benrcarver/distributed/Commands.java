@@ -24,7 +24,7 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
 import io.hops.leader_election.node.SortedActiveNodeList;
 import io.hops.leader_election.node.ActiveNode;
-import org.apache.hadoop.hdfs.serverless.operation.git ActiveServerlessNameNodeList;
+import org.apache.hadoop.hdfs.serverless.operation.ActiveServerlessNameNodeList;
 import org.apache.hadoop.hdfs.serverless.operation.ActiveServerlessNameNode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
