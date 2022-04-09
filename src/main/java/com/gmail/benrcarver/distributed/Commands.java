@@ -1312,11 +1312,13 @@ public class Commands {
     }
 
     public static void getActiveNameNodesOperation(DistributedFileSystem hdfs) {
-        SortedActiveNodeList activeNameNodes;
+        SortedActiveNodeList activeNameNodes = null;
         try {
             activeNameNodes = hdfs.getActiveNamenodesForClient();
         } catch (IOException ex) {
+            LOG.error("Could not retrieve Active NameNodes due to exception.");
             ex.printStackTrace();
+            return;
         }
 
         if (activeNameNodes instanceof ActiveServerlessNameNodeList) {
