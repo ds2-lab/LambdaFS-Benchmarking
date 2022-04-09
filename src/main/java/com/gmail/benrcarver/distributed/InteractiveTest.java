@@ -1059,11 +1059,11 @@ public class InteractiveTest {
     }
 
     private static void prewarmOperation(DistributedFileSystem hdfs) {
-        System.out.print("Invocations per deployment:\n> ");
-        int pingsPerDeployment = Integer.parseInt(scanner.nextLine());
+        int threadsPerDeployment = getIntFromUser("Number of threads to use for each deployment?");
+        int pingsPerThread = getIntFromUser("How many times should each thread pings its assigned deployment?");
 
         try {
-            hdfs.prewarm(pingsPerDeployment);
+            hdfs.prewarm(threadsPerDeployment, pingsPerThread);
         } catch (IOException ex) {
             LOG.info("Encountered IOException while pre-warming NNs.");
             ex.printStackTrace();
