@@ -41,6 +41,8 @@ public class Commands {
     public static final Log LOG = LogFactory.getLog(Commands.class);
     private static Scanner scanner = new Scanner(System.in);
 
+    public static volatile boolean IS_FOLLOWER = false;
+
     public static void writeFilesToDirectories(DistributedFileSystem hdfs,
                                                final Configuration configuration,
                                                String nameNodeEndpoint)
@@ -329,20 +331,22 @@ public class Commands {
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
 
-                operationsPerformed.add(hdfs.getOperationsPerformed());
-                statisticsPackages.add(hdfs.getStatisticsPackages());
-                transactionEvents.add(hdfs.getTransactionEvents());
+                if (!IS_FOLLOWER) {
+                    operationsPerformed.add(hdfs.getOperationsPerformed());
+                    statisticsPackages.add(hdfs.getStatisticsPackages());
+                    transactionEvents.add(hdfs.getTransactionEvents());
 
-                for (double latency : hdfs.getLatencyStatistics().getValues()) {
-                    latencyBoth.addValue(latency);
-                }
+                    for (double latency : hdfs.getLatencyStatistics().getValues()) {
+                        latencyBoth.addValue(latency);
+                    }
 
-                for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
-                    latencyHttp.addValue(latency);
-                }
+                    for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
+                        latencyHttp.addValue(latency);
+                    }
 
-                for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
-                    latencyTcp.addValue(latency);
+                    for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
+                        latencyTcp.addValue(latency);
+                    }
                 }
 
                 try {
@@ -479,20 +483,22 @@ public class Commands {
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
 
-                operationsPerformed.add(hdfs.getOperationsPerformed());
-                statisticsPackages.add(hdfs.getStatisticsPackages());
-                transactionEvents.add(hdfs.getTransactionEvents());
+                if (!IS_FOLLOWER) {
+                    operationsPerformed.add(hdfs.getOperationsPerformed());
+                    statisticsPackages.add(hdfs.getStatisticsPackages());
+                    transactionEvents.add(hdfs.getTransactionEvents());
 
-                for (double latency : hdfs.getLatencyStatistics().getValues()) {
-                    latencyBoth.addValue(latency);
-                }
+                    for (double latency : hdfs.getLatencyStatistics().getValues()) {
+                        latencyBoth.addValue(latency);
+                    }
 
-                for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
-                    latencyHttp.addValue(latency);
-                }
+                    for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
+                        latencyHttp.addValue(latency);
+                    }
 
-                for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
-                    latencyTcp.addValue(latency);
+                    for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
+                        latencyTcp.addValue(latency);
+                    }
                 }
 
                 try {
@@ -771,20 +777,22 @@ public class Commands {
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
 
-                operationsPerformed.add(hdfs.getOperationsPerformed());
-                statisticsPackages.add(hdfs.getStatisticsPackages());
-                transactionEvents.add(hdfs.getTransactionEvents());
+                if (!IS_FOLLOWER) {
+                    operationsPerformed.add(hdfs.getOperationsPerformed());
+                    statisticsPackages.add(hdfs.getStatisticsPackages());
+                    transactionEvents.add(hdfs.getTransactionEvents());
 
-                for (double latency : hdfs.getLatencyStatistics().getValues()) {
-                    latencyBoth.addValue(latency);
-                }
+                    for (double latency : hdfs.getLatencyStatistics().getValues()) {
+                        latencyBoth.addValue(latency);
+                    }
 
-                for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
-                    latencyHttp.addValue(latency);
-                }
+                    for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
+                        latencyHttp.addValue(latency);
+                    }
 
-                for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
-                    latencyTcp.addValue(latency);
+                    for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
+                        latencyTcp.addValue(latency);
+                    }
                 }
 
                 try {

@@ -63,6 +63,8 @@ public class Follower {
         this.serverlessLogLevel = serverlessLogLevel;
         this.consistencyEnabled = !disableConsistency;
 
+        Commands.IS_FOLLOWER = true;
+
         client.addListener(new Listener.ThreadedListener(new Listener() {
             /**
              * This listener is responsible for handling messages received from HopsFS clients. These messages will
