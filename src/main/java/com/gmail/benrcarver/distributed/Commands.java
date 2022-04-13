@@ -1343,15 +1343,19 @@ public class Commands {
                 nodesInDeployment.add(nnId);
             }
 
+            int totalActiveNNs = 0;
             System.out.println("== Active NNs per Deployment =============");
             for (int i = 0; i < numDeployments; i++) {
                 List<Long> nodes = nodesPerDeployment.getOrDefault(i, new ArrayList<>());
                 int numNodes = nodes.size();
+                totalActiveNNs += numNodes;
                 System.out.println("Deployment " + i + ": " + numNodes);
                 if (nodes.size() > 0)
                     System.out.println("Nodes: " + StringUtils.join(", ", nodes));
                 System.out.println();
             }
+
+            System.out.println("Total Number of Active NameNodes: " + totalActiveNNs);
         }
     }
 
