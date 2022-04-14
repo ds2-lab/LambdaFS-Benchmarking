@@ -8,16 +8,12 @@ import com.google.gson.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import io.hops.metrics.TransactionEvent;
-import io.hops.metrics.TransactionAttempt;
-import io.hops.transaction.context.TransactionsStats;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
-import io.hops.metrics.OperationPerformed;
 
 import java.io.File;
 import java.io.IOException;
