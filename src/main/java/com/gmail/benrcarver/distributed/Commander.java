@@ -177,7 +177,7 @@ public class Commander {
         if (!nondistributed) {
             LOG.info("Commander is operating in DISTRIBUTED mode.");
             startServer();
-            launchFollowers();
+            //launchFollowers();
         }
         LOG.info("Commander is operating in NON-DISTRIBUTED mode.");
         interactiveLoop();
