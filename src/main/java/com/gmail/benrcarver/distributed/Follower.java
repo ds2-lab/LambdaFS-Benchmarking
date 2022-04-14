@@ -189,8 +189,7 @@ public class Follower {
                 Commands.pingOperation(hdfs);
                 break;
             case OP_PREWARM:
-                LOG.info("PREWARM selected!");
-                Commands.prewarmOperation(hdfs);
+                LOG.warn("The PREWARM operation is NOT supported for Vanilla HopsFS.");
                 break;
             case OP_WRITE_FILES_TO_DIR:
                 LOG.info("WRITE FILES TO DIRECTORY selected!");
