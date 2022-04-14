@@ -983,18 +983,6 @@ public class Commands {
         }
     }
 
-    public static void prewarmOperation(DistributedFileSystem hdfs) {
-        int threadsPerDeployment = getIntFromUser("Number of threads to use for each deployment?");
-        int pingsPerThread = getIntFromUser("How many times should each thread pings its assigned deployment?");
-
-        try {
-            hdfs.prewarm(threadsPerDeployment, pingsPerThread);
-        } catch (IOException ex) {
-            LOG.info("Encountered IOException while pre-warming NNs.");
-            ex.printStackTrace();
-        }
-    }
-
     public static void pingOperation(DistributedFileSystem hdfs) {
         System.out.print("Target deployment:\n> ");
         int targetDeployment = Integer.parseInt(scanner.nextLine());
