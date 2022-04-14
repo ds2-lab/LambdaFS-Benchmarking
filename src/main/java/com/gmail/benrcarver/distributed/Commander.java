@@ -57,7 +57,7 @@ public class Commander {
     /**
      * Has a default value.
      */
-    private String nameNodeEndpoint = "hdfs://10.150.0.17:9000/";
+    private String nameNodeEndpoint = "hdfs://10.150.0.48:8020/";
 
     /**
      * Used to obtain input from the user.
