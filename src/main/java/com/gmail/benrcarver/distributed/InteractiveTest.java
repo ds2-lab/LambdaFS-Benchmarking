@@ -1,7 +1,5 @@
 package com.gmail.benrcarver.distributed;
 
-import com.gmail.benrcarver.distributed.util.TreeNode;
-import com.gmail.benrcarver.distributed.util.Utils;
 import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -12,18 +10,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 
-import java.util.concurrent.ArrayBlockingQueue;
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
+/**
+ * This is the class that is executed when running the application. It starts the Commander or Follower.
+ */
 public class InteractiveTest {
     public static final Log LOG = LogFactory.getLog(InteractiveTest.class);
 
@@ -59,6 +50,9 @@ public class InteractiveTest {
             System.exit(1);
         }
 
+        // If the user specified the worker argument, then we launch as a Follower.
+        // Otherwise, we launch as a Commander. The Commander takes input from the user
+        // and directs itself and Followers to execute particular file system operations.
         if (cmd.hasOption("worker")) {
             LOG.info("Beginning execution as FOLLOWER now.");
             Follower follower = new Follower(
@@ -66,8 +60,8 @@ public class InteractiveTest {
                     Integer.parseInt(cmd.getOptionValue("leader_port")),
                     cmd.hasOption("loglevel") ? cmd.getOptionValue("loglevel") : "DEBUG",
                     cmd.hasOption("disable_consistency") /* If it has this option, then it is true */);
-            follower.connect();
-            follower.waitUntilDone();
+            follower.connect(); // Connect to the Commander.
+            follower.waitUntilDone(); // Basically run forever.
         } else {
             Commander commander = Commander.getOrCreateCommander(
                     cmd.getOptionValue("leader_ip"),
