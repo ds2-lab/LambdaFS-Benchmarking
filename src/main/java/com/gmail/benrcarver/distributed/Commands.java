@@ -21,8 +21,6 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
 import io.hops.leader_election.node.SortedActiveNodeList;
 import io.hops.leader_election.node.ActiveNode;
-import org.apache.hadoop.hdfs.serverless.operation.ActiveServerlessNameNodeList;
-import org.apache.hadoop.hdfs.serverless.operation.ActiveServerlessNameNode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -979,19 +977,6 @@ public class Commands {
             br.close();
             LOG.info("\t Closed BufferedWriter.");
         } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    public static void pingOperation(DistributedFileSystem hdfs) {
-        System.out.print("Target deployment:\n> ");
-        int targetDeployment = Integer.parseInt(scanner.nextLine());
-
-        try {
-            hdfs.ping(targetDeployment);
-        } catch (IOException ex) {
-            LOG.info("Encountered IOException while pinging NameNode deployment " +
-                    targetDeployment + ".");
             ex.printStackTrace();
         }
     }

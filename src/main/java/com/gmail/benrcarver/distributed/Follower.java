@@ -181,8 +181,7 @@ public class Follower {
                 Commands.createSubtree(hdfs, nameNodeEndpoint);
                 break;
             case OP_PING:
-                LOG.info("PING selected!");
-                Commands.pingOperation(hdfs);
+                LOG.warn("PING operation is not supported for Vanilla HopsFS.");
                 break;
             case OP_PREWARM:
                 LOG.warn("The PREWARM operation is NOT supported for Vanilla HopsFS.");
