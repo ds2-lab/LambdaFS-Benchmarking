@@ -86,7 +86,7 @@ public class Commander {
     /**
      * Configurations of the followers. Used when launching them via SSH.
      */
-    private final List<FollowerConfig> followerConfigs;
+    private List<FollowerConfig> followerConfigs;
 
     /**
      * Fully-qualified path of hdfs-site.xml configuration file.
@@ -114,6 +114,14 @@ public class Commander {
     private static boolean consistencyEnabled = true;
 
     private static Commander instanace;
+
+    /**
+     * Indicates whether the target filesystem is Serverless HopsFS or Vanilla HopsFS.
+     *
+     * If true, then the target filesystem is Serverless HopsFS.
+     * If false, then the target filesystem is Vanilla HopsFS.
+     */
+    private boolean isServerless = true;
 
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
                                           String logLevel, boolean disableConsistency) throws IOException {
@@ -144,6 +152,13 @@ public class Commander {
 
         tcpServer.addListener(new Listener.ThreadedListener(new ServerListener()));
 
+        processConfiguration(yamlPath);
+    }
+
+    /**
+     * Process the configuration file for the benchmarking utility.
+     */
+    private void processConfiguration(String yamlPath) throws IOException {
         Yaml yaml = new Yaml();
         try (InputStream in = Files.newInputStream(Paths.get(yamlPath))) {
             LocalConfiguration config = yaml.loadAs(in, LocalConfiguration.class);
@@ -153,6 +168,9 @@ public class Commander {
             nameNodeEndpoint = config.getNamenodeEndpoint();
             followerConfigs = config.getFollowers();
             hdfsConfigFilePath = config.getHdfsConfigFile();
+            isServerless = config.getIsServerless();
+
+            Commands.IS_SERVERLESS = isServerless;
 
             LOG.info("Loaded configuration!");
             LOG.info(config);
@@ -256,6 +274,11 @@ public class Commander {
                         Commands.clearStatisticsPackages(hdfs);
                         break;
                     case OP_WRITE_STATISTICS:
+                        if (!isServerless) {
+                            LOG.error("Writing statistics packages is not supported by Vanilla HopsFS!");
+                            continue;
+                        }
+
                         LOG.info("Writing statistics packages to files...");
                         LOG.info("");
                         hdfs.dumpStatisticsPackages(true);
@@ -266,6 +289,11 @@ public class Commander {
                         Commands.printOperationsPerformed(hdfs);
                         break;
                     case OP_PRINT_TCP_DEBUG:
+                        if (!isServerless) {
+                            LOG.error("Printing TCP debug information operation is not supported by Vanilla HopsFS!");
+                            return;
+                        }
+
                         LOG.info("Printing TCP debug information...");
                         LOG.info("");
                         hdfs.printDebugInformation();
@@ -371,6 +399,11 @@ public class Commander {
     }
 
     private void handleSetLogLevel(DistributedFileSystem hdfs) {
+        if (!isServerless) {
+            LOG.error("Modifying the NN debug level thru the benchmarking tool is not supported for Vanilla HopsFS!");
+            return;
+        }
+
         String currentLogLevel = hdfs.getServerlessFunctionLogLevel();
         LOG.info("");
         LOG.info("Current log level: " + currentLogLevel);
@@ -397,6 +430,11 @@ public class Commander {
     }
 
     private void handleSetConsistencyProtocolEnabled(DistributedFileSystem hdfs) {
+        if (!isServerless) {
+            LOG.error("The consistency protocol is not supported by Vanilla HopsFS!");
+            return;
+        }
+
         boolean currentFlag = hdfs.getConsistencyProtocolEnabled();
         LOG.info("");
         LOG.info("Consistency protocol is currently " + (currentFlag ? "ENABLED." : "DISABLED."));

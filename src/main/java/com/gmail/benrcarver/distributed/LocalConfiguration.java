@@ -11,6 +11,10 @@ public class LocalConfiguration {
     private String namenodeEndpoint;
     private List<FollowerConfig> followers;
     private String hdfsConfigFile;
+    private boolean isServerless = true;
+
+    public boolean getIsServerless() { return isServerless; }
+    public void setIsServerless(boolean isServerless) { this.isServerless = isServerless; }
 
     public String getNamenodeEndpoint() {
         return namenodeEndpoint;

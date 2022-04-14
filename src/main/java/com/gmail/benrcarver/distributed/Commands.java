@@ -41,7 +41,20 @@ public class Commands {
     public static final Log LOG = LogFactory.getLog(Commands.class);
     private static Scanner scanner = new Scanner(System.in);
 
+    /**
+     * Indicates whether the JVM is running a follower process.
+     * If true, then we are a follower.
+     * If false, then we are a commander (i.e., a leader).
+     */
     public static volatile boolean IS_FOLLOWER = false;
+
+    /**
+     * Indicates whether the target filesystem is Serverless HopsFS or Vanilla HopsFS.
+     *
+     * If true, then the target filesystem is Serverless HopsFS.
+     * If false, then the target filesystem is Vanilla HopsFS.
+     */
+    public static volatile boolean IS_SERVERLESS = true;
 
     public static void writeFilesToDirectories(DistributedFileSystem hdfs,
                                                final Configuration configuration,
@@ -107,6 +120,11 @@ public class Commands {
     }
 
     public static void clearStatisticsPackages(DistributedFileSystem hdfs) {
+        if (!IS_SERVERLESS) {
+            LOG.error("Clearing statistics packages is not supported by Vanilla HopsFS!");
+            return;
+        }
+
         System.out.print("Are you sure? (y/N)\n> ");
         String input = scanner.nextLine();
 
@@ -577,6 +595,11 @@ public class Commands {
      * Print the operations performed. Optionally write them to a CSV.
      */
     public static void printOperationsPerformed(DistributedFileSystem hdfs) throws IOException {
+        if (!IS_SERVERLESS) {
+            LOG.error("This operation is not supported by Vanilla HopsFS!");
+            return;
+        }
+
         System.out.print("Write to CSV? \n> ");
         String input = scanner.nextLine();
 
@@ -1320,6 +1343,11 @@ public class Commands {
     }
 
     public static void getActiveNameNodesOperation(DistributedFileSystem hdfs) {
+        if (!IS_SERVERLESS) {
+            LOG.error("Getting the active NNs is not supported by Vanilla HopsFS!");
+            return;
+        }
+
         SortedActiveNodeList activeNameNodes = null;
         try {
             activeNameNodes = hdfs.getActiveNamenodesForClient();
