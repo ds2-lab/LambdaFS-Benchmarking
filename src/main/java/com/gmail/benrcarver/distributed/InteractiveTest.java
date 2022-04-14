@@ -27,24 +27,6 @@ import java.util.concurrent.TimeUnit;
 public class InteractiveTest {
     public static final Log LOG = LogFactory.getLog(InteractiveTest.class);
 
-    private final static String namenodeEndpoint = "hdfs://10.150.0.17:9000/";
-
-    private static final Scanner scanner = new Scanner(System.in);
-    //private static DistributedFileSystem hdfs;
-
-    /////////////
-    // OPTIONS //
-    /////////////
-
-    /**
-     * If true, then all clients will issue a PING operation first, followed by whatever FS operation we're trying to
-     * do. The purpose of this is to potentially establish a TCP connection with the target NameNode before performing
-     * multiple operations in a row. There isn't really a point to doing this for a one-off operation, but if we're
-     * about to read/write a bunch of files, then it would make sense to establish a TCP connection right away so
-     * ALL subsequent operations are issued via TCP.
-     */
-    private static boolean pingFirst = false;
-
     public static void main(String[] args) throws InterruptedException, IOException {
         Options cmdLineOpts = new Options();
         Option workerOpt = new Option("w", "worker", false, "If true, run this program as a worker, listening to commands from a remote leader.");
