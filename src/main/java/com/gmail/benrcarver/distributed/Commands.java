@@ -115,25 +115,6 @@ public class Commands {
         writeFilesInternal(n, minLength, maxLength, numberOfThreads, directories, hdfs, configuration, nameNodeEndpoint);
     }
 
-    public static void clearStatisticsPackages(DistributedFileSystem hdfs) {
-        if (!IS_SERVERLESS) {
-            LOG.error("Clearing statistics packages is not supported by Vanilla HopsFS!");
-            return;
-        }
-
-        System.out.print("Are you sure? (y/N)\n> ");
-        String input = scanner.nextLine();
-
-        if (input.equalsIgnoreCase("y")) {
-            hdfs.clearStatistics(true, true, true);
-            hdfs.clearLatencyValues();
-
-            LOG.debug("Cleared both statistics and latency values.");
-        } else {
-            LOG.info("NOT clearing statistics packages.");
-        }
-    }
-
     /**
      * Gets the user inputs for this benchmark, then calls the actual benchmark itself.
      */
@@ -579,8 +560,6 @@ public class Commands {
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
         LOG.info("Throughput: " + throughput + " ops/sec.");
-
-        sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
     }
 
     /**
@@ -972,51 +951,6 @@ public class Commands {
             LOG.info("\t Directory created successfully: " + directoryCreated);
         } catch (IOException ex) {
             ex.printStackTrace();
-        }
-    }
-
-    public static void getActiveNameNodesOperation(DistributedFileSystem hdfs) {
-        if (!IS_SERVERLESS) {
-            LOG.error("Getting the active NNs is not supported by Vanilla HopsFS!");
-            return;
-        }
-
-        SortedActiveNodeList activeNameNodes = null;
-        try {
-            activeNameNodes = hdfs.getActiveNamenodesForClient();
-        } catch (IOException ex) {
-            LOG.error("Could not retrieve Active NameNodes due to exception.");
-            ex.printStackTrace();
-            return;
-        }
-
-        if (activeNameNodes instanceof ActiveServerlessNameNodeList) {
-            ActiveServerlessNameNodeList activeServerlessNameNodes = (ActiveServerlessNameNodeList)activeNameNodes;
-            List<ActiveNode> activeNodes = activeServerlessNameNodes.getActiveNodes();
-            HashMap<Integer, List<Long>> nodesPerDeployment = new HashMap<>();
-            int numDeployments = activeServerlessNameNodes.getNumDeployments();
-            for (ActiveNode node : activeNodes) {
-                ActiveServerlessNameNode serverlessNode = (ActiveServerlessNameNode)node;
-                int deployment = serverlessNode.getDeploymentNumber();
-                long nnId = serverlessNode.getId();
-
-                List<Long> nodesInDeployment = nodesPerDeployment.computeIfAbsent(deployment, d -> new ArrayList<>());
-                nodesInDeployment.add(nnId);
-            }
-
-            int totalActiveNNs = 0;
-            System.out.println("== Active NNs per Deployment =============");
-            for (int i = 0; i < numDeployments; i++) {
-                List<Long> nodes = nodesPerDeployment.getOrDefault(i, new ArrayList<>());
-                int numNodes = nodes.size();
-                totalActiveNNs += numNodes;
-                System.out.println("Deployment " + i + ": " + numNodes);
-                if (nodes.size() > 0)
-                    System.out.println("Nodes: " + StringUtils.join(", ", nodes));
-                System.out.println();
-            }
-
-            System.out.println("Total Number of Active NameNodes: " + totalActiveNNs);
         }
     }
 
