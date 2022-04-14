@@ -124,9 +124,6 @@ public class Follower {
             System.exit(1);
         }
 
-        hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
-        hdfs.setServerlessFunctionLogLevel(serverlessLogLevel);
-
         return hdfs;
     }
 
@@ -142,25 +139,6 @@ public class Follower {
         switch(operation) {
             case OP_REGISTRATION:
                 handleRegistration(message);
-                break;
-            case OP_CLEAR_STATISTICS:
-                LOG.info("Clearing statistics packages...");
-                Commands.clearStatisticsPackages(hdfs);
-                break;
-            case OP_WRITE_STATISTICS:
-                LOG.info("Writing statistics packages to files...");
-                LOG.info("");
-                hdfs.dumpStatisticsPackages(true);
-                break;
-            case OP_PRINT_OPS_PERFORMED:
-                LOG.info("Printing operations performed...");
-                LOG.info("");
-                Commands.printOperationsPerformed(hdfs);
-                break;
-            case OP_PRINT_TCP_DEBUG:
-                LOG.info("Printing TCP debug information...");
-                LOG.info("");
-                hdfs.printDebugInformation();
                 break;
             case OP_EXIT:
                 LOG.info("Received 'STOP' operation from Leader. Shutting down primary HDFS connection now.");

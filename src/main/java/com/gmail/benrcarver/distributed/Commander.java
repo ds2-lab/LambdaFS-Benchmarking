@@ -360,71 +360,6 @@ public class Commander {
         }
     }
 
-    private void handleSetLogLevel(DistributedFileSystem hdfs) {
-        if (!isServerless) {
-            LOG.error("Modifying the NN debug level thru the benchmarking tool is not supported for Vanilla HopsFS!");
-            return;
-        }
-
-        String currentLogLevel = hdfs.getServerlessFunctionLogLevel();
-        LOG.info("");
-        LOG.info("Current log level: " + currentLogLevel);
-
-        System.out.print("Please enter the new log level, or nothing to keep it the same:\n> ");
-        String newLogLevel = scanner.nextLine();
-        newLogLevel = newLogLevel.trim();
-
-        if (newLogLevel.isEmpty())
-            return;
-
-        if (!(newLogLevel.equalsIgnoreCase("INFO") ||
-                newLogLevel.equalsIgnoreCase("DEBUG") ||
-                newLogLevel.equalsIgnoreCase("WARN") ||
-                newLogLevel.equalsIgnoreCase("ERROR") ||
-                newLogLevel.equalsIgnoreCase("FATAL") ||
-                newLogLevel.equalsIgnoreCase("ALL") ||
-                newLogLevel.equalsIgnoreCase("TRACE"))) {
-            LOG.error("Invalid log level specified: '" + newLogLevel + "'");
-        } else {
-            serverlessLogLevel = newLogLevel;
-            hdfs.setServerlessFunctionLogLevel(newLogLevel);
-        }
-    }
-
-    private void handleSetConsistencyProtocolEnabled(DistributedFileSystem hdfs) {
-        if (!isServerless) {
-            LOG.error("The consistency protocol is not supported by Vanilla HopsFS!");
-            return;
-        }
-
-        boolean currentFlag = hdfs.getConsistencyProtocolEnabled();
-        LOG.info("");
-        LOG.info("Consistency protocol is currently " + (currentFlag ? "ENABLED." : "DISABLED."));
-
-        System.out.print("Enable [t/y] or Disable [f/n] consistency protocol? (Enter anything else to keep it the same):\n> ");
-        String newFlag = scanner.nextLine();
-        newFlag = newFlag.trim();
-
-        if (newFlag.equalsIgnoreCase("t") || newFlag.equalsIgnoreCase("y")) {
-            if (!currentFlag)
-                LOG.info("ENABLING consistency protocol.");
-            else
-                LOG.info("Consistency protocol is already enabled.");
-
-            hdfs.setConsistencyProtocolEnabled(true);
-            consistencyEnabled = true;
-        }
-        else if (newFlag.equalsIgnoreCase("f") || newFlag.equalsIgnoreCase("n")) {
-            if (currentFlag)
-                LOG.info("DISABLING consistency protocol.");
-            else
-                LOG.info("Consistency protocol is already disabled.");
-
-            hdfs.setConsistencyProtocolEnabled(false);
-            consistencyEnabled = false;
-        }
-    }
-
     /**
      * Issue a command to all our followers.
      * @param opName The name of the command.
@@ -1048,9 +983,6 @@ public class Commander {
             ex.printStackTrace();
             System.exit(1);
         }
-
-        hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
-        hdfs.setServerlessFunctionLogLevel(serverlessLogLevel);
 
         return hdfs;
     }
