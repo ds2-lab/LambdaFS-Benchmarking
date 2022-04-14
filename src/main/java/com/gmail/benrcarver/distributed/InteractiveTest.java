@@ -28,6 +28,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * This is the class that is executed when running the application. It starts the Commander or Follower.
+ */
 public class InteractiveTest {
     public static final Log LOG = LogFactory.getLog(InteractiveTest.class);
 
