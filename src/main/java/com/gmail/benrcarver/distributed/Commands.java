@@ -14,9 +14,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 
-import io.hops.metrics.TransactionEvent;
-import io.hops.metrics.TransactionAttempt;
-import io.hops.transaction.context.TransactionsStats;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,7 +29,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
-import io.hops.metrics.OperationPerformed;
 
 import static com.gmail.benrcarver.distributed.Constants.OP_DELETE_FILES;
 import static com.gmail.benrcarver.distributed.Constants.OP_STRONG_SCALING_READS;
@@ -166,17 +162,6 @@ public class Commands {
         final CountDownLatch startLatch = new CountDownLatch(numThreads);
         final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
 
-        final BlockingQueue<List<OperationPerformed>> operationsPerformed =
-                new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
-        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
-                = new ArrayBlockingQueue<>(numThreads);
-        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
-                = new ArrayBlockingQueue<>(numThreads);
-
-        final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
-        final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
-        final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
-
         for (int i = 0; i < numThreads; i++) {
             Thread thread = new Thread(() -> {
                 DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
@@ -193,22 +178,6 @@ public class Commands {
                 // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
-
-                operationsPerformed.add(hdfs.getOperationsPerformed());
-                statisticsPackages.add(hdfs.getStatisticsPackages());
-                transactionEvents.add(hdfs.getTransactionEvents());
-
-                for (double latency : hdfs.getLatencyStatistics().getValues()) {
-                    latencyBoth.addValue(latency);
-                }
-
-                for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
-                    latencyHttp.addValue(latency);
-                }
-
-                for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
-                    latencyTcp.addValue(latency);
-                }
 
                 try {
                     hdfs.close();
@@ -237,38 +206,11 @@ public class Commands {
             thread.join();
         }
 
-        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            //LOG.info("Adding list of " + opsPerformed.size() + " operations performed to master/shared HDFS object.");
-            sharedHdfs.addOperationPerformeds(opsPerformed);
-        }
-
-        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            //LOG.info("Adding list of " + statPackages.size() + " statistics packages to master/shared HDFS object.");
-            sharedHdfs.mergeStatisticsPackages(statPackages, true);
-        }
-
-        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            // LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
-            sharedHdfs.mergeTransactionEvents(txEvents, true);
-        }
-
         double durationSeconds = (end - start) / 1000.0;
         double totalReads = (double)n * (double)readsPerFile * (double)numThreads;
         double throughput = (totalReads / durationSeconds);
 
-        LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
-                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation() +
-                ", N: " + latencyBoth.getN() + "]");
-        LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
-                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
-                ", N: " + latencyTcp.getN() + "]");
-        LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
-                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
-                ", N: " + latencyHttp.getN() + "]");
-        LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
         LOG.info("Throughput: " + throughput + " ops/sec.");
-
-        sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
 
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
                 start, end);
@@ -311,17 +253,6 @@ public class Commands {
         final CountDownLatch latch = new CountDownLatch(n);
         final Semaphore endSemaphore = new Semaphore((n * -1) + 1);
 
-        final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
-                new java.util.concurrent.ArrayBlockingQueue<>(n);
-        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
-                = new ArrayBlockingQueue<>(n);
-        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
-                = new ArrayBlockingQueue<>(n);
-
-        final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
-        final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
-        final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
-
         Random rng = new Random(); // TODO: Optionally seed this?
 
         final String[][] fileBatches = new String[n][numFilesToRead];
@@ -348,24 +279,6 @@ public class Commands {
                 // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
-
-                if (!IS_FOLLOWER) {
-                    operationsPerformed.add(hdfs.getOperationsPerformed());
-                    statisticsPackages.add(hdfs.getStatisticsPackages());
-                    transactionEvents.add(hdfs.getTransactionEvents());
-
-                    for (double latency : hdfs.getLatencyStatistics().getValues()) {
-                        latencyBoth.addValue(latency);
-                    }
-
-                    for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
-                        latencyHttp.addValue(latency);
-                    }
-
-                    for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
-                        latencyTcp.addValue(latency);
-                    }
-                }
 
                 try {
                     hdfs.close();
@@ -397,43 +310,13 @@ public class Commands {
         int totalCacheHits = 0;
         int totalCacheMisses = 0;
 
-        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            sharedHdfs.addOperationPerformeds(opsPerformed);
-
-            for (OperationPerformed op : opsPerformed) {
-                totalCacheHits += op.getMetadataCacheHits();
-                totalCacheMisses += op.getMetadataCacheMisses();
-            }
-        }
-
-        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            sharedHdfs.mergeStatisticsPackages(statPackages, true);
-        }
-
-        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            sharedHdfs.mergeTransactionEvents(txEvents, true);
-        }
-
         // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
         double durationSeconds = (end - start) / 1000.0;
         double totalReads = (double)n * (double)numFilesToRead;
         double throughput = (totalReads / durationSeconds);
         LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
-
-        LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
-                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation() +
-                ", N: " + latencyBoth.getN() + "]");
-        LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
-                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
-                ", N: " + latencyTcp.getN() + "]");
-        LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
-                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
-                ", N: " + latencyHttp.getN() + "]");
-        LOG.info("Cache Hits: " + totalCacheHits + ", Cache Misses: " + totalCacheMisses + ". [Hitrate: " +
-                ((double)totalCacheHits / (totalCacheHits + totalCacheMisses)) + "]");
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
-        sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
 
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
                 start, end, totalCacheHits, totalCacheMisses);
@@ -474,17 +357,6 @@ public class Commands {
         final CountDownLatch latch = new CountDownLatch(n);
         final Semaphore endSemaphore = new Semaphore((n * -1) + 1);
 
-        final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
-                new java.util.concurrent.ArrayBlockingQueue<>(n);
-        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
-                = new ArrayBlockingQueue<>(n);
-        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
-                = new ArrayBlockingQueue<>(n);
-
-        final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
-        final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
-        final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
-
         for (int i = 0; i < n; i++) {
             final String filePath = paths.get(i);
             Thread thread = new Thread(() -> {
@@ -500,24 +372,6 @@ public class Commands {
                 // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
-
-                if (!IS_FOLLOWER) {
-                    operationsPerformed.add(hdfs.getOperationsPerformed());
-                    statisticsPackages.add(hdfs.getStatisticsPackages());
-                    transactionEvents.add(hdfs.getTransactionEvents());
-
-                    for (double latency : hdfs.getLatencyStatistics().getValues()) {
-                        latencyBoth.addValue(latency);
-                    }
-
-                    for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
-                        latencyHttp.addValue(latency);
-                    }
-
-                    for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
-                        latencyTcp.addValue(latency);
-                    }
-                }
 
                 try {
                     hdfs.close();
@@ -546,113 +400,16 @@ public class Commands {
             thread.join();
         }
 
-        int totalCacheHits = 0;
-        int totalCacheMisses = 0;
-
-        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            sharedHdfs.addOperationPerformeds(opsPerformed);
-
-            for (OperationPerformed op : opsPerformed) {
-                totalCacheHits += op.getMetadataCacheHits();
-                totalCacheMisses += op.getMetadataCacheMisses();
-            }
-        }
-
-        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            sharedHdfs.mergeStatisticsPackages(statPackages, true);
-        }
-
-        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            sharedHdfs.mergeTransactionEvents(txEvents, true);
-        }
-
-        // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
         double durationSeconds = (end - start) / 1000.0;
+
+        LOG.info("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + durationSeconds);
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
-        LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
-
-        LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
-                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation() +
-                ", N: " + latencyBoth.getN() + "]");
-        LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
-                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
-                ", N: " + latencyTcp.getN() + "]");
-        LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
-                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
-                ", N: " + latencyHttp.getN() + "]");
-        LOG.info("Cache Hits: " + totalCacheHits + ", Cache Misses: " + totalCacheMisses + ". [Hitrate: " +
-                ((double)totalCacheHits / (totalCacheHits + totalCacheMisses)) + "]");
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
-        sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
 
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
-                start, end, totalCacheHits, totalCacheMisses);
-    }
-
-    /**
-     * Print the operations performed. Optionally write them to a CSV.
-     */
-    public static void printOperationsPerformed(DistributedFileSystem hdfs) throws IOException {
-        if (!IS_SERVERLESS) {
-            LOG.error("This operation is not supported by Vanilla HopsFS!");
-            return;
-        }
-
-        System.out.print("Write to CSV? \n> ");
-        String input = scanner.nextLine();
-
-        hdfs.printOperationsPerformed();
-
-        HashMap<String, List<TransactionEvent>> transactionEvents = hdfs.getTransactionEvents();
-        ArrayList<TransactionEvent> allTransactionEvents = new ArrayList<TransactionEvent>();
-
-        for (Map.Entry<String, List<TransactionEvent>> entry : transactionEvents.entrySet()) {
-            allTransactionEvents.addAll(entry.getValue());
-        }
-
-        System.out.println("====================== Transaction Events ====================================================================================");
-
-        System.out.println("\n-- SUMS ----------------------------------------------------------------------------------------------------------------------");
-        System.out.println(TransactionEvent.getMetricsHeader());
-        System.out.println(TransactionEvent.getMetricsString(TransactionEvent.getSums(allTransactionEvents)));
-
-        System.out.println("\n-- AVERAGES ------------------------------------------------------------------------------------------------------------------");
-        System.out.println(TransactionEvent.getMetricsHeader());
-        System.out.println(TransactionEvent.getMetricsString(TransactionEvent.getAverages(allTransactionEvents)));
-
-        System.out.println("\n==============================================================================================================================");
-
-        if (input.equalsIgnoreCase("y")) {
-            System.out.print("File path? (no extension)\n> ");
-            String baseFilePath = scanner.nextLine();
-
-            BufferedWriter opsPerformedWriter = new BufferedWriter(new FileWriter(baseFilePath + ".csv"));
-            List<OperationPerformed> operationsPerformed = hdfs.getOperationsPerformed();
-
-            opsPerformedWriter.write(OperationPerformed.getHeader());
-            opsPerformedWriter.newLine();
-            for (OperationPerformed op : operationsPerformed) {
-                op.write(opsPerformedWriter);
-            }
-            opsPerformedWriter.close();
-
-            BufferedWriter txEventsWriter = new BufferedWriter(new FileWriter(baseFilePath + "-txevents.csv"));
-
-            txEventsWriter.write(TransactionEvent.getHeader());
-            txEventsWriter.newLine();
-
-            for (Map.Entry<String, List<TransactionEvent>> entry : transactionEvents.entrySet()) {
-                List<TransactionEvent> txEvents = entry.getValue();
-
-                for (TransactionEvent transactionEvent : txEvents) {
-                    transactionEvent.write(txEventsWriter);
-                }
-            }
-
-            txEventsWriter.close();
-        }
+                start, end, 0, 0);
     }
 
     public static void readFilesOperation(final Configuration configuration,
@@ -771,17 +528,6 @@ public class Commands {
         final CountDownLatch latch = new CountDownLatch(numThreads);
         final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
 
-        final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
-                new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
-        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
-                = new ArrayBlockingQueue<>(numThreads);
-        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
-                = new ArrayBlockingQueue<>(numThreads);
-
-        final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
-        final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
-        final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
-
         for (int i = 0; i < numThreads; i++) {
             final String[] pathsForThread = pathsPerThread[i];
             Thread thread = new Thread(() -> {
@@ -799,24 +545,6 @@ public class Commands {
                 // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
-
-                if (!IS_FOLLOWER) {
-                    operationsPerformed.add(hdfs.getOperationsPerformed());
-                    statisticsPackages.add(hdfs.getStatisticsPackages());
-                    transactionEvents.add(hdfs.getTransactionEvents());
-
-                    for (double latency : hdfs.getLatencyStatistics().getValues()) {
-                        latencyBoth.addValue(latency);
-                    }
-
-                    for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
-                        latencyHttp.addValue(latency);
-                    }
-
-                    for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
-                        latencyTcp.addValue(latency);
-                    }
-                }
 
                 try {
                     hdfs.close();
@@ -845,43 +573,11 @@ public class Commands {
             thread.join();
         }
 
-        int totalCacheHits = 0;
-        int totalCacheMisses = 0;
-
-        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            sharedHdfs.addOperationPerformeds(opsPerformed);
-
-            for (OperationPerformed op : opsPerformed) {
-                totalCacheHits += op.getMetadataCacheHits();
-                totalCacheMisses += op.getMetadataCacheMisses();
-            }
-        }
-
-        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            sharedHdfs.mergeStatisticsPackages(statPackages, true);
-        }
-
-        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            sharedHdfs.mergeTransactionEvents(txEvents, true);
-        }
-
         double durationSeconds = (end - start) / 1000.0;
 
         LOG.info("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + durationSeconds);
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
-
-        LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
-                ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation() +
-                ", N: " + latencyBoth.getN() + "]");
-        LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
-                ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
-                ", N: " + latencyTcp.getN() + "]");
-        LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
-                ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
-                ", N: " + latencyHttp.getN() + "]");
-        LOG.info("Cache Hits: " + totalCacheHits + ", Cache Misses: " + totalCacheMisses + ". [Hitrate: " +
-                ((double)totalCacheHits / (totalCacheHits + totalCacheMisses)) + "]");
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
         sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
@@ -992,18 +688,6 @@ public class Commands {
 
             Thread[] threads = new Thread[numThreads];
 
-            final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
-                    new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
-            final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
-                    = new ArrayBlockingQueue<>(numThreads);
-            final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
-                    = new ArrayBlockingQueue<>(numThreads);
-            final BlockingQueue<Integer> numSuccessPerThread = new ArrayBlockingQueue<>(numThreads);
-
-            final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
-            final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
-            final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
-
             for (int i = 0; i < numThreads; i++) {
                 final int idx = i;
                 Thread thread = new Thread(() -> {
@@ -1013,23 +697,6 @@ public class Commands {
                     int localNumSuccess = createFiles(targetPathsPerArray[idx], contentPerArray[idx], hdfs, nameNodeEndpoint);
 
                     endSemaphore.release();
-
-                    operationsPerformed.add(hdfs.getOperationsPerformed());
-                    statisticsPackages.add(hdfs.getStatisticsPackages());
-                    transactionEvents.add(hdfs.getTransactionEvents());
-                    numSuccessPerThread.add(localNumSuccess);
-
-                    for (double latency : hdfs.getLatencyStatistics().getValues()) {
-                        latencyBoth.addValue(latency);
-                    }
-
-                    for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
-                        latencyHttp.addValue(latency);
-                    }
-
-                    for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
-                        latencyTcp.addValue(latency);
-                    }
 
                     try {
                         hdfs.close();
@@ -1056,40 +723,6 @@ public class Commands {
             LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
             for (Thread thread : threads) {
                 thread.join();
-            }
-
-            LOG.info("");
-            LOG.info("");
-            LOG.info("===============================");
-            LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
-                    ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation() +
-                    ", N: " + latencyBoth.getN() + "]");
-            LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
-                    ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
-                    ", N: " + latencyTcp.getN() + "]");
-            LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
-                    ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
-                    ", N: " + latencyHttp.getN() + "]");
-
-            sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
-
-            for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-                //LOG.info("Adding list of " + opsPerformed.size() + " operations performed to master/shared HDFS object.");
-                sharedHdfs.addOperationPerformeds(opsPerformed);
-            }
-
-            for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-                //LOG.info("Adding list of " + statPackages.size() + " statistics packages to master/shared HDFS object.");
-                sharedHdfs.mergeStatisticsPackages(statPackages, true);
-            }
-
-            for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-                //LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
-                sharedHdfs.mergeTransactionEvents(txEvents, true);
-            }
-
-            for (Integer localNumSuccess : numSuccessPerThread) {
-                numSuccess += localNumSuccess;
             }
         }
 

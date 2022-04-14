@@ -260,44 +260,6 @@ public class Commander {
                 int op = getNextOperation();
 
                 switch (op) {
-                    case OP_GET_ACTIVE_NAMENODES:
-                        Commands.getActiveNameNodesOperation(hdfs);
-                        break;
-                    case OP_SET_CONSISTENCY_PROTOCOL_ENABLED:
-                        handleSetConsistencyProtocolEnabled(hdfs);
-                        break;
-                    case OP_SET_LOG_LEVEL:
-                        handleSetLogLevel(hdfs);
-                        break;
-                    case OP_CLEAR_STATISTICS:
-                        LOG.info("Clearing statistics packages...");
-                        Commands.clearStatisticsPackages(hdfs);
-                        break;
-                    case OP_WRITE_STATISTICS:
-                        if (!isServerless) {
-                            LOG.error("Writing statistics packages is not supported by Vanilla HopsFS!");
-                            continue;
-                        }
-
-                        LOG.info("Writing statistics packages to files...");
-                        LOG.info("");
-                        hdfs.dumpStatisticsPackages(true);
-                        break;
-                    case OP_PRINT_OPS_PERFORMED:
-                        LOG.info("Printing operations performed...");
-                        LOG.info("");
-                        Commands.printOperationsPerformed(hdfs);
-                        break;
-                    case OP_PRINT_TCP_DEBUG:
-                        if (!isServerless) {
-                            LOG.error("Printing TCP debug information operation is not supported by Vanilla HopsFS!");
-                            return;
-                        }
-
-                        LOG.info("Printing TCP debug information...");
-                        LOG.info("");
-                        hdfs.printDebugInformation();
-                        break;
                     case OP_EXIT:
                         LOG.info("Exiting now... goodbye!");
                         try {
@@ -1177,13 +1139,6 @@ public class Commander {
     private static void printMenu() {
         System.out.println("");
         System.out.println("====== MENU ======");
-        System.out.println("Debug Operations:");
-        System.out.println(
-                "(-7) Print currently active NameNodes\n" +
-                "(-6) Get/set consistency protocol enabled flag.\n(-5) Get/set serverless log4j debug level.\n" +
-                "(-4) Clear statistics\n(-3) Output statistics packages to CSV\n" +
-                "(-2) Output operations performed + write to file\n(-1) Print TCP debug information.");
-        System.out.println("\nStandard Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
