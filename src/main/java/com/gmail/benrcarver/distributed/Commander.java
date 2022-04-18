@@ -820,13 +820,13 @@ public class Commander {
      *
      * @return The aggregated throughput.
      */
-    private double waitForDistributedResult(
+    private AggregatedResult waitForDistributedResult(
             int numDistributedResults,
             String operationId,
             DistributedBenchmarkResult localResult) throws InterruptedException {
         if (numDistributedResults < 1) {
             // LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
-            return localResult.getOpsPerSecond();
+            return new AggregatedResult(localResult.getOpsPerSecond(), localResult.cacheHits, localResult.cacheMisses);
         }
 
         LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
@@ -869,7 +869,7 @@ public class Commander {
 //        LOG.info("Cache misses: " + cacheMisses);
         LOG.info("Cache hit percentage: " + (cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum())));
 
-        return aggregateThroughput;
+        return new AggregatedResult(aggregateThroughput, (int)cacheHits.getSum(), (int)cacheMisses.getSum());
     }
 
     /**
@@ -932,18 +932,24 @@ public class Commander {
 
             //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
             localResult.setOperationId(operationId);
-
-            double throughput;
+            double throughput = 0;
+            int aggregatedCacheMisses = 0;
+            int aggregatedCacheHits = 0;
             // Wait for followers' results if we had followers when we first started the operation.
             if (numDistributedResults > 0) {
-                throughput = waitForDistributedResult(numDistributedResults, operationId, localResult);
+                AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
+                throughput = aggregatedResult.throughput;
+                aggregatedCacheHits = aggregatedResult.cacheHits;
+                aggregatedCacheMisses = aggregatedResult.cacheMisses;
             } else {
                 throughput = localResult.getOpsPerSecond();
+                aggregatedCacheHits = localResult.cacheHits;
+                aggregatedCacheMisses = localResult.cacheMisses;
             }
 
             results[currentTrial] = throughput;
-            cacheHits[currentTrial] = localResult.cacheHits;
-            cacheMisses[currentTrial] = localResult.cacheMisses;
+            cacheHits[currentTrial] = aggregatedCacheHits;
+            cacheMisses[currentTrial] = aggregatedCacheMisses;
             currentTrial++;
 
             Thread.sleep(500);
@@ -1023,17 +1029,25 @@ public class Commander {
             //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
             localResult.setOperationId(operationId);
 
-            double throughput;
+            localResult.setOperationId(operationId);
+            double throughput = 0;
+            int aggregatedCacheMisses = 0;
+            int aggregatedCacheHits = 0;
             // Wait for followers' results if we had followers when we first started the operation.
             if (numDistributedResults > 0) {
-                throughput = waitForDistributedResult(numDistributedResults, operationId, localResult);
+                AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
+                throughput = aggregatedResult.throughput;
+                aggregatedCacheHits = aggregatedResult.cacheHits;
+                aggregatedCacheMisses = aggregatedResult.cacheMisses;
             } else {
                 throughput = localResult.getOpsPerSecond();
+                aggregatedCacheHits = localResult.cacheHits;
+                aggregatedCacheMisses = localResult.cacheMisses;
             }
 
             results[currentTrial] = throughput;
-            cacheHits[currentTrial] = localResult.cacheHits;
-            cacheMisses[currentTrial] = localResult.cacheMisses;
+            cacheHits[currentTrial] = aggregatedCacheHits;
+            cacheMisses[currentTrial] = aggregatedCacheMisses;
             currentTrial++;
 
             Thread.sleep(500);
@@ -1194,5 +1208,17 @@ public class Commander {
         System.out.println("");
         System.out.println("What would you like to do?");
         System.out.print("> ");
+    }
+
+    public static class AggregatedResult {
+        public double throughput;
+        public int cacheHits;
+        public int cacheMisses;
+
+        public AggregatedResult(double throughput, int cacheHits, int cacheMisses) {
+            this.throughput = throughput;
+            this.cacheHits = cacheHits;
+            this.cacheMisses = cacheMisses;
+        }
     }
 }
