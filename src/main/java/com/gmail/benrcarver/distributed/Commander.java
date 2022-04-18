@@ -1185,6 +1185,7 @@ public class Commander {
 
         public void disconnected(Connection conn) {
             LOG.info("Lost connection to follower.");
+            followers.remove(conn);
         }
     }
 
