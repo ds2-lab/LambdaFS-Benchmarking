@@ -349,8 +349,8 @@ public class Commands {
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
 
+                operationsPerformed.add(hdfs.getOperationsPerformed());
                 if (!IS_FOLLOWER) {
-                    operationsPerformed.add(hdfs.getOperationsPerformed());
                     statisticsPackages.add(hdfs.getStatisticsPackages());
                     transactionEvents.add(hdfs.getTransactionEvents());
 
@@ -501,8 +501,8 @@ public class Commands {
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
 
+                operationsPerformed.add(hdfs.getOperationsPerformed());
                 if (!IS_FOLLOWER) {
-                    operationsPerformed.add(hdfs.getOperationsPerformed());
                     statisticsPackages.add(hdfs.getStatisticsPackages());
                     transactionEvents.add(hdfs.getTransactionEvents());
 
@@ -800,8 +800,8 @@ public class Commands {
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
 
+                operationsPerformed.add(hdfs.getOperationsPerformed());
                 if (!IS_FOLLOWER) {
-                    operationsPerformed.add(hdfs.getOperationsPerformed());
                     statisticsPackages.add(hdfs.getStatisticsPackages());
                     transactionEvents.add(hdfs.getTransactionEvents());
 
