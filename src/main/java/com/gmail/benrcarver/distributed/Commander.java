@@ -952,7 +952,7 @@ public class Commander {
             cacheMisses[currentTrial] = aggregatedCacheMisses;
             currentTrial++;
 
-            Thread.sleep(500);
+            Thread.sleep(1250);
         }
 
         System.out.println("[THROUGHPUT]");
@@ -1050,7 +1050,7 @@ public class Commander {
             cacheMisses[currentTrial] = aggregatedCacheMisses;
             currentTrial++;
 
-            Thread.sleep(500);
+            Thread.sleep(1250);
         }
 
         System.out.println("[THROUGHPUT]");
