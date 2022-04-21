@@ -485,6 +485,11 @@ public class Commander {
         try {
             int newInterval = Integer.parseInt(newIntervalString);
 
+            if (newInterval < 0) {
+                LOG.error("Invalid interval specified: " + newInterval + ". Interval must be non-negative.");
+                return;
+            }
+
             System.out.println("Changed post-trial sleep interval FROM " + postTrialSleepInterval + " ms TO " +
                     newInterval + " ms.");
             postTrialSleepInterval = newInterval;
