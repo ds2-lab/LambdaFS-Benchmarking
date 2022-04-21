@@ -473,7 +473,7 @@ public class Commander {
     }
 
     private void printAndModifyPostTrialSleep() {
-        System.out.print("Post-trial sleep interval: " + postTrialSleepInterval + " ms");
+        System.out.println("Post-trial sleep interval: " + postTrialSleepInterval + " ms");
 
         System.out.print("Please enter a new sleep interval duration (in ms), or nothing to keep it the same:\n> ");
         String newIntervalString = scanner.nextLine();
