@@ -89,6 +89,12 @@ public class Commander {
     private List<FollowerConfig> followerConfigs;
 
     /**
+     * Time (in milliseconds) to sleep after each trial.
+     * This gives NameNodes a chance to perform any clean-up (e.g., garbage collection).
+     */
+    private int postTrialSleepInterval = 1750;
+
+    /**
      * Fully-qualified path of hdfs-site.xml configuration file.
      */
     public static String hdfsConfigFilePath;
@@ -260,6 +266,9 @@ public class Commander {
                 int op = getNextOperation();
 
                 switch (op) {
+                    case OP_CHANGE_POST_TRIAL_SLEEP:
+                        printAndModifyPostTrialSleep();
+                        break;
                     case OP_GET_ACTIVE_NAMENODES:
                         Commands.getActiveNameNodesOperation(hdfs);
                         break;
@@ -460,6 +469,27 @@ public class Commander {
 
             hdfs.setConsistencyProtocolEnabled(false);
             consistencyEnabled = false;
+        }
+    }
+
+    private void printAndModifyPostTrialSleep() {
+        System.out.print("Post-trial sleep interval: " + postTrialSleepInterval + " ms");
+
+        System.out.print("Please enter a new sleep interval duration (in ms), or nothing to keep it the same:\n> ");
+        String newIntervalString = scanner.nextLine();
+        newIntervalString = newIntervalString.trim();
+
+        if (newIntervalString.isEmpty())
+            return;
+
+        try {
+            int newInterval = Integer.parseInt(newIntervalString);
+
+            System.out.println("Changed post-trial sleep interval FROM " + postTrialSleepInterval + " ms TO " +
+                    newInterval + " ms.");
+            postTrialSleepInterval = newInterval;
+        } catch (NumberFormatException ex) {
+            LOG.error("Invalid value specified. Returning.");
         }
     }
 
@@ -952,7 +982,7 @@ public class Commander {
             cacheMisses[currentTrial] = aggregatedCacheMisses;
             currentTrial++;
 
-            Thread.sleep(1250);
+            Thread.sleep(postTrialSleepInterval);
         }
 
         System.out.println("[THROUGHPUT]");
@@ -1050,7 +1080,7 @@ public class Commander {
             cacheMisses[currentTrial] = aggregatedCacheMisses;
             currentTrial++;
 
-            Thread.sleep(1250);
+            Thread.sleep(postTrialSleepInterval);
         }
 
         System.out.println("[THROUGHPUT]");
@@ -1194,6 +1224,7 @@ public class Commander {
         System.out.println("====== MENU ======");
         System.out.println("Debug Operations:");
         System.out.println(
+                "(-8) Print/modify post-trial sleep interval\n" +
                 "(-7) Print currently active NameNodes\n" +
                 "(-6) Get/set consistency protocol enabled flag.\n(-5) Get/set serverless log4j debug level.\n" +
                 "(-4) Clear statistics\n(-3) Output statistics packages to CSV\n" +
