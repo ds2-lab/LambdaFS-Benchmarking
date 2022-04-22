@@ -987,7 +987,8 @@ public class Commander {
             cacheMisses[currentTrial] = aggregatedCacheMisses;
             currentTrial++;
 
-            Thread.sleep(postTrialSleepInterval);
+            if (!(currentTrial >= numTrials))
+                Thread.sleep(postTrialSleepInterval);
         }
 
         System.out.println("[THROUGHPUT]");
@@ -1085,7 +1086,8 @@ public class Commander {
             cacheMisses[currentTrial] = aggregatedCacheMisses;
             currentTrial++;
 
-            Thread.sleep(postTrialSleepInterval);
+            if (!(currentTrial >= numTrials))
+                Thread.sleep(postTrialSleepInterval);
         }
 
         System.out.println("[THROUGHPUT]");
