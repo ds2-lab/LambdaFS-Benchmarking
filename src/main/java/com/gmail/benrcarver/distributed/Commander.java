@@ -92,7 +92,7 @@ public class Commander {
      * Time (in milliseconds) to sleep after each trial.
      * This gives NameNodes a chance to perform any clean-up (e.g., garbage collection).
      */
-    private int postTrialSleepInterval = 1750;
+    private int postTrialSleepInterval = 5000;
 
     /**
      * Fully-qualified path of hdfs-site.xml configuration file.
@@ -987,8 +987,11 @@ public class Commander {
             cacheMisses[currentTrial] = aggregatedCacheMisses;
             currentTrial++;
 
-            if (!(currentTrial >= numTrials))
+            if (!(currentTrial >= numTrials)) {
+                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Sleeping for " +
+                        postTrialSleepInterval + " ms.");
                 Thread.sleep(postTrialSleepInterval);
+            }
         }
 
         System.out.println("[THROUGHPUT]");
@@ -1086,8 +1089,11 @@ public class Commander {
             cacheMisses[currentTrial] = aggregatedCacheMisses;
             currentTrial++;
 
-            if (!(currentTrial >= numTrials))
+            if (!(currentTrial >= numTrials)) {
+                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Sleeping for " +
+                        postTrialSleepInterval + " ms.");
                 Thread.sleep(postTrialSleepInterval);
+            }
         }
 
         System.out.println("[THROUGHPUT]");
