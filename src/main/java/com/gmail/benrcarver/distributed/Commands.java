@@ -15,7 +15,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 
 import io.hops.metrics.TransactionEvent;
-import io.hops.metrics.TransactionAttempt;
 import io.hops.transaction.context.TransactionsStats;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -168,7 +167,7 @@ public class Commands {
         final CountDownLatch startLatch = new CountDownLatch(numThreads);
         final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
 
-        final BlockingQueue<List<OperationPerformed>> operationsPerformed =
+        final BlockingQueue<OperationPerformed> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
         final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
                 = new ArrayBlockingQueue<>(numThreads);
@@ -196,7 +195,7 @@ public class Commands {
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
 
-                operationsPerformed.add(hdfs.getOperationsPerformed());
+                operationsPerformed.addAll(hdfs.getOperationsPerformed());
                 statisticsPackages.add(hdfs.getStatisticsPackages());
                 transactionEvents.add(hdfs.getTransactionEvents());
 
@@ -239,10 +238,7 @@ public class Commands {
             thread.join();
         }
 
-        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            //LOG.info("Adding list of " + opsPerformed.size() + " operations performed to master/shared HDFS object.");
-            sharedHdfs.addOperationPerformeds(opsPerformed);
-        }
+        sharedHdfs.addOperationPerformeds(operationsPerformed);
 
         for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
             //LOG.info("Adding list of " + statPackages.size() + " statistics packages to master/shared HDFS object.");
@@ -313,7 +309,7 @@ public class Commands {
         final CountDownLatch latch = new CountDownLatch(n);
         final Semaphore endSemaphore = new Semaphore((n * -1) + 1);
 
-        final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
+        final java.util.concurrent.BlockingQueue<OperationPerformed> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(n);
         final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
                 = new ArrayBlockingQueue<>(n);
@@ -351,8 +347,8 @@ public class Commands {
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
 
-                operationsPerformed.add(hdfs.getOperationsPerformed());
-                if (!IS_FOLLOWER) {
+                operationsPerformed.addAll(hdfs.getOperationsPerformed());
+                if (TRACK_OP_PERFORMED) {
                     statisticsPackages.add(hdfs.getStatisticsPackages());
                     transactionEvents.add(hdfs.getTransactionEvents());
 
@@ -399,13 +395,10 @@ public class Commands {
         int totalCacheHits = 0;
         int totalCacheMisses = 0;
 
-        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            sharedHdfs.addOperationPerformeds(opsPerformed);
-
-            for (OperationPerformed op : opsPerformed) {
-                totalCacheHits += op.getMetadataCacheHits();
-                totalCacheMisses += op.getMetadataCacheMisses();
-            }
+        sharedHdfs.addOperationPerformeds(operationsPerformed);
+        for (OperationPerformed op : operationsPerformed) {
+            totalCacheHits += op.getMetadataCacheHits();
+            totalCacheMisses += op.getMetadataCacheMisses();
         }
 
         for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
@@ -437,8 +430,10 @@ public class Commands {
 
         sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
 
-        return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
-                start, end, totalCacheHits, totalCacheMisses);
+        return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads,
+                durationSeconds, start, end, totalCacheHits, totalCacheMisses,
+                TRACK_OP_PERFORMED ? operationsPerformed.toArray(new OperationPerformed[0]) : null,
+                TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null);
     }
 
     /**
@@ -476,7 +471,7 @@ public class Commands {
         final CountDownLatch latch = new CountDownLatch(n);
         final Semaphore endSemaphore = new Semaphore((n * -1) + 1);
 
-        final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
+        final java.util.concurrent.BlockingQueue<OperationPerformed> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(n);
         final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
                 = new ArrayBlockingQueue<>(n);
@@ -503,8 +498,8 @@ public class Commands {
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
 
-                operationsPerformed.add(hdfs.getOperationsPerformed());
-                if (!IS_FOLLOWER) {
+                operationsPerformed.addAll(hdfs.getOperationsPerformed());
+                if (TRACK_OP_PERFORMED) {
                     statisticsPackages.add(hdfs.getStatisticsPackages());
                     transactionEvents.add(hdfs.getTransactionEvents());
 
@@ -551,13 +546,10 @@ public class Commands {
         int totalCacheHits = 0;
         int totalCacheMisses = 0;
 
-        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            sharedHdfs.addOperationPerformeds(opsPerformed);
-
-            for (OperationPerformed op : opsPerformed) {
-                totalCacheHits += op.getMetadataCacheHits();
-                totalCacheMisses += op.getMetadataCacheMisses();
-            }
+        sharedHdfs.addOperationPerformeds(operationsPerformed);
+        for (OperationPerformed op : operationsPerformed) {
+            totalCacheHits += op.getMetadataCacheHits();
+            totalCacheMisses += op.getMetadataCacheMisses();
         }
 
         for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
@@ -590,7 +582,9 @@ public class Commands {
         sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
 
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
-                start, end, totalCacheHits, totalCacheMisses);
+                start, end, totalCacheHits, totalCacheMisses,
+                TRACK_OP_PERFORMED ? operationsPerformed.toArray(new OperationPerformed[0]) : null,
+                TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null);
     }
 
     /**
@@ -773,7 +767,7 @@ public class Commands {
         final CountDownLatch latch = new CountDownLatch(numThreads);
         final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
 
-        final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
+        final java.util.concurrent.BlockingQueue<OperationPerformed> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
         final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
                 = new ArrayBlockingQueue<>(numThreads);
@@ -802,8 +796,8 @@ public class Commands {
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
 
-                operationsPerformed.add(hdfs.getOperationsPerformed());
-                if (!IS_FOLLOWER) {
+                operationsPerformed.addAll(hdfs.getOperationsPerformed());
+                if (TRACK_OP_PERFORMED) {
                     statisticsPackages.add(hdfs.getStatisticsPackages());
                     transactionEvents.add(hdfs.getTransactionEvents());
 
@@ -850,13 +844,10 @@ public class Commands {
         int totalCacheHits = 0;
         int totalCacheMisses = 0;
 
-        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            sharedHdfs.addOperationPerformeds(opsPerformed);
-
-            for (OperationPerformed op : opsPerformed) {
-                totalCacheHits += op.getMetadataCacheHits();
-                totalCacheMisses += op.getMetadataCacheMisses();
-            }
+        sharedHdfs.addOperationPerformeds(operationsPerformed);
+        for (OperationPerformed op : operationsPerformed) {
+            totalCacheHits += op.getMetadataCacheHits();
+            totalCacheMisses += op.getMetadataCacheMisses();
         }
 
         for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
@@ -961,6 +952,13 @@ public class Commands {
 
         Utils.write("./output/writeToDirectoryPaths-" + Instant.now().toEpochMilli()+ ".txt", targetPaths);
 
+        final java.util.concurrent.BlockingQueue<OperationPerformed> operationsPerformed =
+                new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
+        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
+                = new ArrayBlockingQueue<>(numThreads);
+        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
+                = new ArrayBlockingQueue<>(numThreads);
+        final BlockingQueue<Integer> numSuccessPerThread = new ArrayBlockingQueue<>(numThreads);
         long start, end;
         int numSuccess = 0;
         if (numThreads == 1) {
@@ -994,14 +992,6 @@ public class Commands {
 
             Thread[] threads = new Thread[numThreads];
 
-            final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
-                    new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
-            final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
-                    = new ArrayBlockingQueue<>(numThreads);
-            final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
-                    = new ArrayBlockingQueue<>(numThreads);
-            final BlockingQueue<Integer> numSuccessPerThread = new ArrayBlockingQueue<>(numThreads);
-
             final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
             final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
             final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
@@ -1016,7 +1006,7 @@ public class Commands {
 
                     endSemaphore.release();
 
-                    operationsPerformed.add(hdfs.getOperationsPerformed());
+                    operationsPerformed.addAll(hdfs.getOperationsPerformed());
                     statisticsPackages.add(hdfs.getStatisticsPackages());
                     transactionEvents.add(hdfs.getTransactionEvents());
                     numSuccessPerThread.add(localNumSuccess);
@@ -1075,10 +1065,7 @@ public class Commands {
 
             sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
 
-            for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-                //LOG.info("Adding list of " + opsPerformed.size() + " operations performed to master/shared HDFS object.");
-                sharedHdfs.addOperationPerformeds(opsPerformed);
-            }
+            sharedHdfs.addOperationPerformeds(operationsPerformed);
 
             for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
                 //LOG.info("Adding list of " + statPackages.size() + " statistics packages to master/shared HDFS object.");
@@ -1107,7 +1094,9 @@ public class Commands {
             LOG.info("Aggregate throughput including failures: " + (totalNumberOfFiles / durationSeconds) + " ops/sec.");
 
         return new DistributedBenchmarkResult(null, 0, numSuccess,
-                durationSeconds, start, end);
+                durationSeconds, start, end, 0, 0,
+                TRACK_OP_PERFORMED ? operationsPerformed.toArray(new OperationPerformed[0]) : null,
+                TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null);
     }
 
     public static void createDirectories(DistributedFileSystem hdfs, String nameNodeEndpoint) {

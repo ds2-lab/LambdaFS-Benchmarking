@@ -1,7 +1,9 @@
 package com.gmail.benrcarver.distributed;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
+import io.hops.metrics.TransactionEvent;
 
 import io.hops.metrics.OperationPerformed;
 
@@ -14,7 +16,8 @@ public class DistributedBenchmarkResult implements Serializable {
     public String opId;
     public int operation;
     public int numOpsPerformed;
-    public List<OperationPerformed> opsPerformed;
+    public OperationPerformed[] opsPerformed;
+    public HashMap<String, List<TransactionEvent>>[] txEvents;
 
     /**
      * Duration in seconds.
@@ -57,12 +60,12 @@ public class DistributedBenchmarkResult implements Serializable {
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed,
                                       double duration, long startTime, long stopTime,
                                       int cacheHits, int cacheMisses) {
-        this(opId, operation, numOpsPerformed, duration, startTime, stopTime, cacheHits, cacheMisses, null);
+        this(opId, operation, numOpsPerformed, duration, startTime, stopTime, cacheHits, cacheMisses, null, null);
     }
 
-    public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed,
-                                      double duration, long startTime, long stopTime,
-                                      int cacheHits, int cacheMisses, List<OperationPerformed> opsPerformed) {
+    public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed, double duration, long startTime,
+                                      long stopTime, int cacheHits, int cacheMisses, OperationPerformed[] opsPerformed,
+                                      HashMap<String, List<TransactionEvent>>[] txEvents) {
         this.opId = opId;
         this.operation = operation;
         this.numOpsPerformed = numOpsPerformed;
@@ -72,6 +75,7 @@ public class DistributedBenchmarkResult implements Serializable {
         this.cacheHits = cacheHits;
         this.cacheMisses = cacheMisses;
         this.opsPerformed = opsPerformed;
+        this.txEvents = txEvents;
     }
 
     public void setOperationId(String operationId) {
