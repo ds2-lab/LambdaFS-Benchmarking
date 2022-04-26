@@ -1005,7 +1005,7 @@ public class Commander {
             currentTrial++;
 
             if (!(currentTrial >= numTrials)) {
-                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Sleeping for " +
+                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
                         postTrialSleepInterval + " ms.");
                 performClientVMGarbageCollection();
                 Thread.sleep(postTrialSleepInterval);
@@ -1108,7 +1108,7 @@ public class Commander {
             currentTrial++;
 
             if (!(currentTrial >= numTrials)) {
-                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Sleeping for " +
+                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
                         postTrialSleepInterval + " ms.");
                 performClientVMGarbageCollection();
                 Thread.sleep(postTrialSleepInterval);
