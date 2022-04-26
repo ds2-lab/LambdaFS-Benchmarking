@@ -41,6 +41,8 @@ public class Commands {
     public static final Log LOG = LogFactory.getLog(Commands.class);
     private static Scanner scanner = new Scanner(System.in);
 
+    public static volatile boolean TRACK_OP_PERFORMED = false;
+
     /**
      * Indicates whether the JVM is running a follower process.
      * If true, then we are a follower.

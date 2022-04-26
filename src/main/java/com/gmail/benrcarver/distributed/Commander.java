@@ -74,6 +74,11 @@ public class Commander {
     private final Server tcpServer;
 
     /**
+     * Indicates whether followers are currently set to track operations performed.
+     */
+    private boolean followersTrackOpsPerformed = false;
+
+    /**
      * The leader's IP address.
      */
     private final String ip;
@@ -189,6 +194,7 @@ public class Commander {
             startServer();
             launchFollowers();
         }
+        Commands.TRACK_OP_PERFORMED = true;
         LOG.info("Commander is operating in NON-DISTRIBUTED mode.");
         interactiveLoop();
     }
@@ -266,6 +272,9 @@ public class Commander {
                 int op = getNextOperation();
 
                 switch (op) {
+                    case OP_TOGGLE_OPS_PERFORMED_FOLLOWERS:
+                        toggleOperationsPerformedInFollowers();
+                        break;
                     case OP_TRIGGER_CLIENT_GC:
                         performClientVMGarbageCollection();
                         break;
@@ -408,6 +417,27 @@ public class Commander {
                 LOG.error("Exception encountered:", ex);
             }
         }
+    }
+
+    /**
+     * Enable/disable followers tracking OperationPerformed instances and sending them after benchmarks.
+     */
+    private void toggleOperationsPerformedInFollowers() {
+        if (followersTrackOpsPerformed) {
+            LOG.info("DISABLING OperationPerformed tracking.");
+        } else {
+            LOG.info("ENABLING OperationPerformed tracking.");
+        }
+
+        followersTrackOpsPerformed = !followersTrackOpsPerformed;
+
+        JsonObject payload = new JsonObject();
+        String operationId = UUID.randomUUID().toString();
+        payload.addProperty(OPERATION, OP_TOGGLE_OPS_PERFORMED_FOLLOWERS);
+        payload.addProperty(OPERATION_ID, operationId);
+        payload.addProperty(TRACK_OP_PERFORMED, followersTrackOpsPerformed);
+
+        issueCommandToFollowers("Toggle Operation Performed", operationId, payload);
     }
 
     /**
@@ -1209,6 +1239,7 @@ public class Commander {
             registrationPayload.addProperty(OPERATION, OP_REGISTRATION);
             registrationPayload.addProperty(NAMENODE_ENDPOINT, nameNodeEndpoint);
             registrationPayload.addProperty(HDFS_CONFIG_PATH, hdfsConfigFilePath);
+            registrationPayload.addProperty(TRACK_OP_PERFORMED, followersTrackOpsPerformed);
 
             LOG.debug("Sending '" + NAMENODE_ENDPOINT + "' as '" + NAMENODE_ENDPOINT + "'.");
             LOG.debug("Sending '" + HDFS_CONFIG_PATH + "' as '" + hdfsConfigFilePath + "'.");
@@ -1256,12 +1287,13 @@ public class Commander {
         System.out.println("====== MENU ======");
         System.out.println("Debug Operations:");
         System.out.println(
-                "(-9) Perform client VM garbage collection\n" +
-                "(-8) Print/modify post-trial sleep interval\n" +
-                "(-7) Print currently active NameNodes\n" +
-                "(-6) Get/set consistency protocol enabled flag.\n(-5) Get/set serverless log4j debug level.\n" +
-                "(-4) Clear statistics\n(-3) Output statistics packages to CSV\n" +
-                "(-2) Output operations performed + write to file\n(-1) Print TCP debug information.");
+                "(-10) Toggle 'OperationPerformed' tracking in followers\n" +
+                "(-9)  Perform client VM garbage collection\n" +
+                "(-8)  Print/modify post-trial sleep interval\n" +
+                "(-7)  Print currently active NameNodes\n" +
+                "(-6)  Get/set consistency protocol enabled flag.\n(-5) Get/set serverless log4j debug level.\n" +
+                "(-4)  Clear statistics\n(-3) Output statistics packages to CSV\n" +
+                "(-2)  Output operations performed + write to file\n(-1) Print TCP debug information.");
         System.out.println("\nStandard Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +

@@ -140,6 +140,16 @@ public class Follower {
         }
 
         switch(operation) {
+            case OP_TOGGLE_OPS_PERFORMED_FOLLOWERS:
+                boolean toggle = message.getAsJsonPrimitive(TRACK_OP_PERFORMED).getAsBoolean();
+
+                if (toggle)
+                    LOG.debug("ENABLING OperationPerformed tracking.");
+                else
+                    LOG.debug("DISABLING OperationPerformed tracking.");
+
+                Commands.TRACK_OP_PERFORMED = toggle;
+                break;
             case OP_TRIGGER_CLIENT_GC:
                 LOG.debug("Calling System.gc() now!");
                 System.gc();
@@ -331,6 +341,13 @@ public class Follower {
         LOG.debug("Received REGISTRATION message from Leader.");
         nameNodeEndpoint = message.getAsJsonPrimitive(NAMENODE_ENDPOINT).getAsString();
         hdfsConfigFilePath = message.getAsJsonPrimitive(HDFS_CONFIG_PATH).getAsString();
+        Commands.TRACK_OP_PERFORMED = message.getAsJsonPrimitive(TRACK_OP_PERFORMED).getAsBoolean();
+
+        if (Commands.TRACK_OP_PERFORMED)
+            LOG.debug("ENABLING OperationPerformed tracking.");
+        else
+            LOG.debug("DISABLING OperationPerformed tracking.");
+
         // The initDfsClient() function in the Commander file uses the Commander's static 'hdfsConfigFilePath'
         // variable. This is basically a hack, pretty gross.
         Commander.hdfsConfigFilePath = hdfsConfigFilePath;
