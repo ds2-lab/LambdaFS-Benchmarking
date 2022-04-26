@@ -140,6 +140,10 @@ public class Follower {
         }
 
         switch(operation) {
+            case OP_TRIGGER_CLIENT_GC:
+                LOG.debug("Calling System.gc() now!");
+                System.gc();
+                break;
             case OP_REGISTRATION:
                 handleRegistration(message);
                 break;

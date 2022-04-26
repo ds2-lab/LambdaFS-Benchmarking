@@ -1,6 +1,9 @@
 package com.gmail.benrcarver.distributed;
 
 import java.io.Serializable;
+import java.util.List;
+
+import io.hops.metrics.OperationPerformed;
 
 /**
  * Encapsulates the result of running a particular benchmark. This class holds onto various metrics that
@@ -11,6 +14,7 @@ public class DistributedBenchmarkResult implements Serializable {
     public String opId;
     public int operation;
     public int numOpsPerformed;
+    public List<OperationPerformed> opsPerformed;
 
     /**
      * Duration in seconds.
@@ -53,6 +57,12 @@ public class DistributedBenchmarkResult implements Serializable {
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed,
                                       double duration, long startTime, long stopTime,
                                       int cacheHits, int cacheMisses) {
+        this(opId, operation, numOpsPerformed, duration, startTime, stopTime, cacheHits, cacheMisses, null);
+    }
+
+    public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed,
+                                      double duration, long startTime, long stopTime,
+                                      int cacheHits, int cacheMisses, List<OperationPerformed> opsPerformed) {
         this.opId = opId;
         this.operation = operation;
         this.numOpsPerformed = numOpsPerformed;
@@ -61,6 +71,7 @@ public class DistributedBenchmarkResult implements Serializable {
         this.stopTime = stopTime;
         this.cacheHits = cacheHits;
         this.cacheMisses = cacheMisses;
+        this.opsPerformed = opsPerformed;
     }
 
     public void setOperationId(String operationId) {

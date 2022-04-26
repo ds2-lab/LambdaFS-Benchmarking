@@ -266,6 +266,9 @@ public class Commander {
                 int op = getNextOperation();
 
                 switch (op) {
+                    case OP_TRIGGER_CLIENT_GC:
+                        performClientVMGarbageCollection();
+                        break;
                     case OP_CHANGE_POST_TRIAL_SLEEP:
                         printAndModifyPostTrialSleep();
                         break;
@@ -405,6 +408,20 @@ public class Commander {
                 LOG.error("Exception encountered:", ex);
             }
         }
+    }
+
+    /**
+     * Perform GCs on this Client VM as well as any other client VMs if we're the Commander for a distributed setup.
+     */
+    private void performClientVMGarbageCollection() {
+        JsonObject payload = new JsonObject();
+        String operationId = UUID.randomUUID().toString();
+        payload.addProperty(OPERATION, OP_TRIGGER_CLIENT_GC);
+        payload.addProperty(OPERATION_ID, operationId);
+
+        issueCommandToFollowers("Client VM Garbage Collection", operationId, payload);
+
+        System.gc();
     }
 
     private void handleSetLogLevel(DistributedFileSystem hdfs) {
@@ -990,6 +1007,7 @@ public class Commander {
             if (!(currentTrial >= numTrials)) {
                 LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Sleeping for " +
                         postTrialSleepInterval + " ms.");
+                performClientVMGarbageCollection();
                 Thread.sleep(postTrialSleepInterval);
             }
         }
@@ -1092,6 +1110,7 @@ public class Commander {
             if (!(currentTrial >= numTrials)) {
                 LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Sleeping for " +
                         postTrialSleepInterval + " ms.");
+                performClientVMGarbageCollection();
                 Thread.sleep(postTrialSleepInterval);
             }
         }
@@ -1237,6 +1256,7 @@ public class Commander {
         System.out.println("====== MENU ======");
         System.out.println("Debug Operations:");
         System.out.println(
+                "(-9) Perform client VM garbage collection\n" +
                 "(-8) Print/modify post-trial sleep interval\n" +
                 "(-7) Print currently active NameNodes\n" +
                 "(-6) Get/set consistency protocol enabled flag.\n(-5) Get/set serverless log4j debug level.\n" +

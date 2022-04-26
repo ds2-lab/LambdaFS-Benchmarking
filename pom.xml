@@ -49,6 +49,12 @@
             <version>2.12.2</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>io.hops.metadata</groupId>
+            <artifactId>hops-metadata-dal</artifactId>
+            <scope>compile</scope>
+            <version>3.2.0.3-SNAPSHOT</version>
+        </dependency>
         <!-- https://mvnrepository.com/artifact/commons-cli/commons-cli -->
         <dependency>
             <groupId>commons-cli</groupId>
