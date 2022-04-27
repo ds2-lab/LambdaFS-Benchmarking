@@ -562,11 +562,17 @@ public class Commander {
      * @param payload Contains the command and necessary arguments.
      */
     private void issueCommandToFollowers(String opName, String operationId, JsonObject payload) {
+        int numFollowers = followers.size();
+        if (numFollowers == 0) {
+            LOG.warn("We have no followers (though we are in distributed mode).");
+            return;
+        }
+
         LOG.debug("Issuing '" + opName + "' (id=" + operationId + ") command to " +
-                followers.size() + " follower(s).");
+                numFollowers + " follower(s).");
 
         BlockingQueue<DistributedBenchmarkResult> resultQueue = new
-                ArrayBlockingQueue<>(followers.size());
+                ArrayBlockingQueue<>(numFollowers);
         resultQueues.put(operationId, resultQueue);
 
         String payloadStr = new Gson().toJson(payload);
