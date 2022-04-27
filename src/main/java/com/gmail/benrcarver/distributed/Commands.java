@@ -243,7 +243,8 @@ public class Commands {
 
         List<OperationPerformed> allOperationsPerformed = new ArrayList<>();
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            sharedHdfs.addOperationPerformeds(opsPerformed);
+            if (!IS_FOLLOWER)
+                sharedHdfs.addOperationPerformeds(opsPerformed);
             for (OperationPerformed op : opsPerformed) {
                 totalCacheHits += op.getMetadataCacheHits();
                 totalCacheMisses += op.getMetadataCacheMisses();
@@ -251,14 +252,16 @@ public class Commands {
             }
         }
 
-        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            //LOG.info("Adding list of " + statPackages.size() + " statistics packages to master/shared HDFS object.");
-            sharedHdfs.mergeStatisticsPackages(statPackages, true);
-        }
+        if (!IS_FOLLOWER) {
+            for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
+                //LOG.info("Adding list of " + statPackages.size() + " statistics packages to master/shared HDFS object.");
+                sharedHdfs.mergeStatisticsPackages(statPackages, true);
+            }
 
-        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            // LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
-            sharedHdfs.mergeTransactionEvents(txEvents, true);
+            for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
+                // LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
+                sharedHdfs.mergeTransactionEvents(txEvents, true);
+            }
         }
 
         double durationSeconds = (end - start) / 1000.0;
@@ -410,7 +413,8 @@ public class Commands {
 
         List<OperationPerformed> allOperationsPerformed = new ArrayList<>();
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            sharedHdfs.addOperationPerformeds(opsPerformed);
+            if (!IS_FOLLOWER)
+                sharedHdfs.addOperationPerformeds(opsPerformed);
             for (OperationPerformed op : opsPerformed) {
                 totalCacheHits += op.getMetadataCacheHits();
                 totalCacheMisses += op.getMetadataCacheMisses();
@@ -418,12 +422,14 @@ public class Commands {
             }
         }
 
-        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            sharedHdfs.mergeStatisticsPackages(statPackages, true);
-        }
+        if (!IS_FOLLOWER) {
+            for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
+                sharedHdfs.mergeStatisticsPackages(statPackages, true);
+            }
 
-        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            sharedHdfs.mergeTransactionEvents(txEvents, true);
+            for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
+                sharedHdfs.mergeTransactionEvents(txEvents, true);
+            }
         }
 
         // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
@@ -565,7 +571,8 @@ public class Commands {
 
         List<OperationPerformed> allOperationsPerformed = new ArrayList<>();
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            sharedHdfs.addOperationPerformeds(opsPerformed);
+            if (!IS_FOLLOWER)
+                sharedHdfs.addOperationPerformeds(opsPerformed);
             for (OperationPerformed op : opsPerformed) {
                 totalCacheHits += op.getMetadataCacheHits();
                 totalCacheMisses += op.getMetadataCacheMisses();
@@ -573,12 +580,14 @@ public class Commands {
             }
         }
 
-        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            sharedHdfs.mergeStatisticsPackages(statPackages, true);
-        }
+        if (!IS_FOLLOWER) {
+            for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
+                sharedHdfs.mergeStatisticsPackages(statPackages, true);
+            }
 
-        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            sharedHdfs.mergeTransactionEvents(txEvents, true);
+            for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
+                sharedHdfs.mergeTransactionEvents(txEvents, true);
+            }
         }
 
         // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
@@ -866,19 +875,22 @@ public class Commands {
         int totalCacheMisses = 0;
 
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            sharedHdfs.addOperationPerformeds(opsPerformed);
+            if (!IS_FOLLOWER)
+                sharedHdfs.addOperationPerformeds(opsPerformed);
             for (OperationPerformed op : opsPerformed) {
                 totalCacheHits += op.getMetadataCacheHits();
                 totalCacheMisses += op.getMetadataCacheMisses();
             }
         }
 
-        for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-            sharedHdfs.mergeStatisticsPackages(statPackages, true);
-        }
+        if (!IS_FOLLOWER) {
+            for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
+                sharedHdfs.mergeStatisticsPackages(statPackages, true);
+            }
 
-        for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-            sharedHdfs.mergeTransactionEvents(txEvents, true);
+            for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
+                sharedHdfs.mergeTransactionEvents(txEvents, true);
+            }
         }
 
         double durationSeconds = (end - start) / 1000.0;

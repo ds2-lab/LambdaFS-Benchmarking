@@ -26,11 +26,11 @@ public class Network {
         kryo.register(String[].class);
         kryo.register(DistributedBenchmarkResult.class);
         kryo.register(OperationPerformed.class);
-        kryo.register(HashMap.class);
         kryo.register(TransactionEvent.class);
         kryo.register(TransactionAttempt.class);
         kryo.register(java.util.HashMap.class);
         kryo.register(java.util.ArrayList.class);
+        kryo.register(java.util.List.class);
         kryo.register(byte[].class);
         kryo.register(OperationPerformed[].class);
         kryo.register(java.util.HashMap[].class);
