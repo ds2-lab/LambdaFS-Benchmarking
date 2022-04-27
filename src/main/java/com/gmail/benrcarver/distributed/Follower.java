@@ -142,6 +142,21 @@ public class Follower {
         }
 
         switch(operation) {
+            case OP_TOGGLE_BENCHMARK_MODE:
+                boolean benchmarkModeEnabled = message.getAsJsonPrimitive(BENCHMARK_MODE).getAsBoolean();
+
+                if (benchmarkModeEnabled)
+                    LOG.debug("ENABLING Benchmark Mode (and thus disabling OperationPerformed tracking).");
+                else
+                    LOG.debug("DISABLING Benchmark Mode.");
+
+                Commands.BENCHMARKING_MODE = benchmarkModeEnabled;
+                hdfs.setBenchmarkModeEnabled(benchmarkModeEnabled);
+
+                if (benchmarkModeEnabled)
+                    Commands.TRACK_OP_PERFORMED = false;
+
+                break;
             case OP_TOGGLE_OPS_PERFORMED_FOLLOWERS:
                 boolean toggle = message.getAsJsonPrimitive(TRACK_OP_PERFORMED).getAsBoolean();
 
@@ -153,6 +168,13 @@ public class Follower {
                 Commands.TRACK_OP_PERFORMED = toggle;
                 break;
             case OP_TRIGGER_CLIENT_GC:
+                LOG.debug("We've been instructed to perform a garbage collection!");
+
+                if (Commands.BENCHMARKING_MODE) {
+                    LOG.debug("Clearing statistics packages first since Benchmarking Mode is enabled.");
+                    Commands.clearStatisticsPackagesNoPrompt(hdfs);
+                }
+
                 LOG.debug("Calling System.gc() now!");
                 System.gc();
                 break;

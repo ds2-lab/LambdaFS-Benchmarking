@@ -277,6 +277,8 @@ public class Commander {
                 int op = getNextOperation();
 
                 switch (op) {
+                    case OP_TOGGLE_BENCHMARK_MODE:
+                        break;
                     case OP_TOGGLE_OPS_PERFORMED_FOLLOWERS:
                         toggleOperationsPerformedInFollowers();
                         break;
@@ -421,6 +423,33 @@ public class Commander {
             } catch (Exception ex) {
                 LOG.error("Exception encountered:", ex);
             }
+        }
+    }
+
+    private void toggleBenchmarkMode() {
+        boolean toggle = getBooleanFromUser("Enter 'true' to enable benchmark mode and 'false' to disable it.");
+
+        if (toggle) {
+            LOG.info("ENABLING benchmark mode. This will also disable 'Followers Track Ops Perf'");
+            followersTrackOpsPerformed = false;
+        }
+        else {
+            LOG.info("DISABLING benchmark mode. This will NOT enable 'Followers Track Ops Perf'. That must be done separately.");
+        }
+
+        Commands.BENCHMARKING_MODE = toggle;
+        primaryHdfs.setBenchmarkModeEnabled(toggle);
+
+        if (!nondistributed) {
+            JsonObject payload = new JsonObject();
+            String operationId = UUID.randomUUID().toString();
+            payload.addProperty(OPERATION, OP_TOGGLE_BENCHMARK_MODE);
+            payload.addProperty(OPERATION_ID, operationId);
+            payload.addProperty(BENCHMARK_MODE, toggle);
+
+            issueCommandToFollowers((toggle ? "Enabling" : "Disabling" ) + " Benchmark Mode", operationId, payload);
+        } else {
+            LOG.warn("Running in non-distributed mode. We have no followers.");
         }
     }
 
@@ -1221,6 +1250,7 @@ public class Commander {
 
         hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
         hdfs.setServerlessFunctionLogLevel(serverlessLogLevel);
+        hdfs.setBenchmarkModeEnabled(Commands.BENCHMARKING_MODE);
 
         return hdfs;
     }
