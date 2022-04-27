@@ -30,5 +30,6 @@ public class Network {
         kryo.register(java.util.HashMap.class);
         kryo.register(java.util.ArrayList.class);
         kryo.register(byte[].class);
+        kryo.register(OperationPerformed[].class);
     }
 }
