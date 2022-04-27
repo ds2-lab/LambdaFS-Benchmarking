@@ -20,6 +20,8 @@ public class Network {
         Kryo kryo = endPoint.getKryo();
 
         kryo.setReferences(true);
+        kryo.setRegistrationRequired(false);
+        kryo.setWarnUnregisteredClasses(true);
 
         kryo.register(String[].class);
         kryo.register(DistributedBenchmarkResult.class);
