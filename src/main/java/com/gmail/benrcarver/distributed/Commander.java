@@ -49,6 +49,8 @@ public class Commander {
 
     private final List<Connection> followers;
 
+    private static final int COMMANDER_TCP_BUFFER_SIZES = Follower.FOLLOWER_TCP_BUFFER_SIZES * 4;
+
     private static final String LEADER_PREFIX = "[LEADER TCP SERVER]";
 
     /**
@@ -156,7 +158,7 @@ public class Commander {
         this.followers = new ArrayList<>();
         this.resultQueues = new ConcurrentHashMap<>();
 
-        tcpServer = new Server(32000, 32000) {
+        tcpServer = new Server(COMMANDER_TCP_BUFFER_SIZES, COMMANDER_TCP_BUFFER_SIZES) {
             @Override
             protected Connection newConnection() {
                 LOG.debug(LEADER_PREFIX + " Creating new FollowerConnection.");

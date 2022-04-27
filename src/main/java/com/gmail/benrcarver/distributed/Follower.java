@@ -52,12 +52,14 @@ public class Follower {
     private String serverlessLogLevel = "INFO";
     private boolean consistencyEnabled = true;
 
+    public static final int FOLLOWER_TCP_BUFFER_SIZES = (int)128e6;
+
     public synchronized void waitUntilDone() throws InterruptedException {
         this.wait();
     }
 
     public Follower(String masterIp, int masterPort, String serverlessLogLevel, boolean disableConsistency) {
-        client = new Client(16000, 16000);
+        client = new Client(FOLLOWER_TCP_BUFFER_SIZES, FOLLOWER_TCP_BUFFER_SIZES);
         this.masterIp = masterIp;
         this.masterPort = masterPort;
         this.serverlessLogLevel = serverlessLogLevel;
