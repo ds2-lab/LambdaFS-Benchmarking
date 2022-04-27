@@ -943,11 +943,14 @@ public class Commander {
             cacheHits.addValue(res.cacheHits);
             cacheMisses.addValue(res.cacheMisses);
 
-            primaryHdfs.addOperationPerformeds(res.opsPerformed);
+            if (res.opsPerformed != null)
+                primaryHdfs.addOperationPerformeds(res.opsPerformed);
 
-            for (HashMap<String, List<TransactionEvent>> txEvents : res.txEvents) {
-                //LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
-                primaryHdfs.mergeTransactionEvents(txEvents, true);
+            if (res.txEvents != null) {
+                for (HashMap<String, List<TransactionEvent>> txEvents : res.txEvents) {
+                    //LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
+                    primaryHdfs.mergeTransactionEvents(txEvents, true);
+                }
             }
         }
 
