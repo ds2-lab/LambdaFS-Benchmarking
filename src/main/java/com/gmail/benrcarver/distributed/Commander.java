@@ -9,15 +9,14 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.hops.metrics.TransactionEvent;
+import io.hops.transaction.context.TransactionsStats;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.common.IOUtils;
 import net.schmizz.sshj.connection.channel.direct.Session;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import io.hops.metrics.TransactionEvent;
-import io.hops.metrics.TransactionAttempt;
-import io.hops.transaction.context.TransactionsStats;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -25,7 +24,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
-import io.hops.metrics.OperationPerformed;
 import org.yaml.snakeyaml.Yaml;
 
 import java.nio.file.Files;
@@ -125,6 +123,11 @@ public class Commander {
     private static boolean consistencyEnabled = true;
 
     private static Commander instanace;
+
+    /**
+     * The main DistributedFileSystem instance. Used by the main thread and also to keep track of metrics.
+     */
+    private DistributedFileSystem primaryHdfs;
 
     /**
      * Indicates whether the target filesystem is Serverless HopsFS or Vanilla HopsFS.
@@ -263,7 +266,7 @@ public class Commander {
     private void interactiveLoop() {
         LOG.info("Beginning execution as LEADER now.");
 
-        DistributedFileSystem hdfs = initDfsClient(nameNodeEndpoint);
+        primaryHdfs = initDfsClient(nameNodeEndpoint);
 
         while (true) {
             try {
@@ -282,17 +285,17 @@ public class Commander {
                         printAndModifyPostTrialSleep();
                         break;
                     case OP_GET_ACTIVE_NAMENODES:
-                        Commands.getActiveNameNodesOperation(hdfs);
+                        Commands.getActiveNameNodesOperation(primaryHdfs);
                         break;
                     case OP_SET_CONSISTENCY_PROTOCOL_ENABLED:
-                        handleSetConsistencyProtocolEnabled(hdfs);
+                        handleSetConsistencyProtocolEnabled(primaryHdfs);
                         break;
                     case OP_SET_LOG_LEVEL:
-                        handleSetLogLevel(hdfs);
+                        handleSetLogLevel(primaryHdfs);
                         break;
                     case OP_CLEAR_STATISTICS:
                         LOG.info("Clearing statistics packages...");
-                        Commands.clearStatisticsPackages(hdfs);
+                        Commands.clearStatisticsPackages(primaryHdfs);
                         break;
                     case OP_WRITE_STATISTICS:
                         if (!isServerless) {
@@ -302,12 +305,12 @@ public class Commander {
 
                         LOG.info("Writing statistics packages to files...");
                         LOG.info("");
-                        hdfs.dumpStatisticsPackages(true);
+                        primaryHdfs.dumpStatisticsPackages(true);
                         break;
                     case OP_PRINT_OPS_PERFORMED:
                         LOG.info("Printing operations performed...");
                         LOG.info("");
-                        Commands.printOperationsPerformed(hdfs);
+                        Commands.printOperationsPerformed(primaryHdfs);
                         break;
                     case OP_PRINT_TCP_DEBUG:
                         if (!isServerless) {
@@ -317,12 +320,12 @@ public class Commander {
 
                         LOG.info("Printing TCP debug information...");
                         LOG.info("");
-                        hdfs.printDebugInformation();
+                        primaryHdfs.printDebugInformation();
                         break;
                     case OP_EXIT:
                         LOG.info("Exiting now... goodbye!");
                         try {
-                            hdfs.close();
+                            primaryHdfs.close();
                         } catch (IOException ex) {
                             LOG.info("Encountered exception while closing file system...");
                             ex.printStackTrace();
@@ -331,83 +334,83 @@ public class Commander {
                         System.exit(0);
                     case OP_CREATE_FILE:
                         LOG.info("CREATE FILE selected!");
-                        Commands.createFileOperation(hdfs, nameNodeEndpoint);
+                        Commands.createFileOperation(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_MKDIR:
                         LOG.info("MAKE DIRECTORY selected!");
-                        Commands.mkdirOperation(hdfs, nameNodeEndpoint);
+                        Commands.mkdirOperation(primaryHdfs, nameNodeEndpoint);
                         ;
                         break;
                     case OP_READ_FILE:
                         LOG.info("READ FILE selected!");
-                        Commands.readOperation(hdfs, nameNodeEndpoint);
+                        Commands.readOperation(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_RENAME:
                         LOG.info("RENAME selected!");
-                        Commands.renameOperation(hdfs, nameNodeEndpoint);
+                        Commands.renameOperation(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_DELETE:
                         LOG.info("DELETE selected!");
-                        Commands.deleteOperation(hdfs, nameNodeEndpoint);
+                        Commands.deleteOperation(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_LIST:
                         LOG.info("LIST selected!");
-                        Commands.listOperation(hdfs, nameNodeEndpoint);
+                        Commands.listOperation(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_APPEND:
                         LOG.info("APPEND selected!");
-                        Commands.appendOperation(hdfs, nameNodeEndpoint);
+                        Commands.appendOperation(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_CREATE_SUBTREE:
                         LOG.info("CREATE SUBTREE selected!");
-                        Commands.createSubtree(hdfs, nameNodeEndpoint);
+                        Commands.createSubtree(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_PING:
                         LOG.info("PING selected!");
-                        Commands.pingOperation(hdfs);
+                        Commands.pingOperation(primaryHdfs);
                         break;
                     case OP_PREWARM:
                         LOG.info("PREWARM selected!");
-                        Commands.prewarmOperation(hdfs);
+                        Commands.prewarmOperation(primaryHdfs);
                         break;
                     case OP_WRITE_FILES_TO_DIR:
                         LOG.info("WRITE FILES TO DIRECTORY selected!");
-                        Commands.writeFilesToDirectory(hdfs, hdfsConfiguration, nameNodeEndpoint);
+                        Commands.writeFilesToDirectory(primaryHdfs, hdfsConfiguration, nameNodeEndpoint);
                         break;
                     case OP_READ_FILES:
                         LOG.info("READ FILES selected!");
-                        Commands.readFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        Commands.readFilesOperation(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_DELETE_FILES:
                         LOG.info("DELETE FILES selected!");
-                        Commands.deleteFilesOperation(hdfs, nameNodeEndpoint);
+                        Commands.deleteFilesOperation(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_WRITE_FILES_TO_DIRS:
                         LOG.info("WRITE FILES TO DIRECTORIES selected!");
-                        Commands.writeFilesToDirectories(hdfs, hdfsConfiguration, nameNodeEndpoint);
+                        Commands.writeFilesToDirectories(primaryHdfs, hdfsConfiguration, nameNodeEndpoint);
                         break;
                     case OP_WEAK_SCALING_READS:
                         LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
-                        weakScalingReadOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        weakScalingReadOperation(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_STRONG_SCALING_READS:
                         LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
-                        strongScalingReadOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        strongScalingReadOperation(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_WEAK_SCALING_WRITES:
                         LOG.info("'Write n Files with n Threads (Weak Scaling - Write)' selected!");
-                        weakScalingWriteOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        weakScalingWriteOperation(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_STRONG_SCALING_WRITES:
                         LOG.info("'Write n Files y Times with z Threads (Strong Scaling - Write)' selected!");
                         throw new NotImplementedException("Not yet implemented.");
                     case OP_CREATE_DIRECTORIES:
                         LOG.info("CREATE DIRECTORIES selected!");
-                        Commands.createDirectories(hdfs, nameNodeEndpoint);
+                        Commands.createDirectories(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_WEAK_SCALING_READS_V2:
                         LOG.info("WeakScalingReadsV2 Selected!");
-                        weakScalingReadOperationV2(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        weakScalingReadOperationV2(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
                         break;
                     default:
                         LOG.info("ERROR: Unknown or invalid operation specified: " + op);
@@ -939,6 +942,13 @@ public class Commander {
             throughput.addValue(res.getOpsPerSecond());
             cacheHits.addValue(res.cacheHits);
             cacheMisses.addValue(res.cacheMisses);
+
+            primaryHdfs.addOperationPerformeds(res.opsPerformed);
+
+            for (HashMap<String, List<TransactionEvent>> txEvents : res.txEvents) {
+                //LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
+                primaryHdfs.mergeTransactionEvents(txEvents, true);
+            }
         }
 
         double aggregateThroughput = (opsPerformed.getSum() / duration.getMean());
