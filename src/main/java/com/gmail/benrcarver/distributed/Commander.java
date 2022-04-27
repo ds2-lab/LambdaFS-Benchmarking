@@ -428,34 +428,39 @@ public class Commander {
      * Enable/disable followers tracking OperationPerformed instances and sending them after benchmarks.
      */
     private void toggleOperationsPerformedInFollowers() {
-        if (followersTrackOpsPerformed) {
-            LOG.info("DISABLING OperationPerformed tracking.");
+        if (!nondistributed) {
+            if (followersTrackOpsPerformed) {
+                LOG.info("DISABLING OperationPerformed tracking.");
+            } else {
+                LOG.info("ENABLING OperationPerformed tracking.");
+            }
+
+            followersTrackOpsPerformed = !followersTrackOpsPerformed;
+
+            JsonObject payload = new JsonObject();
+            String operationId = UUID.randomUUID().toString();
+            payload.addProperty(OPERATION, OP_TOGGLE_OPS_PERFORMED_FOLLOWERS);
+            payload.addProperty(OPERATION_ID, operationId);
+            payload.addProperty(TRACK_OP_PERFORMED, followersTrackOpsPerformed);
+
+            issueCommandToFollowers("Toggle Operation Performed", operationId, payload);
         } else {
-            LOG.info("ENABLING OperationPerformed tracking.");
+            LOG.warn("Running in non-distributed mode. We have no followers.");
         }
-
-        followersTrackOpsPerformed = !followersTrackOpsPerformed;
-
-        JsonObject payload = new JsonObject();
-        String operationId = UUID.randomUUID().toString();
-        payload.addProperty(OPERATION, OP_TOGGLE_OPS_PERFORMED_FOLLOWERS);
-        payload.addProperty(OPERATION_ID, operationId);
-        payload.addProperty(TRACK_OP_PERFORMED, followersTrackOpsPerformed);
-
-        issueCommandToFollowers("Toggle Operation Performed", operationId, payload);
     }
 
     /**
      * Perform GCs on this Client VM as well as any other client VMs if we're the Commander for a distributed setup.
      */
     private void performClientVMGarbageCollection() {
-        JsonObject payload = new JsonObject();
-        String operationId = UUID.randomUUID().toString();
-        payload.addProperty(OPERATION, OP_TRIGGER_CLIENT_GC);
-        payload.addProperty(OPERATION_ID, operationId);
+        if (!nondistributed) {
+            JsonObject payload = new JsonObject();
+            String operationId = UUID.randomUUID().toString();
+            payload.addProperty(OPERATION, OP_TRIGGER_CLIENT_GC);
+            payload.addProperty(OPERATION_ID, operationId);
 
-        issueCommandToFollowers("Client VM Garbage Collection", operationId, payload);
-
+            issueCommandToFollowers("Client VM Garbage Collection", operationId, payload);
+        }
         System.gc();
     }
 
