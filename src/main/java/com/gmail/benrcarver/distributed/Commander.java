@@ -26,6 +26,8 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.yaml.snakeyaml.Yaml;
 
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.*;
@@ -130,6 +132,16 @@ public class Commander {
      * The main DistributedFileSystem instance. Used by the main thread and also to keep track of metrics.
      */
     private DistributedFileSystem primaryHdfs;
+
+    /**
+     * The approximate number of collections that occurred.
+     */
+    private long numGarbageCollections = 0L;
+
+    /**
+     * The approximate time, in milliseconds, that has elapsed during GCs
+     */
+    private long garbageCollectionTime = 0L;
 
     /**
      * Indicates whether the target filesystem is Serverless HopsFS or Vanilla HopsFS.
@@ -271,6 +283,10 @@ public class Commander {
         primaryHdfs = initDfsClient(nameNodeEndpoint);
 
         while (true) {
+            updateGCMetrics();
+            long currentGCs = numGarbageCollections;
+            long currentGCTime = garbageCollectionTime;
+
             try {
                 Thread.sleep(50);
                 printMenu();
@@ -423,6 +439,31 @@ public class Commander {
             } catch (Exception ex) {
                 LOG.error("Exception encountered:", ex);
             }
+
+            updateGCMetrics();
+            long numGCsPerformedDuringLastOp = numGarbageCollections - currentGCs;
+            long timeSpentInGCDuringLastOp = garbageCollectionTime - currentGCTime;
+
+            LOG.debug("Performed " + numGCsPerformedDuringLastOp + " garbage collection(s) during last operation.");
+            if (numGCsPerformedDuringLastOp > 0)
+                LOG.debug("Spent " + timeSpentInGCDuringLastOp + " ms garbage collecting during the last operation.");
+        }
+    }
+
+    /**
+     * Update the running totals for number of GCs performed and time spent GC-ing.
+     */
+    private void updateGCMetrics() {
+        List<GarbageCollectorMXBean> mxBeans = ManagementFactory.getGarbageCollectorMXBeans();
+        for (GarbageCollectorMXBean mxBean : mxBeans) {
+            long count = mxBean.getCollectionCount();
+            long time  = mxBean.getCollectionTime();
+
+            if (count > 0)
+                this.numGarbageCollections += count;
+
+            if (time > 0)
+                this.garbageCollectionTime += time;
         }
     }
 

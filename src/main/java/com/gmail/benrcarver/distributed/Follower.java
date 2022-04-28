@@ -21,6 +21,8 @@ import io.hops.metrics.OperationPerformed;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -47,6 +49,16 @@ public class Follower {
     private String hdfsConfigFilePath;
     private Configuration hdfsConfiguration;
     private DistributedFileSystem hdfs;
+
+    /**
+     * The approximate number of collections that occurred.
+     */
+    private long numGarbageCollections = 0L;
+
+    /**
+     * The approximate time, in milliseconds, that has elapsed during GCs
+     */
+    private long garbageCollectionTime = 0L;
 
     // TODO: Make it so we can change these dynamically.
     private String serverlessLogLevel = "INFO";
@@ -132,13 +144,36 @@ public class Follower {
         return hdfs;
     }
 
+    /**
+     * Update the running totals for number of GCs performed and time spent GC-ing.
+     */
+    private void updateGCMetrics() {
+        List<GarbageCollectorMXBean> mxBeans = ManagementFactory.getGarbageCollectorMXBeans();
+        for (GarbageCollectorMXBean mxBean : mxBeans) {
+            long count = mxBean.getCollectionCount();
+            long time  = mxBean.getCollectionTime();
+
+            if (count > 0)
+                this.numGarbageCollections += count;
+
+            if (time > 0)
+                this.garbageCollectionTime += time;
+        }
+    }
+
     private void handleMessageFromLeader(JsonObject message, DistributedFileSystem hdfs) throws IOException, InterruptedException {
         int operation = message.getAsJsonPrimitive(OPERATION).getAsInt();
+
+        updateGCMetrics();
+        long currentGCs = numGarbageCollections;
+        long currentGCTime = garbageCollectionTime;
 
         String operationId = "N/A";
         if (message.has(OPERATION_ID)) {
             operationId = message.getAsJsonPrimitive(OPERATION_ID).getAsString();
             LOG.info("Received operation " + operationId + " from Leader.");
+            LOG.debug("Current Number of GCs: " + numGarbageCollections);
+            LOG.debug("Time spent GC-ing: " + garbageCollectionTime + " ms");
         }
 
         switch(operation) {
@@ -345,6 +380,14 @@ public class Follower {
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
                 break;
         }
+
+        updateGCMetrics();
+        long numGCsPerformedDuringLastOp = numGarbageCollections - currentGCs;
+        long timeSpentInGCDuringLastOp = garbageCollectionTime - currentGCTime;
+
+        LOG.debug("Performed " + numGCsPerformedDuringLastOp + " garbage collection(s) during last operation.");
+        if (numGCsPerformedDuringLastOp > 0)
+            LOG.debug("Spent " + timeSpentInGCDuringLastOp + " ms garbage collecting during the last operation.");
     }
 
     private void sendResultToLeader(DistributedBenchmarkResult result) {
