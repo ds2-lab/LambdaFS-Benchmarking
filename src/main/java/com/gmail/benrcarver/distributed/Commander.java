@@ -294,6 +294,7 @@ public class Commander {
 
                 switch (op) {
                     case OP_TOGGLE_BENCHMARK_MODE:
+                        toggleBenchmarkMode();
                         break;
                     case OP_TOGGLE_OPS_PERFORMED_FOLLOWERS:
                         toggleOperationsPerformedInFollowers();
@@ -1384,6 +1385,7 @@ public class Commander {
         System.out.println("====== MENU ======");
         System.out.println("Debug Operations:");
         System.out.println(
+                "(-11) Toggle 'Benchmarking Mode' in self and followers\n" +
                 "(-10) Toggle 'OperationPerformed' tracking in followers\n" +
                 "(-9)  Perform client VM garbage collection\n" +
                 "(-8)  Print/modify post-trial sleep interval\n" +
