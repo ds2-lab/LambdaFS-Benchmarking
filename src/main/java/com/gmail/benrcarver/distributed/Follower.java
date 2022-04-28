@@ -149,6 +149,8 @@ public class Follower {
      */
     private void updateGCMetrics() {
         List<GarbageCollectorMXBean> mxBeans = ManagementFactory.getGarbageCollectorMXBeans();
+        this.numGarbageCollections = 0;
+        this.garbageCollectionTime = 0;
         for (GarbageCollectorMXBean mxBean : mxBeans) {
             long count = mxBean.getCollectionCount();
             long time  = mxBean.getCollectionTime();
