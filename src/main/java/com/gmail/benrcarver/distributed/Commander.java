@@ -284,8 +284,8 @@ public class Commander {
 
         while (true) {
             updateGCMetrics();
-            long currentGCs = numGarbageCollections;
-            long currentGCTime = garbageCollectionTime;
+            long startingGCs = numGarbageCollections;
+            long startingGCTime = garbageCollectionTime;
 
             try {
                 Thread.sleep(50);
@@ -442,8 +442,8 @@ public class Commander {
             }
 
             updateGCMetrics();
-            long numGCsPerformedDuringLastOp = numGarbageCollections - currentGCs;
-            long timeSpentInGCDuringLastOp = garbageCollectionTime - currentGCTime;
+            long numGCsPerformedDuringLastOp = numGarbageCollections - startingGCs;
+            long timeSpentInGCDuringLastOp = garbageCollectionTime - startingGCTime;
 
             LOG.debug("Performed " + numGCsPerformedDuringLastOp + " garbage collection(s) during last operation.");
             if (numGCsPerformedDuringLastOp > 0)
