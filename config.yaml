@@ -4,3 +4,9 @@ followers:
         -
                 ip: 10.150.0.20
                 user: ben
+        -
+                ip: 10.150.0.55
+                user: ben
+        -
+                ip: 10.150.0.122
+                user: ben
