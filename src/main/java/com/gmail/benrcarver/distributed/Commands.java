@@ -1228,7 +1228,7 @@ public class Commands {
         mkdir(subtreeRootPath, hdfs, nameNodeEndpoint);
         numDirectoriesCreated++;
 
-        List<String> directoriesCreated = new ArrayList<String>();
+        Set<String> directoriesCreated = new HashSet<String>();
         Stack<TreeNode> directoryStack = new Stack<TreeNode>();
         TreeNode subtreeRoot = new TreeNode(subtreeRootPath, new ArrayList<TreeNode>());
         directoryStack.push(subtreeRoot);
@@ -1241,11 +1241,11 @@ public class Commands {
             List<Stack<TreeNode>> currentDepthStacks = new ArrayList<>();
             while (!directoryStack.empty()) {
                 TreeNode directory = directoryStack.pop();
-                directoriesCreated.add(directory.getPath());
+                //directoriesCreated.add(directory.getPath());
 
                 String basePath = directory.getPath() + "/dir";
 
-                Stack<TreeNode> stack = createChildDirectories(basePath, maxSubDirs, hdfs, nameNodeEndpoint);
+                Stack<TreeNode> stack = createChildDirectories(basePath, maxSubDirs, hdfs, nameNodeEndpoint, directoriesCreated);
                 directory.addChildren(stack);
                 numDirectoriesCreated += stack.size();
                 currentDepthStacks.add(stack);
@@ -1267,6 +1267,7 @@ public class Commands {
         LOG.info("Files created: " + filesCreated + "\n");
 
         LOG.info("subtreeRoot children: " + subtreeRoot.getChildren().size());
+        LOG.info("directoriesCreated.size(): " + directoriesCreated.size());
         LOG.info(subtreeRoot.toString());
 
 //        for (String path : directoriesCreated) {
@@ -1279,11 +1280,14 @@ public class Commands {
     }
 
     public static Stack<TreeNode> createChildDirectories(String basePath, int subDirs,
-                                                         DistributedFileSystem hdfs, String nameNodeEndpoint) {
+                                                         DistributedFileSystem hdfs,
+                                                         String nameNodeEndpoint,
+                                                         Collection<String> directoriesCreated) {
         Stack<TreeNode> directoryStack = new Stack<TreeNode>();
         for (int i = 0; i < subDirs; i++) {
             String path = basePath + i;
             mkdir(path, hdfs, nameNodeEndpoint);
+            directoriesCreated.add(path);
             TreeNode node = new TreeNode(path, new ArrayList<TreeNode>());
             directoryStack.push(node);
         }

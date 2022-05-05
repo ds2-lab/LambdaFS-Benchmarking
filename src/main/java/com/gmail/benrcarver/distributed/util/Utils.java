@@ -63,7 +63,7 @@ public class Utils {
     }
 
     public static void write(String filename, Object[] x) throws IOException {
-        BufferedWriter outputWriter = null;
+        BufferedWriter outputWriter;
         outputWriter = new BufferedWriter(new FileWriter(filename));
         for (Object o : x) {
             outputWriter.write(o.toString());
