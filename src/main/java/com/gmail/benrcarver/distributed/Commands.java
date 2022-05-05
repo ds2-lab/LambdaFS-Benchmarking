@@ -310,13 +310,13 @@ public class Commands {
      *
      * This is the WEAK SCALING (read) benchmark.
      *
-     * @param n Number of files to read.
-     * @param numFilesToRead How many files should be read.
+     * @param numThreads Number of threads.
+     * @param numFilesToRead How many files should be read by each thread.
      * @param inputPath Path to local file containing HopsFS file paths (of the files to read).
      */
     public static DistributedBenchmarkResult weakScalingBenchmarkV2(final Configuration configuration,
                                                         final DistributedFileSystem sharedHdfs,
-                                                        final String nameNodeEndpoint, int n,
+                                                        final String nameNodeEndpoint, int numThreads,
                                                         final int numFilesToRead, String inputPath,
                                                         boolean shuffle)
             throws InterruptedException, FileNotFoundException {
@@ -327,35 +327,38 @@ public class Commands {
             Collections.shuffle(paths);
         }
 
-        if (paths.size() < n) {
-            LOG.error("ERROR: The file should contain at least " + n +
+        if (paths.size() < numThreads) {
+            LOG.error("ERROR: The file should contain at least " + numThreads +
                     " HopsFS file path(s); however, it contains just " + paths.size() + " HopsFS file path(s).");
             LOG.error("Aborting operation.");
             return null;
         }
 
-        Thread[] threads = new Thread[n];
+        Thread[] threads = new Thread[numThreads];
 
         // Used to synchronize threads; they each connect to HopsFS and then
         // count down. So, they all cannot start until they are all connected.
-        final CountDownLatch latch = new CountDownLatch(n);
-        final Semaphore endSemaphore = new Semaphore((n * -1) + 1);
+        final CountDownLatch latch = new CountDownLatch(numThreads);
+        final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
 
         final java.util.concurrent.BlockingQueue<List<OperationPerformed>> operationsPerformed =
-                new java.util.concurrent.ArrayBlockingQueue<>(n);
+                new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
         final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
-                = new ArrayBlockingQueue<>(n);
+                = new ArrayBlockingQueue<>(numThreads);
         final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
-                = new ArrayBlockingQueue<>(n);
+                = new ArrayBlockingQueue<>(numThreads);
 
         final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
         final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
         final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
 
+        // This is recorded by the benchmarking application.
+        final ArrayList<Double> latencyBenchmark = new ArrayList<>(numThreads * numFilesToRead);
+
         Random rng = new Random(); // TODO: Optionally seed this?
 
-        final String[][] fileBatches = new String[n][numFilesToRead];
-        for (int i = 0; i < n; i++) {
+        final String[][] fileBatches = new String[numThreads][numFilesToRead];
+        for (int i = 0; i < numThreads; i++) {
             fileBatches[i] = new String[numFilesToRead]; // Prolly don't need to do this but oh well.
             for (int j = 0; j < numFilesToRead; j++) {
                 int filePathIndex = rng.nextInt(paths.size());
@@ -363,7 +366,7 @@ public class Commands {
             }
         }
 
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < numThreads; i++) {
             final String[] filesToRead = fileBatches[i];
 
             Thread thread = new Thread(() -> {
@@ -371,7 +374,8 @@ public class Commands {
 
                 latch.countDown();
 
-                for (String s : filesToRead) readFile(s, hdfs, nameNodeEndpoint);
+                for (String s : filesToRead)
+                    latencyBenchmark.add(readFile(s, hdfs, nameNodeEndpoint));
 
                 // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
                 // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
@@ -454,7 +458,7 @@ public class Commands {
 
         // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
         double durationSeconds = (end - start) / 1000.0;
-        double totalReads = (double)n * (double)numFilesToRead;
+        double totalReads = (double)numThreads * (double)numFilesToRead;
         double throughput = (totalReads / durationSeconds);
         LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
 
@@ -471,6 +475,11 @@ public class Commands {
             LOG.info("Cache Hits: " + totalCacheHits + ", Cache Misses: " + totalCacheMisses + ". [Hitrate: " +
                     ((double) totalCacheHits / (totalCacheHits + totalCacheMisses)) + "]");
             sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
+        } else {
+            DescriptiveStatistics latency = new DescriptiveStatistics();
+            for (double l : latencyBenchmark)
+                latency.addValue(l);
+            LOG.info("Average latency: " + (latency.getMean() / 1.0e6) + " ms");
         }
 
         LOG.info("Throughput: " + throughput + " ops/sec.");
@@ -527,6 +536,9 @@ public class Commands {
         final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
         final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
 
+        // This is recorded by the benchmarking application.
+        final ArrayList<Double> latencyBenchmark = new ArrayList<>(n * readsPerFile);
+
         for (int i = 0; i < n; i++) {
             final String filePath = paths.get(i);
             Thread thread = new Thread(() -> {
@@ -535,7 +547,7 @@ public class Commands {
                 latch.countDown();
 
                 for (int j = 0; j < readsPerFile; j++)
-                    readFile(filePath, hdfs, nameNodeEndpoint);
+                    latencyBenchmark.add(readFile(filePath, hdfs, nameNodeEndpoint));
 
                 // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
                 // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
@@ -634,6 +646,11 @@ public class Commands {
                     ", N: " + latencyHttp.getN() + "]");
             LOG.info("Cache Hits: " + totalCacheHits + ", Cache Misses: " + totalCacheMisses + ". [Hitrate: " +
                     ((double) totalCacheHits / (totalCacheHits + totalCacheMisses)) + "]");
+        } else {
+            DescriptiveStatistics latency = new DescriptiveStatistics();
+            for (double l : latencyBenchmark)
+                latency.addValue(l);
+            LOG.info("Average latency: " + (latency.getMean() / 1.0e6) + " ms");
         }
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
@@ -1520,16 +1537,21 @@ public class Commands {
     }
 
     /**
-     *
-     *
      * Read the HopsFS/HDFS file at the given path.
      * @param fileName The path to the file to read.
+     * @return The latency of the operation in nanoseconds.
      */
-    public static void readFile(String fileName, DistributedFileSystem hdfs, String nameNodeEndpoint) {
+    public static double readFile(String fileName, DistributedFileSystem hdfs, String nameNodeEndpoint) {
         Path filePath = new Path(nameNodeEndpoint + fileName);
+        double durationMilliseconds = -1;
 
         try {
+            long s = System.nanoTime();
             FSDataInputStream inputStream = hdfs.open(filePath);
+            long t = System.nanoTime();
+
+            durationMilliseconds = t - s;
+
             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
             String line = null;
 
@@ -1540,6 +1562,8 @@ public class Commands {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+
+        return durationMilliseconds;
     }
 
     private static int getIntFromUser(String prompt) {

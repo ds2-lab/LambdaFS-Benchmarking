@@ -1067,14 +1067,14 @@ public class Commander {
             throws InterruptedException, FileNotFoundException {
         System.out.print("How many threads should be used?\n> ");
         String inputN = scanner.nextLine();
-        int n = Integer.parseInt(inputN);
+        int numThreads = Integer.parseInt(inputN);
 
         System.out.print("How many files should each thread read?\n> ");
         String inputFilesPerThread = scanner.nextLine();
         int filesPerThread = Integer.parseInt(inputFilesPerThread);
 
         System.out.print("Please provide a path to a local file containing at least " + inputN + " HopsFS file " +
-                (n == 1 ? "path.\n> " : "paths.\n> "));
+                (numThreads == 1 ? "path.\n> " : "paths.\n> "));
         String inputPath = scanner.nextLine();
 
         boolean shuffle = getBooleanFromUser("Shuffle file paths around?");
@@ -1093,7 +1093,7 @@ public class Commander {
                 JsonObject payload = new JsonObject();
                 payload.addProperty(OPERATION, OP_WEAK_SCALING_READS_V2);
                 payload.addProperty(OPERATION_ID, operationId);
-                payload.addProperty("n", n);
+                payload.addProperty("n", numThreads);
                 payload.addProperty("filesPerThread", filesPerThread);
                 payload.addProperty("inputPath", inputPath);
                 payload.addProperty("shuffle", shuffle);
@@ -1104,7 +1104,7 @@ public class Commander {
             // TODO: Make this return some sort of 'result' object encapsulating the result.
             //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
             DistributedBenchmarkResult localResult =
-                    Commands.weakScalingBenchmarkV2(configuration, sharedHdfs, nameNodeEndpoint, n, filesPerThread, inputPath, shuffle);
+                    Commands.weakScalingBenchmarkV2(configuration, sharedHdfs, nameNodeEndpoint, numThreads, filesPerThread, inputPath, shuffle);
 
             if (localResult == null) {
                 LOG.warn("Local result is null. Aborting.");
