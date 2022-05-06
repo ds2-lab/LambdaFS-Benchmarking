@@ -1157,6 +1157,17 @@ public class Commands {
                 latencyTcp, latencyHttp);
     }
 
+    /**
+     * Check if the user is trying to cancel the current operation.
+     *
+     * @param input The user's input.
+     */
+    private static void checkForExit(String input) {
+        if (input.equalsIgnoreCase("abort") || input.equalsIgnoreCase("cancel") ||
+                input.equalsIgnoreCase("exit"))
+            throw new IllegalArgumentException("User specified '" + input + "'. Aborting operation.");
+    }
+
     public static void createDirectories(DistributedFileSystem hdfs, String nameNodeEndpoint) {
         System.out.print("Base name for the directories:\n> ");
         String baseDirName = scanner.nextLine();
@@ -1525,7 +1536,9 @@ public class Commands {
 
     private static int getIntFromUser(String prompt) {
         System.out.print(prompt + "\n> ");
-        return Integer.parseInt(scanner.nextLine());
+        String input = scanner.nextLine();
+        checkForExit(input);
+        return Integer.parseInt(input);
     }
 
     public static void deleteOperation(DistributedFileSystem hdfs, final String nameNodeEndpoint) {

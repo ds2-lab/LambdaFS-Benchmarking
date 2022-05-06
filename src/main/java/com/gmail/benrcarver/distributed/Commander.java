@@ -674,14 +674,29 @@ public class Commander {
         System.out.print(prompt + " [y/n]\n> ");
         String input = scanner.nextLine().trim();
 
+        checkForExit(input);
+
         return input.equalsIgnoreCase("y") || input.equalsIgnoreCase("yes") ||
                 input.equalsIgnoreCase("t") || input.equalsIgnoreCase("true") ||
                 input.equalsIgnoreCase("1");
     }
 
+    /**
+     * Check if the user is trying to cancel the current operation.
+     *
+     * @param input The user's input.
+     */
+    private static void checkForExit(String input) {
+        if (input.equalsIgnoreCase("abort") || input.equalsIgnoreCase("cancel") ||
+                input.equalsIgnoreCase("exit"))
+            throw new IllegalArgumentException("User specified '" + input + "'. Aborting operation.");
+    }
+
     private int getIntFromUser(String prompt) {
         System.out.print(prompt + "\n> ");
-        return Integer.parseInt(scanner.nextLine());
+        String input = scanner.nextLine();
+        checkForExit(input);
+        return Integer.parseInt(input);
     }
 
     public void strongScalingWriteOperation(final Configuration configuration,
