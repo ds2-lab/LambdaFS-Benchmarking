@@ -1,6 +1,7 @@
 package com.gmail.benrcarver.distributed;
 
 import java.io.Serializable;
+import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import java.util.List;
 import io.hops.metrics.TransactionEvent;
@@ -15,6 +16,7 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
  */
 public class DistributedBenchmarkResult implements Serializable {
     public String opId;
+    public String jvmId;
     public int operation;
     public int numOpsPerformed;
     public OperationPerformed[] opsPerformed;
@@ -79,7 +81,7 @@ public class DistributedBenchmarkResult implements Serializable {
                                       long stopTime, int cacheHits, int cacheMisses, OperationPerformed[] opsPerformed,
                                       HashMap<String, List<TransactionEvent>>[] txEvents) {
         this(opId, operation, numOpsPerformed, duration, startTime, stopTime, cacheHits, cacheMisses,
-                null, null, null, null);
+                opsPerformed, txEvents, null, null);
     }
 
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed, double duration, long startTime,
@@ -99,6 +101,8 @@ public class DistributedBenchmarkResult implements Serializable {
         this.txEvents = txEvents;
         this.tcpLatencyStatistics = tcpLatencyStatistics;
         this.httpLatencyStatistics = httpLatencyStatistics;
+
+        this.jvmId = ManagementFactory.getRuntimeMXBean().getName();
     }
 
     public void setOperationId(String operationId) {

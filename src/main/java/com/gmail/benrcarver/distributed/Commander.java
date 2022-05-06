@@ -1019,14 +1019,39 @@ public class Commander {
         cacheHits.addValue(localResult.cacheHits);
         cacheMisses.addValue(localResult.cacheMisses);
 
+        double trialAvgTcpLatency = localResult.tcpLatencyStatistics.getMean();
+        double trialAvgHttpLatency = localResult.httpLatencyStatistics.getMean();
+
         for (DistributedBenchmarkResult res : resultQueue) {
-            LOG.debug("Received result: " + res);
+            LOG.debug("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");
+            LOG.debug("Num Ops Performed   : " + res.numOpsPerformed);
+            LOG.debug("Duration (sec)      : " + res.durationSeconds);
+            LOG.debug("Cache hits          : " + res.cacheHits);
+            LOG.debug("Cache misses        : " + res.cacheMisses);
+            LOG.debug("Cache hit percentage: " + (res.cacheHits/(res.cacheHits + res.cacheMisses)));
+            LOG.debug("Throughput          : " + res.getOpsPerSecond());
 
             opsPerformed.addValue(res.numOpsPerformed);
             duration.addValue(res.durationSeconds);
             throughput.addValue(res.getOpsPerSecond());
             cacheHits.addValue(res.cacheHits);
             cacheMisses.addValue(res.cacheMisses);
+
+            if (res.tcpLatencyStatistics != null && res.httpLatencyStatistics != null) {
+                DescriptiveStatistics latencyTcp = res.tcpLatencyStatistics;
+                DescriptiveStatistics latencyHttp = res.httpLatencyStatistics;
+                primaryHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
+
+                LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
+                        ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
+                        ", N: " + latencyTcp.getN() + "]");
+                LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
+                        ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
+                        ", N: " + latencyHttp.getN() + "]");
+
+                trialAvgTcpLatency += latencyTcp.getMean();
+                trialAvgHttpLatency += latencyHttp.getMean();
+            }
 
             if (res.opsPerformed != null)
                 primaryHdfs.addOperationPerformeds(res.opsPerformed);
@@ -1039,15 +1064,23 @@ public class Commander {
             }
         }
 
+        trialAvgTcpLatency = trialAvgTcpLatency / (1 + numDistributedResults);   // Add 1 to account for local result.
+        trialAvgHttpLatency = trialAvgHttpLatency / (1 + numDistributedResults); // Add 1 to account for local result.
         double aggregateThroughput = (opsPerformed.getSum() / duration.getMean());
 
-        LOG.info("==== RESULTS ====");
+        LOG.info("==== AGGREGATED RESULTS ====");
         LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
-        LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
-        LOG.info("Average Non-Aggregate Throughput (op/sec): " + throughput.getMean());
-//        LOG.info("Cache hits: " + cacheHits);
-//        LOG.info("Cache misses: " + cacheMisses);
+        LOG.info("Cache hits: " + cacheHits.getSum());
+        LOG.info("Cache misses: " + cacheMisses.getSum());
         LOG.info("Cache hit percentage: " + (cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum())));
+        LOG.info("Average TCP latency: " + trialAvgTcpLatency + " ms");
+        LOG.info("Average HTTP latency: " + trialAvgHttpLatency + " ms");
+        LOG.info("Average combined latency: " + (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0 + " ms");
+        LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
+
+        LOG.info(String.format("%f %f %f %f %f %f %f", aggregateThroughput, cacheHits.getSum(), cacheMisses.getSum(),
+                (cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum())), trialAvgTcpLatency,
+                trialAvgHttpLatency, (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0));
 
         return new AggregatedResult(aggregateThroughput, (int)cacheHits.getSum(), (int)cacheMisses.getSum());
     }
