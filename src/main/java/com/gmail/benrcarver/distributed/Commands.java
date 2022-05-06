@@ -515,7 +515,7 @@ public class Commands {
                 latch.countDown();
 
                 for (int j = 0; j < readsPerFile; j++)
-                    readFile(filePath, hdfs, nameNodeEndpoint)
+                    readFile(filePath, hdfs, nameNodeEndpoint);
 
                 // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
                 // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
