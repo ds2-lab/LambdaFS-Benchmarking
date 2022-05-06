@@ -320,7 +320,8 @@ public class Commands {
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
                 start, end, totalCacheHits, totalCacheMisses,
                 TRACK_OP_PERFORMED ? allOperationsPerformed.toArray(new OperationPerformed[0]) : null,
-                TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null);
+                TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null,
+                latencyTcp, latencyHttp);
     }
 
     /**
@@ -465,7 +466,8 @@ public class Commands {
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads,
                 durationSeconds, start, end, totalCacheHits, totalCacheMisses,
                 TRACK_OP_PERFORMED ? allOperationsPerformed.toArray(new OperationPerformed[0]) : null,
-                TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null);
+                TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null,
+                latencyTcp, latencyHttp);
     }
 
     /**
@@ -601,7 +603,8 @@ public class Commands {
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
                 start, end, totalCacheHits, totalCacheMisses,
                 TRACK_OP_PERFORMED ? allOperationsPerformed.toArray(new OperationPerformed[0]) : null,
-                TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null);
+                TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null,
+                latencyTcp, latencyHttp);
     }
 
     /**
@@ -1005,6 +1008,9 @@ public class Commands {
                 = new ArrayBlockingQueue<>(numThreads);
         final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
                 = new ArrayBlockingQueue<>(numThreads);
+        final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
+        final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
+        final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
         List<OperationPerformed> allOpsPerformed = new ArrayList<>();
         final BlockingQueue<Integer> numSuccessPerThread = new ArrayBlockingQueue<>(numThreads);
         long start, end;
@@ -1039,10 +1045,6 @@ public class Commands {
             final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
 
             Thread[] threads = new Thread[numThreads];
-
-            final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
-            final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
-            final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
 
             for (int i = 0; i < numThreads; i++) {
                 final int idx = i;
@@ -1151,7 +1153,8 @@ public class Commands {
         return new DistributedBenchmarkResult(null, 0, numSuccess,
                 durationSeconds, start, end, 0, 0,
                 TRACK_OP_PERFORMED ? allOpsPerformed.toArray(new OperationPerformed[0]) : null,
-                TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null);
+                TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null,
+                latencyTcp, latencyHttp);
     }
 
     public static void createDirectories(DistributedFileSystem hdfs, String nameNodeEndpoint) {

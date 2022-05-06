@@ -6,6 +6,7 @@ import java.util.List;
 import io.hops.metrics.TransactionEvent;
 
 import io.hops.metrics.OperationPerformed;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 /**
  * Encapsulates the result of running a particular benchmark. This class holds onto various metrics that
@@ -38,6 +39,16 @@ public class DistributedBenchmarkResult implements Serializable {
 
     public int cacheMisses;
 
+    /**
+     * TCP latencies obtained during the workload whose result is encapsulated by this DistributedBenchmarkResult instance.
+     */
+    public DescriptiveStatistics tcpLatencyStatistics;
+
+    /**
+     * HTTP latencies obtained during the workload whose result is encapsulated by this DistributedBenchmarkResult instance.
+     */
+    public DescriptiveStatistics httpLatencyStatistics;
+
     public DistributedBenchmarkResult() { }
 
     /**
@@ -60,12 +71,22 @@ public class DistributedBenchmarkResult implements Serializable {
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed,
                                       double duration, long startTime, long stopTime,
                                       int cacheHits, int cacheMisses) {
-        this(opId, operation, numOpsPerformed, duration, startTime, stopTime, cacheHits, cacheMisses, null, null);
+        this(opId, operation, numOpsPerformed, duration, startTime, stopTime, cacheHits, cacheMisses,
+                null, null);
     }
 
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed, double duration, long startTime,
                                       long stopTime, int cacheHits, int cacheMisses, OperationPerformed[] opsPerformed,
                                       HashMap<String, List<TransactionEvent>>[] txEvents) {
+        this(opId, operation, numOpsPerformed, duration, startTime, stopTime, cacheHits, cacheMisses,
+                null, null, null, null);
+    }
+
+    public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed, double duration, long startTime,
+                                      long stopTime, int cacheHits, int cacheMisses, OperationPerformed[] opsPerformed,
+                                      HashMap<String, List<TransactionEvent>>[] txEvents,
+                                      DescriptiveStatistics tcpLatencyStatistics,
+                                      DescriptiveStatistics httpLatencyStatistics) {
         this.opId = opId;
         this.operation = operation;
         this.numOpsPerformed = numOpsPerformed;
@@ -76,6 +97,8 @@ public class DistributedBenchmarkResult implements Serializable {
         this.cacheMisses = cacheMisses;
         this.opsPerformed = opsPerformed;
         this.txEvents = txEvents;
+        this.tcpLatencyStatistics = tcpLatencyStatistics;
+        this.httpLatencyStatistics = httpLatencyStatistics;
     }
 
     public void setOperationId(String operationId) {
