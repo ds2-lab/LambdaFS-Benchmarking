@@ -10,7 +10,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.hops.metrics.TransactionEvent;
-import io.hops.transaction.context.TransactionsStats;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.common.IOUtils;
 import net.schmizz.sshj.connection.channel.direct.Session;
@@ -314,9 +313,9 @@ public class Commander {
                     case OP_SET_LOG_LEVEL:
                         handleSetLogLevel(primaryHdfs);
                         break;
-                    case OP_CLEAR_STATISTICS:
-                        LOG.info("Clearing statistics packages...");
-                        Commands.clearStatisticsPackages(primaryHdfs);
+                    case OP_CLEAR_METRIC_DATA:
+                        LOG.info("Clearing metric data (including latencies) now...");
+                        Commands.clearMetricData(primaryHdfs);
                         break;
                     case OP_WRITE_STATISTICS:
                         if (!isServerless) {

@@ -8,16 +8,12 @@ import com.google.gson.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import io.hops.metrics.TransactionEvent;
-import io.hops.metrics.TransactionAttempt;
-import io.hops.transaction.context.TransactionsStats;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
-import io.hops.metrics.OperationPerformed;
 
 import java.io.File;
 import java.io.IOException;
@@ -209,7 +205,7 @@ public class Follower {
 
                 if (Commands.BENCHMARKING_MODE) {
                     LOG.debug("Clearing statistics packages first since Benchmarking Mode is enabled.");
-                    Commands.clearStatisticsPackagesNoPrompt(hdfs);
+                    Commands.clearMetricDataNoPrompt(hdfs);
                 }
 
                 LOG.debug("Calling System.gc() now!");
@@ -218,9 +214,9 @@ public class Follower {
             case OP_REGISTRATION:
                 handleRegistration(message);
                 break;
-            case OP_CLEAR_STATISTICS:
+            case OP_CLEAR_METRIC_DATA:
                 LOG.info("Clearing statistics packages...");
-                Commands.clearStatisticsPackages(hdfs);
+                Commands.clearMetricData(hdfs);
                 break;
             case OP_WRITE_STATISTICS:
                 LOG.info("Writing statistics packages to files...");
