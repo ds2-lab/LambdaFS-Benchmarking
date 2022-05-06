@@ -1019,6 +1019,14 @@ public class Commander {
         cacheHits.addValue(localResult.cacheHits);
         cacheMisses.addValue(localResult.cacheMisses);
 
+        LOG.debug("========== LOCAL RESULT ==========");
+        LOG.debug("Num Ops Performed   : " + localResult.numOpsPerformed);
+        LOG.debug("Duration (sec)      : " + localResult.durationSeconds);
+        LOG.debug("Cache hits          : " + localResult.cacheHits);
+        LOG.debug("Cache misses        : " + localResult.cacheMisses);
+        LOG.debug("Cache hit percentage: " + (localResult.cacheHits/(localResult.cacheHits + localResult.cacheMisses)));
+        LOG.debug("Throughput          : " + localResult.getOpsPerSecond());
+
         double trialAvgTcpLatency = localResult.tcpLatencyStatistics.getMean();
         double trialAvgHttpLatency = localResult.httpLatencyStatistics.getMean();
 
