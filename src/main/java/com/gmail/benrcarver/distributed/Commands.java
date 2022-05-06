@@ -21,6 +21,7 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
 import io.hops.leader_election.node.SortedActiveNodeList;
 import io.hops.leader_election.node.ActiveNode;
+import org.apache.commons.math3.util.Pair;
 import org.apache.hadoop.hdfs.serverless.operation.ActiveServerlessNameNodeList;
 import org.apache.hadoop.hdfs.serverless.operation.ActiveServerlessNameNode;
 import org.apache.hadoop.conf.Configuration;
@@ -159,15 +160,21 @@ public class Commands {
      * Merge a bunch of different metrics objects into the provided DistributedFileSystem instance.
      *
      * @param sharedHdfs The instance into which we are merging all the metrics objects.
-     * @return A flattened list of {@link OperationPerformed} instances. This contains all of the
-     * {@link OperationPerformed} instances contained within the lists in the {@code operationsPerformed} argument.
+     * @param allOperationsPerformed An empty list. By the end of this method's execution, this will contain all of
+     *                               the {@link OperationPerformed} instances contained within the lists in the
+     *                               {@code operationsPerformed} argument.
+     * @return A {@link Pair<Long, Long>} containing the total cache hits as the first element and the total cache
+     * misses as the second element.
      */
-    private static List<OperationPerformed> mergeMetricInformation(
+    private static Pair<Integer, Integer> mergeMetricInformation(
             final DistributedFileSystem sharedHdfs,
             final BlockingQueue<List<OperationPerformed>> operationsPerformed,
             final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages,
-            final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents) {
-        List<OperationPerformed> allOperationsPerformed = new ArrayList<>();
+            final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents,
+            final List<OperationPerformed> allOperationsPerformed) {
+        int totalCacheHits = 0;
+        int totalCacheMisses = 0;
+
         if (!BENCHMARKING_MODE) {
             for (List<OperationPerformed> opsPerformed : operationsPerformed) {
                 if (!IS_FOLLOWER)
@@ -192,7 +199,7 @@ public class Commands {
             }
         }
 
-        return allOperationsPerformed;
+        return new Pair(totalCacheHits, totalCacheMisses);
     }
 
     /**
@@ -296,11 +303,11 @@ public class Commands {
             thread.join();
         }
 
-        int totalCacheHits = 0;
-        int totalCacheMisses = 0;
-
-        List<OperationPerformed> allOperationsPerformed =
-                mergeMetricInformation(sharedHdfs, operationsPerformed, statisticsPackages, transactionEvents);
+        List<OperationPerformed> allOperationsPerformed = new ArrayList<OperationPerformed>();
+        Pair<Integer, Integer> cacheHitsAndMisses = mergeMetricInformation(sharedHdfs, operationsPerformed,
+                statisticsPackages, transactionEvents, allOperationsPerformed);
+        int totalCacheHits = cacheHitsAndMisses.getFirst();
+        int totalCacheMisses = cacheHitsAndMisses.getSecond();
 
         double durationSeconds = (end - start) / 1000.0;
         double totalReads = (double)n * (double)readsPerFile * (double)numThreads;
@@ -439,11 +446,11 @@ public class Commands {
             thread.join();
         }
 
-        int totalCacheHits = 0;
-        int totalCacheMisses = 0;
-
-        List<OperationPerformed> allOperationsPerformed =
-                mergeMetricInformation(sharedHdfs, operationsPerformed, statisticsPackages, transactionEvents);
+        List<OperationPerformed> allOperationsPerformed = new ArrayList<OperationPerformed>();
+        Pair<Integer, Integer> cacheHitsAndMisses = mergeMetricInformation(sharedHdfs, operationsPerformed,
+                statisticsPackages, transactionEvents, allOperationsPerformed);
+        int totalCacheHits = cacheHitsAndMisses.getFirst();
+        int totalCacheMisses = cacheHitsAndMisses.getSecond();
 
         // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
         double durationSeconds = (end - start) / 1000.0;
@@ -570,11 +577,11 @@ public class Commands {
             thread.join();
         }
 
-        int totalCacheHits = 0;
-        int totalCacheMisses = 0;
-
-        List<OperationPerformed> allOperationsPerformed =
-                mergeMetricInformation(sharedHdfs, operationsPerformed, statisticsPackages, transactionEvents);
+        List<OperationPerformed> allOperationsPerformed = new ArrayList<OperationPerformed>();
+        Pair<Integer, Integer> cacheHitsAndMisses = mergeMetricInformation(sharedHdfs, operationsPerformed,
+                statisticsPackages, transactionEvents, allOperationsPerformed);
+        int totalCacheHits = cacheHitsAndMisses.getFirst();
+        int totalCacheMisses = cacheHitsAndMisses.getSecond();
 
         // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
         double durationSeconds = (end - start) / 1000.0;
