@@ -338,7 +338,8 @@ public class Follower {
                         message.getAsJsonPrimitive("maxLength").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
                         directories,
-                        hdfs, hdfsConfiguration, nameNodeEndpoint);
+                        hdfs, hdfsConfiguration, nameNodeEndpoint,
+                        message.getAsJsonPrimitive("randomWrites").getAsBoolean());
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for WEAK SCALING (WRITE) benchmark: " + result);
                 sendResultToLeader(result);
@@ -357,7 +358,7 @@ public class Follower {
                         message.getAsJsonPrimitive("maxLength").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
                         directories,
-                        hdfs, hdfsConfiguration, nameNodeEndpoint);
+                        hdfs, hdfsConfiguration, nameNodeEndpoint, false);
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for STRONG SCALING (WRITE) benchmark: " + result);
                 sendResultToLeader(result);

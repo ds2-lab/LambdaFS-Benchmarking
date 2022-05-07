@@ -812,7 +812,7 @@ public class Commander {
 
         DistributedBenchmarkResult localResult =
                 Commands.writeFilesInternal(writesPerThread, minLength, maxLength, numberOfThreads, directories,
-                        sharedHdfs, hdfsConfiguration, nameNodeEndpoint);
+                        sharedHdfs, hdfsConfiguration, nameNodeEndpoint, false);
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
@@ -880,18 +880,16 @@ public class Commander {
                                           final DistributedFileSystem sharedHdfs,
                                           final String nameNodeEndpoint)
             throws IOException, InterruptedException {
-        System.out.print("Should the threads write their files to the SAME DIRECTORY [1] or DIFFERENT DIRECTORIES [2]?\n> ");
-        int directoryChoice = Integer.parseInt(scanner.nextLine());
+        int directoryChoice = getIntFromUser("Should the threads write their files to the SAME DIRECTORY [1], DIFFERENT DIRECTORIES [2], or RANDOM WRITES [3]?");
 
         // Validate input.
-        if (directoryChoice < 1 || directoryChoice > 2) {
-            LOG.error("Invalid argument specified. Should be \"1\" for same directory or \"2\" for different directories. " +
-                    "Instead, got \"" + directoryChoice + "\"");
+        if (directoryChoice < 1 || directoryChoice > 3) {
+            LOG.error("Invalid argument specified. Should be \"1\" for same directory, \"2\" for different directories. " +
+                    "Or \"3\" for random writes. Instead, got \"" + directoryChoice + "\"");
             return;
         }
 
-        System.out.print("Manually input (comma-separated list) [1], or specify file containing directories [2]? \n> ");
-        int dirInputMethodChoice = Integer.parseInt(scanner.nextLine());
+        int dirInputMethodChoice = getIntFromUser("Manually input (comma-separated list) [1], or specify file containing directories [2]?");
 
         List<String> directories = null;
         if (dirInputMethodChoice == 1) {
@@ -936,9 +934,11 @@ public class Commander {
             directories = new ArrayList<>(numberOfThreads);
             for (int i = 0; i < numberOfThreads; i++)
                 directories.add(dir); // This way, they'll all write to the same directory. We can reuse old code.
-        } else {
+        } else if (directoryChoice == 2) {
             Collections.shuffle(directories);
             directories = directories.subList(0, numberOfThreads);
+        } else {
+            // Use the entire directories list. We'll generate a bunch of random writes using the full list.
         }
 
         System.out.print("Number of writes per thread? \n> ");
@@ -970,6 +970,7 @@ public class Commander {
             payload.addProperty("minLength", minLength);
             payload.addProperty("maxLength", maxLength);
             payload.addProperty("numberOfThreads", numberOfThreads);
+            payload.addProperty("randomWrites", directoryChoice == 3);
 
             JsonArray directoriesJson = new JsonArray();
             for (String dir : directories)
@@ -984,7 +985,7 @@ public class Commander {
 
         DistributedBenchmarkResult localResult =
                 Commands.writeFilesInternal(writesPerThread, minLength, maxLength, numberOfThreads, directories,
-                        sharedHdfs, hdfsConfiguration, nameNodeEndpoint);
+                        sharedHdfs, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3));
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 

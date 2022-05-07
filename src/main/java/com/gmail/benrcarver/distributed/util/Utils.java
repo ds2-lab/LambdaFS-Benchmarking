@@ -108,7 +108,7 @@ public class Utils {
      * @param n The number of files to be written. We'll generate this many strings.
      * @param l The length of each randomly-generated string.
      *
-     * @return An array of size `numberOfFiles` containing randomly-generated strings of length `stringLength`.
+     * @return An array of size `n` containing randomly-generated strings of length `stringLength`.
      */
     public static String[] getFixedLengthRandomStrings(int n, int l) {
         String[] fileContents = new String[n];
@@ -118,6 +118,22 @@ public class Utils {
         }
 
         return fileContents;
+    }
+
+    /**
+     * Randomly generate n strings of length l to be used as file contents during a write operation.
+     *
+     * @param n The number of files to be written. We'll generate this many strings.
+     * @param l The length of each randomly-generated string.
+     * @param fileContents Empty array of size 'n'. Will be populated with randomly-generated file names.
+     */
+    public static void getFixedLengthRandomStrings(int n, int l, String[] fileContents) {
+        if (fileContents.length != n)
+            throw new IllegalArgumentException("Length of fileContents parameter must be n. Instead, it is " + fileContents.length);
+
+        for (int i = 0; i < n; i++) {
+            fileContents[i] = RandomStringUtils.randomAlphabetic(l);
+        }
     }
 
     /**

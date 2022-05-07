@@ -4,6 +4,7 @@ import com.gmail.benrcarver.distributed.util.TreeNode;
 import com.gmail.benrcarver.distributed.util.Utils;
 
 import java.io.*;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -122,7 +123,7 @@ public class Commands {
         }
 
         assert directories != null;
-        writeFilesInternal(n, minLength, maxLength, numberOfThreads, directories, hdfs, configuration, nameNodeEndpoint);
+        writeFilesInternal(n, minLength, maxLength, numberOfThreads, directories, hdfs, configuration, nameNodeEndpoint, false);
     }
 
     public static void clearMetricData(DistributedFileSystem hdfs) {
@@ -963,38 +964,71 @@ public class Commands {
         }
 
         writeFilesInternal(n, minLength, maxLength, numThreads, Collections.singletonList(targetDirectory),
-                sharedHdfs, configuration, nameNodeEndpoint);
+                sharedHdfs, configuration, nameNodeEndpoint, false);
     }
 
     /**
      * Write a bunch of files to a bunch of directories.
      *
-     * @param n Number of files per directory.
+     * The {@code targetDirectories} list is expected to have size equal to {@code numThreads}, unless
+     * {@code randomWrites} is true. When {@code randomWrites} is true, we just generate a bunch of random writes
+     * using all provided directories as part of the sample space.
+     *
+     * @param n Number of files per directory (or per thread for random writes).
      * @param minLength Minimum length of randomly-generated file contents.
      * @param maxLength Maximum length of randomly-generated file contents.
      * @param numThreads The number of threads to use when performing the operation.
      * @param targetDirectories The target directories.
      * @param sharedHdfs Shared/master DistributedFileSystem instance.
      * @param configuration Configuration for per-thread DistributedFileSystem objects.
+     * @param randomWrites Generate a bunch of random writes across all directories,
+     *                     rather than doing the writes per-directory.
      */
     public static DistributedBenchmarkResult writeFilesInternal(int n, int minLength, int maxLength, int numThreads,
                                     List<String> targetDirectories, DistributedFileSystem sharedHdfs,
-                                    Configuration configuration, final String nameNodeEndpoint)
+                                    Configuration configuration, final String nameNodeEndpoint, boolean randomWrites)
             throws IOException, InterruptedException {
-        // Generate the file contents and file names.
-        int totalNumberOfFiles = n * targetDirectories.size();
+        // Generate the file contents and file names. targetDirectories has length equal to numThreads
+        // except when randomWrites is true (in which case, in may vary). But either way, each thread
+        // will be reading n files, so this works.
+        int totalNumberOfFiles = n * numThreads;
         LOG.info("Generating " + n + " files for each directory (total of " + totalNumberOfFiles + " files.");
         final String[] targetPaths = new String[totalNumberOfFiles];
         int counter = 0;
         double filesPerSec = 0.0;
 
+        // Contents of the files to be written.
         String[] content = Utils.getVariableLengthRandomStrings(totalNumberOfFiles, minLength, maxLength);
 
-        for (String targetDirectory : targetDirectories) {
-            String[] targetFiles = Utils.getFixedLengthRandomStrings(n, 15);
+        // The standard way of generating files. Just generate a bunch of files for each provided directory.
+        if (!randomWrites) {
+            // Generate file names and subsequently the full file paths.
+            for (String targetDirectory : targetDirectories) {
+                // File names.
+                String[] targetFiles = Utils.getFixedLengthRandomStrings(n, 15);
 
-            for (String targetFile : targetFiles) {
-                targetPaths[counter++] = targetDirectory + "/" + targetFile;
+                // Create the full paths.
+                for (String targetFile : targetFiles) {
+                    targetPaths[counter++] = targetDirectory + "/" + targetFile;
+                }
+            }
+        } else {
+            // Generate truly random reads using the `targetDirectories` list as the sample space from which
+            // we draw random directories to write to. We generate random writes with replacement from the
+            // targetDirectories list.
+            Random rng = new Random();
+
+            // Generate the filenames. These will be appended to the end of the directories.
+            Utils.getFixedLengthRandomStrings(totalNumberOfFiles, 20, targetPaths);
+
+            for (int i = 0; i < totalNumberOfFiles; i++) {
+                // Randomly select a directory from the list of all target directories.
+                String directory = targetDirectories.get(rng.nextInt(targetDirectories.size()));
+
+                // We initially put all the randomly-generated filenames in 'targetPaths'. Now, we prepend each
+                // randomly-generated filename with the randomly-selected directory. We used targetPaths to store
+                // the filenames first just to avoid allocating too many arrays for large read tests.
+                targetPaths[i] = directory + "/" + targetPaths[i];
             }
         }
 
@@ -1025,18 +1059,17 @@ public class Commands {
             LOG.info("");
             LOG.info("===============================");
         } else {
-            int filesPerArray = (int)Math.floor((double)totalNumberOfFiles / numThreads);
             int remainder = totalNumberOfFiles % numThreads;
 
             if (remainder != 0) {
-                LOG.info("Assigning all but last thread " + filesPerArray +
+                LOG.info("Assigning all but last thread " + n +
                         " files. The last thread will be assigned " + remainder + " files.");
             } else {
-                LOG.info("Assigning each thread " + filesPerArray + " files.");
+                LOG.info("Assigning each thread " + n + " files.");
             }
 
-            final String[][] contentPerArray = Utils.splitArray(content, filesPerArray);
-            final String[][] targetPathsPerArray = Utils.splitArray(targetPaths, filesPerArray);
+            final String[][] contentPerArray = Utils.splitArray(content, n);
+            final String[][] targetPathsPerArray = Utils.splitArray(targetPaths, n);
 
             assert targetPathsPerArray != null;
             assert contentPerArray != null;
