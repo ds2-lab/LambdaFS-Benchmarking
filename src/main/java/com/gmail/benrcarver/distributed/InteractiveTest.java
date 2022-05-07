@@ -58,7 +58,7 @@ public class InteractiveTest {
         Option leaderIpOpt = new Option("l", "leader_ip", true, "The IP address of the Leader. Only used when this process is designated as a worker.");
         Option leaderPort = new Option("p", "leader_port", true, "The port of the Leader. Only used when this process is designated as a worker.");
         Option localOption = new Option("n", "nondistributed", false, "Run in non-distributed mode, meaning we don't launch any followers.");
-        Option logLevelOption = new Option("ll", "loglevel", true, "The log4j log level to pass to the NameNodes.");
+        //Option logLevelOption = new Option("ll", "loglevel", true, "The log4j log level to pass to the NameNodes.");
         Option consistencyProtocolOption = new Option("c", "disable_consistency", false, "If passed, then we default to disabling the consistency protocol.");
 
         Option yamlPath = new Option("y", "yaml_path", true, "Path to YAML configuration file.");
@@ -68,7 +68,7 @@ public class InteractiveTest {
         cmdLineOpts.addOption(leaderPort);
         cmdLineOpts.addOption(yamlPath);
         cmdLineOpts.addOption(localOption);
-        cmdLineOpts.addOption(logLevelOption);
+        //cmdLineOpts.addOption(logLevelOption);
         cmdLineOpts.addOption(consistencyProtocolOption);
 
         CommandLineParser parser = new GnuParser();
@@ -89,7 +89,7 @@ public class InteractiveTest {
             Follower follower = new Follower(
                     cmd.getOptionValue("leader_ip"),
                     Integer.parseInt(cmd.getOptionValue("leader_port")),
-                    cmd.hasOption("loglevel") ? cmd.getOptionValue("loglevel") : "DEBUG",
+                    //cmd.hasOption("loglevel") ? cmd.getOptionValue("loglevel") : "DEBUG",
                     cmd.hasOption("disable_consistency") /* If it has this option, then it is true */);
             follower.connect();
             follower.waitUntilDone();
@@ -99,7 +99,6 @@ public class InteractiveTest {
                     Integer.parseInt(cmd.getOptionValue("leader_port")),
                     cmd.getOptionValue("yaml_path"),
                     cmd.hasOption("nondistributed"), /* If it has this option, then it is true */
-                    cmd.hasOption("loglevel") ? cmd.getOptionValue("loglevel") : "DEBUG",
                     cmd.hasOption("disable_consistency") /* If it has this option, then it is true */);
             commander.start();
         }

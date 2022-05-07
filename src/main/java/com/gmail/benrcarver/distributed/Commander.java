@@ -122,7 +122,7 @@ public class Commander {
 
     private final boolean nondistributed;
 
-    private static String serverlessLogLevel = "DEBUG";
+    private static String serverlessLogLevel = null;
     private static boolean consistencyEnabled = true;
 
     private static Commander instanace;
@@ -151,9 +151,9 @@ public class Commander {
     private boolean isServerless = true;
 
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
-                                          String logLevel, boolean disableConsistency) throws IOException {
+                                                 boolean disableConsistency) throws IOException {
         if (instanace == null) {
-            serverlessLogLevel = logLevel;
+            // serverlessLogLevel = logLevel;
             consistencyEnabled = !disableConsistency;
             instanace = new Commander(ip, port, yamlPath, nondistributed);
         }
@@ -1349,7 +1349,7 @@ public class Commander {
         }
 
         hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
-        hdfs.setServerlessFunctionLogLevel(serverlessLogLevel);
+        serverlessLogLevel = hdfs.getServerlessFunctionLogLevel();
         hdfs.setBenchmarkModeEnabled(Commands.BENCHMARKING_MODE);
 
         return hdfs;

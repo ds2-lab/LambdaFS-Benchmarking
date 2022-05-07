@@ -57,7 +57,7 @@ public class Follower {
     private long garbageCollectionTime = 0L;
 
     // TODO: Make it so we can change these dynamically.
-    private String serverlessLogLevel = "INFO";
+    private String serverlessLogLevel;
     private boolean consistencyEnabled = true;
 
     public static final int FOLLOWER_TCP_BUFFER_SIZES = (int)128e6;
@@ -66,11 +66,10 @@ public class Follower {
         this.wait();
     }
 
-    public Follower(String masterIp, int masterPort, String serverlessLogLevel, boolean disableConsistency) {
+    public Follower(String masterIp, int masterPort, boolean disableConsistency) {
         client = new Client(FOLLOWER_TCP_BUFFER_SIZES, FOLLOWER_TCP_BUFFER_SIZES);
         this.masterIp = masterIp;
         this.masterPort = masterPort;
-        this.serverlessLogLevel = serverlessLogLevel;
         this.consistencyEnabled = !disableConsistency;
 
         Commands.IS_FOLLOWER = true;
@@ -135,7 +134,7 @@ public class Follower {
         }
 
         hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
-        hdfs.setServerlessFunctionLogLevel(serverlessLogLevel);
+        serverlessLogLevel = hdfs.getServerlessFunctionLogLevel();
 
         return hdfs;
     }
