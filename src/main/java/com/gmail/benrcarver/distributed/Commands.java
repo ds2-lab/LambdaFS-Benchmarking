@@ -5,7 +5,7 @@ import com.gmail.benrcarver.distributed.util.Utils;
 
 import java.io.*;
 
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.fs.FileStatus;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -1327,7 +1327,7 @@ public class Commands {
     public static void getFileStatus(String path, DistributedFileSystem hdfs, String nameNodeEndpoint) {
         Path filePath = new Path(nameNodeEndpoint + path);
         try {
-            HdfsFileStatus status = hdfs.getFileStatus(filePath);
+            FileStatus status = hdfs.getFileStatus(filePath);
             if (status == null)
                 LOG.warn("Received null result from getFileInfo('" + filePath + "')...");
         } catch (Exception ex) {
