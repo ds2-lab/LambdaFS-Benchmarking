@@ -432,8 +432,9 @@ public class Commander {
                         LOG.info("WeakScalingReadsV2 Selected!");
                         weakScalingReadOperationV2(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
                         break;
-                    case OP_GET_FILE_DIR_INFO:
-                        Commands.getFileDirInfoOperation(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
+                    case OP_GET_FILE_STATUS:
+                        LOG.info("OP_GET_FILE_STATUS selected!");
+                        Commands.getFileStatusOperation(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
                         break;
                     default:
                         LOG.info("ERROR: Unknown or invalid operation specified: " + op);

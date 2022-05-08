@@ -374,9 +374,9 @@ public class Follower {
                 LOG.info("Obtained local result for OP_WEAK_SCALING_READS_V2 benchmark: " + result);
                 sendResultToLeader(result);
                 break;
-            case OP_GET_FILE_DIR_INFO:
-                LOG.info("OP_GET_FILE_DIR_INFO selected!");
-                result = Commands.getFileDirInfoOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+            case OP_GET_FILE_STATUS:
+                LOG.info("OP_GET_FILE_STATUS selected!");
+                result = Commands.getFileStatusOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for OP_GET_FILE_DIR_INFO benchmark: " + result);
                 sendResultToLeader(result);

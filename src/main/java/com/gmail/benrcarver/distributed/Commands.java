@@ -4,7 +4,7 @@ import com.gmail.benrcarver.distributed.util.TreeNode;
 import com.gmail.benrcarver.distributed.util.Utils;
 
 import java.io.*;
-import java.nio.file.Paths;
+
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import java.time.Duration;
 import java.time.Instant;
@@ -694,9 +694,9 @@ public class Commands {
         }
     }
 
-    public static DistributedBenchmarkResult getFileDirInfoOperation(final Configuration configuration,
-                                                  DistributedFileSystem sharedHdfs,
-                                                  final String nameNodeEndpoint) throws InterruptedException {
+    public static DistributedBenchmarkResult getFileStatusOperation(final Configuration configuration,
+                                                                    DistributedFileSystem sharedHdfs,
+                                                                    final String nameNodeEndpoint) throws InterruptedException {
         System.out.print("Path to local file containing HopsFS/HDFS paths:\n> ");
         String localFilePath = scanner.nextLine();
 
@@ -757,7 +757,7 @@ public class Commands {
 
                 for (String filePath : pathsForThread) {
                     for (int j = 0; j < readsPerFile; j++)
-                        getFileDirInfo(filePath, hdfs, nameNodeEndpoint);
+                        getFileStatus(filePath, hdfs, nameNodeEndpoint);
                 }
 
                 // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
@@ -829,7 +829,7 @@ public class Commands {
         sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
         LOG.info("Throughput: " + throughput + " ops/sec.");
 
-        return new DistributedBenchmarkResult(null, OP_GET_FILE_DIR_INFO, (int)totalReads, durationSeconds,
+        return new DistributedBenchmarkResult(null, OP_GET_FILE_STATUS, (int)totalReads, durationSeconds,
                 start, end, totalCacheHits, totalCacheMisses,
                 TRACK_OP_PERFORMED ? allOperationsPerformed.toArray(new OperationPerformed[0]) : null,
                 TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null,
@@ -1324,10 +1324,10 @@ public class Commands {
             throw new IllegalArgumentException("User specified '" + input + "'. Aborting operation.");
     }
 
-    public static void getFileDirInfo(String path, DistributedFileSystem hdfs, String nameNodeEndpoint) {
+    public static void getFileStatus(String path, DistributedFileSystem hdfs, String nameNodeEndpoint) {
         Path filePath = new Path(nameNodeEndpoint + path);
         try {
-            HdfsFileStatus status = hdfs.getFileInfo(filePath);
+            HdfsFileStatus status = hdfs.getFileStatus(filePath);
             if (status == null)
                 LOG.warn("Received null result from getFileInfo('" + filePath + "')...");
         } catch (Exception ex) {
