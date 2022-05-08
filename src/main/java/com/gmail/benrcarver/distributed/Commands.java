@@ -1497,9 +1497,10 @@ public class Commands {
      *
      * @return True if the create operation succeeds, otherwise false.
      */
-    public static boolean createFile(String name, String contents,
-                                  DistributedFileSystem hdfs,
-                                  String nameNodeEndpoint) {
+    public static boolean createFile(String name,
+                                     String contents,
+                                     DistributedFileSystem hdfs,
+                                     String nameNodeEndpoint) {
         Path filePath = new Path(nameNodeEndpoint + name);
 
         try {
