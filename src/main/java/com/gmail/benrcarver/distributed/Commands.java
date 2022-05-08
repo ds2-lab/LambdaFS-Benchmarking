@@ -33,9 +33,12 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import io.hops.metrics.OperationPerformed;
 
-import static com.gmail.benrcarver.distributed.Constants.OP_DELETE_FILES;
-import static com.gmail.benrcarver.distributed.Constants.OP_STRONG_SCALING_READS;
+import static com.gmail.benrcarver.distributed.Constants.*;
 
+// TODO: Condense the various functions and build some generic framework for executing benchmarks.
+//       Like, many of the function calls here have a lot of boilerplate code to create the infrastructure
+//       to temporarily store metrics info and print the results. The only difference is the FS operation
+//       being called. So, at some point I can generify everything.
 public class Commands {
     public static final Log LOG = LogFactory.getLog(Commands.class);
     private static Scanner scanner = new Scanner(System.in);
@@ -597,9 +600,7 @@ public class Commands {
 
         printLatencyStatistics(latencyBoth, latencyTcp, latencyHttp);
         LOG.info("Throughput: " + throughput + " ops/sec.");
-
-        if (!BENCHMARKING_MODE)
-            sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
+        sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
 
         return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
                 start, end, totalCacheHits, totalCacheMisses,
@@ -690,6 +691,148 @@ public class Commands {
 
             txEventsWriter.close();
         }
+    }
+
+    public static DistributedBenchmarkResult getFileDirInfoOperation(final Configuration configuration,
+                                                  DistributedFileSystem sharedHdfs,
+                                                  final String nameNodeEndpoint) throws InterruptedException {
+        System.out.print("Path to local file containing HopsFS/HDFS paths:\n> ");
+        String localFilePath = scanner.nextLine();
+
+        System.out.print("Stat calls per file/directory:\n> ");
+        int readsPerFile = Integer.parseInt(scanner.nextLine());
+
+        System.out.print("Number of threads:\n> ");
+        int numThreads = Integer.parseInt(scanner.nextLine());
+
+        List<String> paths;
+        try {
+            paths = Utils.getFilePathsFromFile(localFilePath);
+        } catch (FileNotFoundException ex) {
+            LOG.error("Could not find file: '" + localFilePath + "'");
+            return null;
+        }
+        int n = paths.size();
+
+        int filesPerArray = (int)Math.floor((double)n/numThreads);
+        int remainder = n % numThreads;
+
+        if (remainder != 0) {
+            LOG.info("Assigning all but last thread " + filesPerArray +
+                    " files. The last thread will be assigned " + remainder + " files.");
+        } else {
+            LOG.info("Assigning each thread " + filesPerArray + " files.");
+        }
+
+        String[][] pathsPerThread = Utils.splitArray(paths.toArray(new String[0]), filesPerArray);
+
+        assert pathsPerThread != null;
+        LOG.info("pathsPerThread.length: " + pathsPerThread.length);
+
+        Thread[] threads = new Thread[numThreads];
+
+        // Used to synchronize threads; they each connect to HopsFS and then
+        // count down. So, they all cannot start until they are all connected.
+        final CountDownLatch latch = new CountDownLatch(numThreads);
+        final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
+
+        final BlockingQueue<List<OperationPerformed>> operationsPerformed =
+                new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
+        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
+                = new ArrayBlockingQueue<>(numThreads);
+        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
+                = new ArrayBlockingQueue<>(numThreads);
+
+        final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
+        final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
+        final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
+
+        for (int i = 0; i < numThreads; i++) {
+            final String[] pathsForThread = pathsPerThread[i];
+            Thread thread = new Thread(() -> {
+                DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
+
+                latch.countDown();
+
+                for (String filePath : pathsForThread) {
+                    for (int j = 0; j < readsPerFile; j++)
+                        getFileDirInfo(filePath, hdfs, nameNodeEndpoint);
+                }
+
+                // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+                // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+                // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+                // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+                endSemaphore.release();
+
+                if (!BENCHMARKING_MODE) {
+                    operationsPerformed.add(hdfs.getOperationsPerformed());
+                    if (TRACK_OP_PERFORMED) {
+                        statisticsPackages.add(hdfs.getStatisticsPackages());
+                        transactionEvents.add(hdfs.getTransactionEvents());
+                    }
+                }
+
+                for (double latency : hdfs.getLatencyStatistics().getValues()) {
+                    latencyBoth.addValue(latency);
+                }
+
+                for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
+                    latencyHttp.addValue(latency);
+                }
+
+                for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
+                    latencyTcp.addValue(latency);
+                }
+
+                try {
+                    hdfs.close();
+                } catch (IOException ex) {
+                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+                }
+            });
+            threads[i] = thread;
+        }
+
+        LOG.info("Starting threads.");
+        long start = System.currentTimeMillis();
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
+        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+        endSemaphore.acquire();
+        long end = System.currentTimeMillis();
+
+        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
+        for (Thread thread : threads) {
+            thread.join();
+        }
+
+        List<OperationPerformed> allOperationsPerformed = new ArrayList<>();
+        Pair<Integer, Integer> cacheHitsAndMisses = mergeMetricInformation(sharedHdfs, operationsPerformed,
+                statisticsPackages, transactionEvents, allOperationsPerformed);
+        int totalCacheHits = cacheHitsAndMisses.getFirst();
+        int totalCacheMisses = cacheHitsAndMisses.getSecond();
+
+        double durationSeconds = (end - start) / 1000.0;
+
+        LOG.info("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + durationSeconds);
+        double totalReads = (double)n * (double)readsPerFile;
+        double throughput = (totalReads / durationSeconds);
+
+        printLatencyStatistics(latencyBoth, latencyTcp, latencyHttp);
+        sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
+        LOG.info("Throughput: " + throughput + " ops/sec.");
+
+        return new DistributedBenchmarkResult(null, OP_GET_FILE_DIR_INFO, (int)totalReads, durationSeconds,
+                start, end, totalCacheHits, totalCacheMisses,
+                TRACK_OP_PERFORMED ? allOperationsPerformed.toArray(new OperationPerformed[0]) : null,
+                TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null,
+                latencyTcp, latencyHttp);
     }
 
     public static void readFilesOperation(final Configuration configuration,
@@ -914,20 +1057,8 @@ public class Commands {
         double totalReads = (double)n * (double)readsPerFile;
         double throughput = (totalReads / durationSeconds);
 
-        if (!BENCHMARKING_MODE) {
-            LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
-                    ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation() +
-                    ", N: " + latencyBoth.getN() + "]");
-            LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
-                    ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
-                    ", N: " + latencyTcp.getN() + "]");
-            LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
-                    ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
-                    ", N: " + latencyHttp.getN() + "]");
-            LOG.info("Cache Hits: " + totalCacheHits + ", Cache Misses: " + totalCacheMisses + ". [Hitrate: " +
-                    ((double) totalCacheHits / (totalCacheHits + totalCacheMisses)) + "]");
-            sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
-        }
+        printLatencyStatistics(latencyBoth, latencyTcp, latencyHttp);
+        sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
         LOG.info("Throughput: " + throughput + " ops/sec.");
     }
 
@@ -1135,22 +1266,13 @@ public class Commands {
                 thread.join();
             }
 
+            LOG.info("");
+            LOG.info("");
+            LOG.info("===============================");
+            printLatencyStatistics(latencyBoth, latencyTcp, latencyHttp);
+            sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
+
             if (!BENCHMARKING_MODE) {
-                LOG.info("");
-                LOG.info("");
-                LOG.info("===============================");
-                LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
-                        ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation() +
-                        ", N: " + latencyBoth.getN() + "]");
-                LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
-                        ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
-                        ", N: " + latencyTcp.getN() + "]");
-                LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
-                        ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
-                        ", N: " + latencyHttp.getN() + "]");
-
-                sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
-
                 for (List<OperationPerformed> opsPerformed : operationsPerformed) {
                     sharedHdfs.addOperationPerformeds(opsPerformed);
                     allOpsPerformed.addAll(opsPerformed);
@@ -1199,6 +1321,17 @@ public class Commands {
         if (input.equalsIgnoreCase("abort") || input.equalsIgnoreCase("cancel") ||
                 input.equalsIgnoreCase("exit"))
             throw new IllegalArgumentException("User specified '" + input + "'. Aborting operation.");
+    }
+
+    public static void getFileDirInfo(String path, DistributedFileSystem hdfs, String nameNodeEndpoint) {
+        Path filePath = new Path(nameNodeEndpoint + path);
+        try {
+            HdfsFileStatus status = hdfs.getFileInfo(filePath);
+            if (status == null)
+                LOG.warn("Received null result from getFileInfo('" + filePath + "')...");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     public static void createDirectories(DistributedFileSystem hdfs, String nameNodeEndpoint) {

@@ -374,6 +374,13 @@ public class Follower {
                 LOG.info("Obtained local result for OP_WEAK_SCALING_READS_V2 benchmark: " + result);
                 sendResultToLeader(result);
                 break;
+            case OP_GET_FILE_DIR_INFO:
+                LOG.info("OP_GET_FILE_DIR_INFO selected!");
+                result = Commands.getFileDirInfoOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                result.setOperationId(operationId);
+                LOG.info("Obtained local result for OP_GET_FILE_DIR_INFO benchmark: " + result);
+                sendResultToLeader(result);
+                break;
             default:
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
                 break;
