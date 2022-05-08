@@ -67,6 +67,12 @@ public class Commands {
      */
     public static volatile boolean IS_SERVERLESS = true;
 
+    public static void executeBenchmark(DistributedFileSystem hdfs,
+                                        final Configuration configuration,
+                                        String nameNodeEndpoint) {
+
+    }
+
     public static void writeFilesToDirectories(DistributedFileSystem hdfs,
                                                final Configuration configuration,
                                                String nameNodeEndpoint)

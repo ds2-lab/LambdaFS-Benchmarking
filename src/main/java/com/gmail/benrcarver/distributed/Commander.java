@@ -1461,7 +1461,7 @@ public class Commander {
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
                 "\n(15) Read n Files with n Threads (Weak Scaling - Read)\n(16) Read n Files y Times with z Threads (Strong Scaling - Read)" +
                 "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)" +
-                "\n(19) Create directories.\n(20) Weak Scaling Reads v2");
+                "\n(19) Create directories.\n(20) Weak Scaling Reads v2\n(21) File Stat Benchmark\n");
         System.out.println("==================");
         System.out.println("");
         System.out.println("What would you like to do?");
