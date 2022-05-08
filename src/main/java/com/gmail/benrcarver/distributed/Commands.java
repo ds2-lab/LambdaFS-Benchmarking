@@ -5,6 +5,7 @@ import com.gmail.benrcarver.distributed.util.Utils;
 
 import java.io.*;
 import java.nio.file.Paths;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
