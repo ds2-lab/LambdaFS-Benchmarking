@@ -399,7 +399,7 @@ public class Commander {
                         break;
                     case OP_READ_FILES:
                         LOG.info("READ FILES selected!");
-                        Commands.readFilesOperation(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
+                        Commands.readFilesOperation(hdfsConfiguration, primaryHdfs, nameNodeEndpoint, OP_READ_FILES);
                         break;
                     case OP_DELETE_FILES:
                         LOG.info("DELETE FILES selected!");
@@ -816,7 +816,7 @@ public class Commander {
 
         DistributedBenchmarkResult localResult =
                 Commands.writeFilesInternal(writesPerThread, minLength, maxLength, numberOfThreads, directories,
-                        sharedHdfs, hdfsConfiguration, nameNodeEndpoint, false);
+                        sharedHdfs, OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, false);
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
@@ -989,7 +989,7 @@ public class Commander {
 
         DistributedBenchmarkResult localResult =
                 Commands.writeFilesInternal(writesPerThread, minLength, maxLength, numberOfThreads, directories,
-                        sharedHdfs, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3));
+                        sharedHdfs, OP_STRONG_SCALING_READS, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3));
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
@@ -1164,7 +1164,8 @@ public class Commander {
             // TODO: Make this return some sort of 'result' object encapsulating the result.
             //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
             DistributedBenchmarkResult localResult =
-                    Commands.weakScalingBenchmarkV2(configuration, sharedHdfs, nameNodeEndpoint, numThreads, filesPerThread, inputPath, shuffle);
+                    Commands.weakScalingBenchmarkV2(configuration, sharedHdfs, nameNodeEndpoint, numThreads,
+                            filesPerThread, inputPath, shuffle, OP_WEAK_SCALING_READS_V2);
 
             if (localResult == null) {
                 LOG.warn("Local result is null. Aborting.");
@@ -1265,7 +1266,8 @@ public class Commander {
             // TODO: Make this return some sort of 'result' object encapsulating the result.
             //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
             DistributedBenchmarkResult localResult =
-                    Commands.readNFiles(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile, inputPath, shuffle);
+                    Commands.weakScalingReadsV1(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile,
+                            inputPath, shuffle, OP_WEAK_SCALING_READS);
 
             if (localResult == null) {
                 LOG.warn("Local result is null. Aborting.");

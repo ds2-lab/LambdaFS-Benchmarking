@@ -290,7 +290,7 @@ public class Follower {
                 break;
             case OP_READ_FILES:
                 LOG.info("READ FILES selected!");
-                Commands.readFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                Commands.readFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint, OP_READ_FILES);
                 break;
             case OP_DELETE_FILES:
                 LOG.info("DELETE FILES selected!");
@@ -302,12 +302,13 @@ public class Follower {
                 break;
             case OP_WEAK_SCALING_READS:
                 LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
-                DistributedBenchmarkResult result = Commands.readNFiles(hdfsConfiguration,
+                DistributedBenchmarkResult result = Commands.weakScalingReadsV1(hdfsConfiguration,
                         hdfs, nameNodeEndpoint,
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
-                        message.getAsJsonPrimitive("shuffle").getAsBoolean());
+                        message.getAsJsonPrimitive("shuffle").getAsBoolean(),
+                        OP_WEAK_SCALING_READS);
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for WEAK SCALING (READ) benchmark: " + result);
                 sendResultToLeader(result);
@@ -336,8 +337,7 @@ public class Follower {
                         message.getAsJsonPrimitive("minLength").getAsInt(),
                         message.getAsJsonPrimitive("maxLength").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
-                        directories,
-                        hdfs, hdfsConfiguration, nameNodeEndpoint,
+                        directories, hdfs, OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint,
                         message.getAsJsonPrimitive("randomWrites").getAsBoolean());
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for WEAK SCALING (WRITE) benchmark: " + result);
@@ -356,8 +356,8 @@ public class Follower {
                         message.getAsJsonPrimitive("minLength").getAsInt(),
                         message.getAsJsonPrimitive("maxLength").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
-                        directories,
-                        hdfs, hdfsConfiguration, nameNodeEndpoint, false);
+                        directories, hdfs, OP_STRONG_SCALING_WRITES, hdfsConfiguration,
+                        nameNodeEndpoint, false);
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for STRONG SCALING (WRITE) benchmark: " + result);
                 sendResultToLeader(result);
@@ -369,7 +369,7 @@ public class Follower {
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("filesPerThread").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
-                        message.getAsJsonPrimitive("shuffle").getAsBoolean());
+                        message.getAsJsonPrimitive("shuffle").getAsBoolean(), OP_WEAK_SCALING_READS_V2);
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for OP_WEAK_SCALING_READS_V2 benchmark: " + result);
                 sendResultToLeader(result);

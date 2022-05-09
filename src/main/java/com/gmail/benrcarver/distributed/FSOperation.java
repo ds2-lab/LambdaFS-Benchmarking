@@ -3,7 +3,7 @@ package com.gmail.benrcarver.distributed;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 
-public abstract class FSOperation<T> {
+public abstract class FSOperation {
     public final String endpoint;
     public final Configuration conf;
 
