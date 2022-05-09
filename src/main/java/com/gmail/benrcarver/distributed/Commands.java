@@ -129,16 +129,20 @@ public class Commands {
                     }
                 }
 
-                for (double latency : hdfs.getLatencyStatistics().getValues()) {
-                    latencyBoth.addValue(latency);
-                }
+                // COMMENTED OUT: Just add the HTTP and TCP latencies to `latencyBoth` as well.
+                // Doing so avoids three separate (redundant) loops.
+                //for (double latency : hdfs.getLatencyStatistics().getValues()) {
+                //    latencyBoth.addValue(latency);
+                //}
 
                 for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
                     latencyHttp.addValue(latency);
+                    latencyBoth.addValue(latency);
                 }
 
                 for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
                     latencyTcp.addValue(latency);
+                    latencyBoth.addValue(latency);
                 }
 
                 try {
@@ -176,6 +180,7 @@ public class Commands {
 
         double durationSeconds = (end - start) / 1.0e3;
 
+        // TODO: Verify that I've calculated the total number of operations correctly.
         LOG.info("Finished performing all " + (operationsPerFile * numFilesPerThread) + " file reads in " + durationSeconds);
         double totalOperations = numThreads * numFilesPerThread * operationsPerFile;
         double throughput = (totalOperations / durationSeconds);
