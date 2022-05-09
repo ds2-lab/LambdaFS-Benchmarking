@@ -1083,7 +1083,7 @@ public class Commands {
      * @param readsPerFile Number of times each file should be read.
      * @param numThreads Number of threads to use when performing the reads concurrently.
      */
-    public static void readFiles(String path, int readsPerFile, int numThreads, final Configuration configuration,
+    public static DistributedBenchmarkResult readFiles(String path, int readsPerFile, int numThreads, final Configuration configuration,
                                  DistributedFileSystem sharedHdfs, final String nameNodeEndpoint, int opCode)
             throws InterruptedException {
         List<String> paths;
