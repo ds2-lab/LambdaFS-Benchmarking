@@ -1091,7 +1091,7 @@ public class Commands {
             paths = Utils.getFilePathsFromFile(path);
         } catch (FileNotFoundException ex) {
             LOG.error("Could not find file: '" + path + "'");
-            return;
+            return null;
         }
         int n = paths.size();
 
