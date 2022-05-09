@@ -243,12 +243,12 @@ public class Commands {
         System.out.print("Number of threads? \n>");
         int numberOfThreads = Integer.parseInt(scanner.nextLine());
 
-        int n = 10;
-        System.out.print("Number of files per directory (default " + n + "):\n> ");
+        int filesPerDirectory = 10;
+        System.out.print("Number of files per directory (default " + filesPerDirectory + "):\n> ");
         try {
-            n = Integer.parseInt(scanner.nextLine());
+            filesPerDirectory = Integer.parseInt(scanner.nextLine());
         } catch (NumberFormatException ex) {
-            LOG.info("Defaulting to " + n + ".");
+            LOG.info("Defaulting to " + filesPerDirectory + ".");
         }
 
         int minLength = 0;
@@ -267,8 +267,41 @@ public class Commands {
             LOG.info("Defaulting to " + maxLength + ".");
         }
 
-        assert directories != null;
-        writeFilesInternal(n, minLength, maxLength, numberOfThreads, directories, hdfs, 0, configuration, nameNodeEndpoint, false);
+        // Generate the file contents and file names. targetDirectories has length equal to numThreads
+        // except when randomWrites is true (in which case, in may vary). But either way, each thread
+        // will be reading n files, so this works.
+        int totalNumberOfFiles = filesPerDirectory * directories.size();
+        LOG.info("Generating " + filesPerDirectory + " files for each directory (total of " + totalNumberOfFiles + " files).");
+        final String[] targetPaths = new String[totalNumberOfFiles];
+
+        int counter = 0;
+        // Generate file names and subsequently the full file paths.
+        for (String targetDirectory : directories) {
+            // File names.
+            String[] targetFiles = Utils.getFixedLengthRandomStrings(filesPerDirectory, 15);
+
+            // Create the full paths.
+            for (String targetFile : targetFiles) {
+                targetPaths[counter++] = targetDirectory + "/" + targetFile;
+            }
+        }
+
+        LOG.info("Generated a total of " + totalNumberOfFiles + " file(s).");
+
+        Utils.write("./output/writeToDirectoryPaths-" + Instant.now().toEpochMilli()+ ".txt", targetPaths);
+
+        int numWritesPerThread = targetPaths.length / numberOfThreads;
+        final String[][] targetPathsPerThread = Utils.splitArray(targetPaths, numWritesPerThread);
+        assert(targetPathsPerThread != null);
+        assert(targetPathsPerThread.length == numberOfThreads);
+
+        return executeBenchmark(hdfs, configuration, nameNodeEndpoint, numberOfThreads, targetPathsPerThread,
+                1, OP_WRITE_FILES_TO_DIRS, new FSOperation(nameNodeEndpoint, configuration) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return createFile(path, content, hdfs, nameNodeEndpoint);
+                    }
+                });
     }
 
     public static void clearMetricData(DistributedFileSystem hdfs) {
@@ -1250,7 +1283,7 @@ public class Commands {
         String targetDirectory = scanner.nextLine();
 
         System.out.print("Number of files:\n> ");
-        int n = Integer.parseInt(scanner.nextLine());
+        int numFiles = Integer.parseInt(scanner.nextLine());
 
         System.out.print("Min string length:\n> ");
         int minLength = Integer.parseInt(scanner.nextLine());
@@ -1269,7 +1302,7 @@ public class Commands {
             numThreads = Integer.parseInt(scanner.nextLine());
         }
 
-        writeFilesInternal(n, minLength, maxLength, numThreads, Collections.singletonList(targetDirectory),
+        writeFilesInternal(numFiles, minLength, maxLength, numThreads, Collections.singletonList(targetDirectory),
                 sharedHdfs, OP_WEAK_SCALING_WRITES, configuration, nameNodeEndpoint, false);
     }
 
@@ -1280,7 +1313,7 @@ public class Commands {
      * {@code randomWrites} is true. When {@code randomWrites} is true, we just generate a bunch of random writes
      * using all provided directories as part of the sample space.
      *
-     * @param n Number of files per directory (or per thread for random writes).
+     * @param filesPerDirectory Number of files per directory (or per thread for random writes).
      * @param minLength Minimum length of randomly-generated file contents.
      * @param maxLength Maximum length of randomly-generated file contents.
      * @param numThreads The number of threads to use when performing the operation.
@@ -1290,28 +1323,26 @@ public class Commands {
      * @param randomWrites Generate a bunch of random writes across all directories,
      *                     rather than doing the writes per-directory.
      */
-    public static DistributedBenchmarkResult writeFilesInternal(int n, int minLength, int maxLength, int numThreads,
-                                    List<String> targetDirectories, DistributedFileSystem sharedHdfs, int opCode,
-                                    Configuration configuration, final String nameNodeEndpoint, boolean randomWrites)
+    public static DistributedBenchmarkResult writeFilesInternal(int filesPerDirectory, int minLength, int maxLength,
+                                                                int numThreads, List<String> targetDirectories,
+                                                                DistributedFileSystem sharedHdfs, int opCode,
+                                                                Configuration configuration,
+                                                                final String nameNodeEndpoint, boolean randomWrites)
             throws IOException, InterruptedException {
         // Generate the file contents and file names. targetDirectories has length equal to numThreads
         // except when randomWrites is true (in which case, in may vary). But either way, each thread
         // will be reading n files, so this works.
-        int totalNumberOfFiles = n * numThreads;
-        LOG.info("Generating " + n + " files for each directory (total of " + totalNumberOfFiles + " files.");
+        int totalNumberOfFiles = filesPerDirectory * numThreads;
+        LOG.info("Generating " + filesPerDirectory + " files for each directory (total of " + totalNumberOfFiles + " files).");
         final String[] targetPaths = new String[totalNumberOfFiles];
-        int counter = 0;
-        double filesPerSec = 0.0;
-
-        // Contents of the files to be written.
-        String[] content = Utils.getVariableLengthRandomStrings(totalNumberOfFiles, minLength, maxLength);
 
         // The standard way of generating files. Just generate a bunch of files for each provided directory.
         if (!randomWrites) {
+            int counter = 0;
             // Generate file names and subsequently the full file paths.
             for (String targetDirectory : targetDirectories) {
                 // File names.
-                String[] targetFiles = Utils.getFixedLengthRandomStrings(n, 15);
+                String[] targetFiles = Utils.getFixedLengthRandomStrings(filesPerDirectory, 15);
 
                 // Create the full paths.
                 for (String targetFile : targetFiles) {
@@ -1342,22 +1373,14 @@ public class Commands {
 
         Utils.write("./output/writeToDirectoryPaths-" + Instant.now().toEpochMilli()+ ".txt", targetPaths);
 
-        final String[][] targetPathsPerArray = Utils.splitArray(targetPaths, n);
-        assert(targetPathsPerArray != null);
+        // TODO: Are we splitting this correctly?
+        int numWritesPerThread = targetPaths.length / numThreads;
+        final String[][] targetPathsPerThread = Utils.splitArray(targetPaths, numWritesPerThread);
+        assert(targetPathsPerThread != null);
+        assert(targetPathsPerThread.length == numThreads);
 
-        /*
-            executeBenchmark(
-                DistributedFileSystem sharedHdfs,
-                final Configuration configuration,
-                String nameNodeEndpoint,
-                int numThreads,
-                String[][] filesPerThread,
-                int operationsPerFile,
-                int opCode,
-                FSOperation operation)
-         */
         return executeBenchmark(
-                sharedHdfs, configuration, nameNodeEndpoint, numThreads, targetPathsPerArray, 1, opCode,
+                sharedHdfs, configuration, nameNodeEndpoint, numThreads, targetPathsPerThread, 1, opCode,
                 new FSOperation(nameNodeEndpoint, configuration) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
