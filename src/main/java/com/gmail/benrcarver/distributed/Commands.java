@@ -101,6 +101,7 @@ public class Commands {
 
         // Keep track of number of successful operations.
         AtomicInteger numSuccessfulOps = new AtomicInteger(0);
+        AtomicInteger numOps = new AtomicInteger(0);
 
         final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
         final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
@@ -113,10 +114,13 @@ public class Commands {
 
                 latch.countDown();
                 int numSuccessfulOpsCurrentThread = 0;
+                int numOpsCurrentThread = 0;
 
                 for (String filePath : filesForCurrentThread) {
                     for (int j = 0; j < operationsPerFile; j++) {
-                        if (operation.call(hdfs, filePath, EMPTY_STRING)) numSuccessfulOpsCurrentThread++;
+                        if (operation.call(hdfs, filePath, EMPTY_STRING))
+                            numSuccessfulOpsCurrentThread++;
+                        numOpsCurrentThread++;
                     }
                 }
 
@@ -127,6 +131,7 @@ public class Commands {
                 endSemaphore.release();
 
                 numSuccessfulOps.addAndGet(numSuccessfulOpsCurrentThread);
+                numOps.addAndGet(numOpsCurrentThread);
 
                 if (!BENCHMARKING_MODE) {
                     operationsPerformed.add(hdfs.getOperationsPerformed());
@@ -190,9 +195,9 @@ public class Commands {
         // TODO: Verify that I've calculated the total number of operations correctly.
         int numSuccess = numSuccessfulOps.get();
         LOG.info("Finished performing all " + (operationsPerFile * numFilesPerThread) + " file reads in " + durationSeconds);
-        double totalOperations = numThreads * numFilesPerThread * operationsPerFile;
+        double totalOperations = numOps.get();
         double totalThroughput = totalOperations / durationSeconds;
-        double successThroughput = totalOperations / numSuccess;
+        double successThroughput = numSuccess / durationSeconds;
         LOG.info("Number of successful write operations: " + numSuccess);
         LOG.info("Number of failed write operations: " + (totalOperations - numSuccess));
 
