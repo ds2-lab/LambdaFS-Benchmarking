@@ -256,7 +256,7 @@ public class Commands {
         }
 
         assert directories != null;
-        writeFilesInternal(n, minLength, maxLength, numberOfThreads, directories, hdfs, configuration, nameNodeEndpoint, false);
+        writeFilesInternal(n, minLength, maxLength, numberOfThreads, directories, hdfs, 0, configuration, nameNodeEndpoint, false);
     }
 
     public static void clearMetricData(DistributedFileSystem hdfs) {
@@ -1225,7 +1225,7 @@ public class Commands {
         }
 
         writeFilesInternal(n, minLength, maxLength, numThreads, Collections.singletonList(targetDirectory),
-                sharedHdfs, configuration, nameNodeEndpoint, false);
+                sharedHdfs, OP_WEAK_SCALING_WRITES, configuration, nameNodeEndpoint, false);
     }
 
     /**
@@ -1246,7 +1246,7 @@ public class Commands {
      *                     rather than doing the writes per-directory.
      */
     public static DistributedBenchmarkResult writeFilesInternal(int n, int minLength, int maxLength, int numThreads,
-                                    List<String> targetDirectories, DistributedFileSystem sharedHdfs,
+                                    List<String> targetDirectories, DistributedFileSystem sharedHdfs, int opCode,
                                     Configuration configuration, final String nameNodeEndpoint, boolean randomWrites)
             throws IOException, InterruptedException {
         // Generate the file contents and file names. targetDirectories has length equal to numThreads
@@ -1296,6 +1296,29 @@ public class Commands {
         LOG.info("Generated a total of " + totalNumberOfFiles + " file(s).");
 
         Utils.write("./output/writeToDirectoryPaths-" + Instant.now().toEpochMilli()+ ".txt", targetPaths);
+
+        final String[][] targetPathsPerArray = Utils.splitArray(targetPaths, n);
+        assert(targetPathsPerArray != null);
+
+        /*
+            executeBenchmark(
+                DistributedFileSystem sharedHdfs,
+                final Configuration configuration,
+                String nameNodeEndpoint,
+                int numThreads,
+                String[][] filesPerThread,
+                int operationsPerFile,
+                int opCode,
+                FSOperation operation)
+         */
+        executeBenchmark(
+                sharedHdfs, configuration, nameNodeEndpoint, numThreads, targetPathsPerArray, 1, opCode,
+                new FSOperation<Integer>(nameNodeEndpoint, configuration, FSOperation.AccumulationType.SUM) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return createFile(path, content, hdfs, nameNodeEndpoint);
+                    }
+                });
 
         final BlockingQueue<List<OperationPerformed>> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
