@@ -208,7 +208,7 @@ public class Commands {
                 latencyTcp, latencyHttp);
     }
 
-    public static void writeFilesToDirectories(DistributedFileSystem hdfs,
+    public static DistributedBenchmarkResult writeFilesToDirectories(DistributedFileSystem hdfs,
                                                final Configuration configuration,
                                                String nameNodeEndpoint)
             throws IOException, InterruptedException {
