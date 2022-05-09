@@ -267,6 +267,9 @@ public class Commander {
                 int op = getNextOperation();
 
                 switch (op) {
+                    case OP_TRIGGER_CLIENT_GC:
+                        performClientVMGarbageCollection();
+                        break;
                     case OP_EXIT:
                         LOG.info("Exiting now... goodbye!");
                         try {
@@ -425,6 +428,21 @@ public class Commander {
     private int getIntFromUser(String prompt) {
         System.out.print(prompt + "\n> ");
         return Integer.parseInt(scanner.nextLine());
+    }
+
+    /**
+     * Perform GCs on this Client VM as well as any other client VMs if we're the Commander for a distributed setup.
+     */
+    private void performClientVMGarbageCollection() {
+        if (!nondistributed) {
+            JsonObject payload = new JsonObject();
+            String operationId = UUID.randomUUID().toString();
+            payload.addProperty(OPERATION, OP_TRIGGER_CLIENT_GC);
+            payload.addProperty(OPERATION_ID, operationId);
+
+            issueCommandToFollowers("Client VM Garbage Collection", operationId, payload);
+        }
+        System.gc();
     }
 
     public void strongScalingWriteOperation(final Configuration configuration,
@@ -861,7 +879,12 @@ public class Commander {
             cacheMisses[currentTrial] = localResult.cacheMisses;
             currentTrial++;
 
-            Thread.sleep(500);
+            if (!(currentTrial >= numTrials)) {
+                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
+                        2500 + " ms.");
+                performClientVMGarbageCollection();
+                Thread.sleep(2500);
+            }
         }
 
         System.out.println("[THROUGHPUT]");

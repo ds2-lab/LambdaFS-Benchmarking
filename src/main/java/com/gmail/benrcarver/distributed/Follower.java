@@ -132,6 +132,10 @@ public class Follower {
             case OP_REGISTRATION:
                 handleRegistration(message);
                 break;
+            case OP_TRIGGER_CLIENT_GC:
+                LOG.debug("We've been instructed to perform a garbage collection!");
+                System.gc();
+                break;
             case OP_EXIT:
                 LOG.info("Received 'STOP' operation from Leader. Shutting down primary HDFS connection now.");
                 try {
