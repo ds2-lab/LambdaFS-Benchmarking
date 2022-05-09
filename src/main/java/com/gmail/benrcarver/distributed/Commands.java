@@ -1111,7 +1111,7 @@ public class Commands {
         LOG.info("pathsPerThread.length: " + pathsPerThread.length);
 
         return executeBenchmark(
-                sharedHdfs, configuration, nameNodeEndpoint, numThreads, pathsPerThread, 1, opCode,
+                sharedHdfs, configuration, nameNodeEndpoint, numThreads, pathsPerThread, readsPerFile, opCode,
                 new FSOperation(nameNodeEndpoint, configuration) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
