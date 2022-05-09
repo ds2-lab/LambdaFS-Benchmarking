@@ -659,7 +659,7 @@ public class Commands {
         }
 
         return executeBenchmark(
-                sharedHdfs, configuration, nameNodeEndpoint, n, pathsPerThread, 1, opCode,
+                sharedHdfs, configuration, nameNodeEndpoint, n, pathsPerThread, readsPerFile, opCode,
                 new FSOperation(nameNodeEndpoint, configuration) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
