@@ -80,12 +80,6 @@ public class Commands {
             int opCode,
             FSOperation operation) throws InterruptedException {
         Thread[] threads = new Thread[numThreads];
-        int numFilesPerThread = 0;
-
-        // Avoid index out of bounds, although that scenario should probably never happen.
-        // Like, the filesPerThread parameter should probably always have non-zero length.
-        if (filesPerThread.length > 0)
-            numFilesPerThread = filesPerThread[0].length;
 
         // Used to synchronize threads; they each connect to HopsFS and then
         // count down. So, they all cannot start until they are all connected.
@@ -194,12 +188,12 @@ public class Commands {
 
         // TODO: Verify that I've calculated the total number of operations correctly.
         int numSuccess = numSuccessfulOps.get();
-        LOG.info("Finished performing all " + (operationsPerFile * numFilesPerThread) + " file reads in " + durationSeconds);
         double totalOperations = numOps.get();
+        LOG.info("Finished performing all " + totalOperations + " file reads in " + durationSeconds + " seconds.");
         double totalThroughput = totalOperations / durationSeconds;
         double successThroughput = numSuccess / durationSeconds;
-        LOG.info("Number of successful write operations: " + numSuccess);
-        LOG.info("Number of failed write operations: " + (totalOperations - numSuccess));
+        LOG.info("Number of successful operations: " + numSuccess);
+        LOG.info("Number of failed operations: " + (totalOperations - numSuccess));
 
         printLatencyStatistics(latencyBoth, latencyTcp, latencyHttp);
         sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
@@ -515,13 +509,13 @@ public class Commands {
      * This is the WEAK SCALING (read) benchmark.
      *
      * @param numThreads Number of threads.
-     * @param numFilesToRead How many files should be read by each thread.
+     * @param filesPerThread How many files should be read by each thread.
      * @param inputPath Path to local file containing HopsFS file paths (of the files to read).
      */
     public static DistributedBenchmarkResult weakScalingBenchmarkV2(final Configuration configuration,
                                                         final DistributedFileSystem sharedHdfs,
                                                         final String nameNodeEndpoint, int numThreads,
-                                                        final int numFilesToRead, String inputPath,
+                                                        final int filesPerThread, String inputPath,
                                                         boolean shuffle, int opCode)
             throws InterruptedException, FileNotFoundException {
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
@@ -540,10 +534,9 @@ public class Commands {
 
         Random rng = new Random(); // TODO: Optionally seed this?
 
-        final String[][] fileBatches = new String[numThreads][numFilesToRead];
+        final String[][] fileBatches = new String[numThreads][filesPerThread];
         for (int i = 0; i < numThreads; i++) {
-            fileBatches[i] = new String[numFilesToRead]; // Prolly don't need to do this but oh well.
-            for (int j = 0; j < numFilesToRead; j++) {
+            for (int j = 0; j < filesPerThread; j++) {
                 int filePathIndex = rng.nextInt(paths.size());
                 fileBatches[i][j] = paths.get(filePathIndex);
             }
