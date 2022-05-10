@@ -57,7 +57,7 @@ public class Commander {
     /**
      * Has a default value.
      */
-    private String nameNodeEndpoint = "hdfs://10.150.0.17:9000/";
+    private String nameNodeEndpoint = "hdfs://10.150.0.48:8020/";
 
     /**
      * Used to obtain input from the user.
@@ -100,9 +100,20 @@ public class Commander {
     private HashMap<String, SSHClient> sshClients;
 
     /**
+     * The operations each follower is involved in.
+     */
+    private ConcurrentHashMap<String, HashSet<String>> followerIdToInvolvedOperations;
+
+    /**
      * Map from operation ID to the queue in which distributed results should be placed by the TCP server.
      */
     private ConcurrentHashMap<String, BlockingQueue<DistributedBenchmarkResult>> resultQueues;
+
+    /**
+     * The followers we're waiting on for each operation.
+     * If a follower disconnects, this gets updated.
+     */
+    private ConcurrentHashMap<String, HashSet<String>> waitingOnPerOperation;
 
     private final boolean nondistributed;
 
@@ -256,6 +267,9 @@ public class Commander {
                 int op = getNextOperation();
 
                 switch (op) {
+                    case OP_TRIGGER_CLIENT_GC:
+                        performClientVMGarbageCollection();
+                        break;
                     case OP_EXIT:
                         LOG.info("Exiting now... goodbye!");
                         try {
@@ -364,6 +378,17 @@ public class Commander {
         LOG.debug("Issuing '" + opName + "' (id=" + operationId + ") command to " +
                 followers.size() + " follower(s).");
 
+        Set<String> waitingOn = new HashSet<String>();
+        for (Connection conn : followers) {
+            FollowerConnection followerConnection = (FollowerConnection)conn;
+            waitingOn.add(followerConnection.name);
+
+            HashSet<String> involvedOps = followerIdToInvolvedOperations.computeIfAbsent(
+                    followerConnection.name, n -> new HashSet<>());
+            involvedOps.add(operationId);
+        }
+        waitingOnPerOperation.put(operationId, waitingOn);
+
         BlockingQueue<DistributedBenchmarkResult> resultQueue = new
                 ArrayBlockingQueue<>(followers.size());
         resultQueues.put(operationId, resultQueue);
@@ -403,6 +428,21 @@ public class Commander {
     private int getIntFromUser(String prompt) {
         System.out.print(prompt + "\n> ");
         return Integer.parseInt(scanner.nextLine());
+    }
+
+    /**
+     * Perform GCs on this Client VM as well as any other client VMs if we're the Commander for a distributed setup.
+     */
+    private void performClientVMGarbageCollection() {
+        if (!nondistributed) {
+            JsonObject payload = new JsonObject();
+            String operationId = UUID.randomUUID().toString();
+            payload.addProperty(OPERATION, OP_TRIGGER_CLIENT_GC);
+            payload.addProperty(OPERATION_ID, operationId);
+
+            issueCommandToFollowers("Client VM Garbage Collection", operationId, payload);
+        }
+        System.gc();
     }
 
     public void strongScalingWriteOperation(final Configuration configuration,
@@ -724,7 +764,9 @@ public class Commander {
         BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
         assert(resultQueue != null);
 
-        while (resultQueue.size() < numDistributedResults) {
+        HashSet<String> waitingOnForThisOp = waitingOnPerOperation.get(operationId);
+        // Once waitingOnForThisOp has size zero, we're done.
+        while (resultQueue.size() < numDistributedResults && waitingOnForThisOp.size() > 0) {
             Thread.sleep(50);
         }
 
@@ -837,7 +879,12 @@ public class Commander {
             cacheMisses[currentTrial] = localResult.cacheMisses;
             currentTrial++;
 
-            Thread.sleep(500);
+            if (!(currentTrial >= numTrials)) {
+                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
+                        2500 + " ms.");
+                performClientVMGarbageCollection();
+                Thread.sleep(2500);
+            }
         }
 
         System.out.println("[THROUGHPUT]");
@@ -990,18 +1037,13 @@ public class Commander {
          * Name of the connection. It's just the unique ID of the NameNode to which we are connected.
          * NameNode IDs are longs, so that's why this is of type long.
          */
-        public long name = -1; // Hides super type.
+        public String name; // Hides super type.
 
         /**
          * Default constructor.
          */
         public FollowerConnection() {
 
-        }
-
-        @Override
-        public String toString() {
-            return this.name != -1 ? String.valueOf(this.name) : super.toString();
         }
     }
 
@@ -1015,6 +1057,10 @@ public class Commander {
                     + conn.getRemoteAddressTCP());
             conn.setKeepAliveTCP(6000);
             conn.setTimeout(12000);
+
+            FollowerConnection followerConnection = (FollowerConnection)conn;
+            followerConnection.name = UUID.randomUUID().toString();
+
             followers.add(conn);
 
             JsonObject registrationPayload = new JsonObject();
@@ -1048,6 +1094,12 @@ public class Commander {
 
                 BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(opId);
                 resultQueue.add(result);
+
+                FollowerConnection followerConnection = (FollowerConnection)conn;
+                HashSet<String> waitingOn = waitingOnPerOperation.get(opId);
+                waitingOn.remove(followerConnection.name);
+                HashSet<String> involved = followerIdToInvolvedOperations.get(followerConnection.name);
+                involved.remove(followerConnection.name);
             }
             else if (object instanceof FrameworkMessage.KeepAlive) {
                 // Do nothing...
@@ -1058,7 +1110,15 @@ public class Commander {
         }
 
         public void disconnected(Connection conn) {
-            LOG.info("Lost connection to follower.");
+            FollowerConnection followerConnection = (FollowerConnection)conn;
+            LOG.info("Lost connection to follower " + followerConnection.name);
+
+            // Any operations for which we were waiting on a result for this follower, update
+            // so that we are no longer waiting on them, seeing as they've disconnected.
+            HashSet<String> involvedOps = followerIdToInvolvedOperations.get(followerConnection.name);
+            for (String involvedOp : involvedOps) {
+                waitingOnPerOperation.get(involvedOp).remove(followerConnection.name);
+            }
         }
     }
 

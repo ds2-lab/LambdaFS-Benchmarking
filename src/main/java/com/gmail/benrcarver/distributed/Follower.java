@@ -44,20 +44,16 @@ public class Follower {
     private Configuration hdfsConfiguration;
     private DistributedFileSystem hdfs;
 
-    // TODO: Make it so we can change these dynamically.
-    private String serverlessLogLevel = "INFO";
-    private boolean consistencyEnabled = true;
-
     public synchronized void waitUntilDone() throws InterruptedException {
         this.wait();
     }
 
-    public Follower(String masterIp, int masterPort, String serverlessLogLevel, boolean disableConsistency) {
+    public Follower(String masterIp, int masterPort) {
         client = new Client(16000, 16000);
         this.masterIp = masterIp;
         this.masterPort = masterPort;
-        this.serverlessLogLevel = serverlessLogLevel;
-        this.consistencyEnabled = !disableConsistency;
+
+        LOG.debug("Follower being created. Commander IP: " + masterIp + ", commander port: " + masterPort);
 
         Commands.IS_FOLLOWER = true;
 
@@ -135,6 +131,10 @@ public class Follower {
         switch(operation) {
             case OP_REGISTRATION:
                 handleRegistration(message);
+                break;
+            case OP_TRIGGER_CLIENT_GC:
+                LOG.debug("We've been instructed to perform a garbage collection!");
+                System.gc();
                 break;
             case OP_EXIT:
                 LOG.info("Received 'STOP' operation from Leader. Shutting down primary HDFS connection now.");
@@ -313,6 +313,8 @@ public class Follower {
 
         Thread connectThread = new Thread(() -> {
             client.start();
+
+            LOG.debug("Trying to connect to Commander at " + masterIp + ":" + masterPort + ".");
 
             try {
                 client.connect(CONN_TIMEOUT_MILLISECONDS, masterIp, masterPort, masterPort + 1);

@@ -2,6 +2,11 @@ package com.gmail.benrcarver.distributed;
 
 import java.io.Serializable;
 
+/**
+ * Encapsulates the result of running a particular benchmark. This class holds onto various metrics that
+ * we may find interesting or want to report, such as cache hits and misses, start and stop time for the benchmark,
+ * throughput, etc.
+ */
 public class DistributedBenchmarkResult implements Serializable {
     public String opId;
     public int operation;
