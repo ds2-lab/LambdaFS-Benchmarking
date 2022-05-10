@@ -135,12 +135,6 @@ public class Commands {
                     }
                 }
 
-                // COMMENTED OUT: Just add the HTTP and TCP latencies to `latencyBoth` as well.
-                // Doing so avoids three separate (redundant) loops.
-                //for (double latency : hdfs.getLatencyStatistics().getValues()) {
-                //    latencyBoth.addValue(latency);
-                //}
-
                 for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
                     latencyHttp.addValue(latency);
                     latencyBoth.addValue(latency);
@@ -178,7 +172,7 @@ public class Commands {
             thread.join();
         }
 
-        List<OperationPerformed> allOperationsPerformed = new ArrayList<OperationPerformed>();
+        List<OperationPerformed> allOperationsPerformed = new ArrayList<>();
         Pair<Integer, Integer> cacheHitsAndMisses = mergeMetricInformation(sharedHdfs, operationsPerformed,
                 statisticsPackages, transactionEvents, allOperationsPerformed);
         int totalCacheHits = cacheHitsAndMisses.getFirst();
@@ -189,7 +183,7 @@ public class Commands {
         // TODO: Verify that I've calculated the total number of operations correctly.
         int numSuccess = numSuccessfulOps.get();
         double totalOperations = numOps.get();
-        LOG.info("Finished performing all " + totalOperations + " file reads in " + durationSeconds + " seconds.");
+        LOG.info("Finished performing all " + totalOperations + " operations in " + durationSeconds + " sec.");
         double totalThroughput = totalOperations / durationSeconds;
         double successThroughput = numSuccess / durationSeconds;
         LOG.info("Number of successful operations: " + numSuccess);
@@ -377,7 +371,7 @@ public class Commands {
             }
         }
 
-        return new Pair(totalCacheHits, totalCacheMisses);
+        return new Pair<>(totalCacheHits, totalCacheMisses);
     }
 
     /**
