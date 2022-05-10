@@ -378,7 +378,7 @@ public class Commander {
         LOG.debug("Issuing '" + opName + "' (id=" + operationId + ") command to " +
                 followers.size() + " follower(s).");
 
-        Set<String> waitingOn = new HashSet<String>();
+        HashSet<String> waitingOn = new HashSet<String>();
         for (Connection conn : followers) {
             FollowerConnection followerConnection = (FollowerConnection)conn;
             waitingOn.add(followerConnection.name);
