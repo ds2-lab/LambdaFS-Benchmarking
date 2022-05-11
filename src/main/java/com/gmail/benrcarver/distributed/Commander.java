@@ -836,14 +836,14 @@ public class Commander {
         // Specifies how many files each thread should read.
         // Specifies number of threads.
         // Specifies how many times each file should be read.
-        int n = getIntFromUser("How many files should be read by each thread?");
+        int filesPerThread = getIntFromUser("How many files should be read by each thread?");
 
         int readsPerFile = getIntFromUser("How many times should each file be read?");
 
         int numThreads = getIntFromUser("Number of threads");
 
-        System.out.print("Please provide a path to a local file containing at least " + n + " HopsFS file " +
-                (n == 1 ? "path.\n> " : "paths.\n> "));
+        System.out.print("Please provide a path to a local file containing at least " + filesPerThread + " HopsFS file " +
+                (filesPerThread == 1 ? "path.\n> " : "paths.\n> "));
         String inputPath = scanner.nextLine();
 
         String operationId = UUID.randomUUID().toString();
@@ -852,7 +852,7 @@ public class Commander {
             JsonObject payload = new JsonObject();
             payload.addProperty(OPERATION, OP_STRONG_SCALING_READS);
             payload.addProperty(OPERATION_ID, operationId);
-            payload.addProperty("n", n);
+            payload.addProperty("n", filesPerThread);
             payload.addProperty("readsPerFile", readsPerFile);
             payload.addProperty("numThreads", numThreads);
             payload.addProperty("inputPath", inputPath);
@@ -861,7 +861,7 @@ public class Commander {
         }
 
         DistributedBenchmarkResult localResult =
-                Commands.strongScalingBenchmark(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile,
+                Commands.strongScalingBenchmark(configuration, sharedHdfs, nameNodeEndpoint, filesPerThread, readsPerFile,
                         numThreads, inputPath);
 
         if (localResult == null) {
