@@ -83,7 +83,11 @@ public class Commands {
 
         // Used to synchronize threads; they each connect to HopsFS and then
         // count down. So, they all cannot start until they are all connected.
-        final CountDownLatch latch = new CountDownLatch(numThreads);
+        final CountDownLatch startLatch = new CountDownLatch(numThreads);
+
+        // Used to synchronize threads; they block when they finish executing to avoid using CPU cycles
+        // by aggregating their results. Once all the threads have finished, they aggregate their results.
+        final CountDownLatch endLatch = new CountDownLatch(numThreads);
         final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
 
         final BlockingQueue<List<OperationPerformed>> operationsPerformed =
@@ -103,12 +107,13 @@ public class Commands {
 
         for (int i = 0; i < numThreads; i++) {
             final String[] filesForCurrentThread = filesPerThread[i];
+            final int threadId = i;
             Thread thread = new Thread(() -> {
                 DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
                 hdfs.setServerlessFunctionLogLevel(sharedHdfs.getServerlessFunctionLogLevel());
                 hdfs.setConsistencyProtocolEnabled(sharedHdfs.getConsistencyProtocolEnabled());
 
-                latch.countDown();
+                startLatch.countDown();
                 int numSuccessfulOpsCurrentThread = 0;
                 int numOpsCurrentThread = 0;
 
@@ -126,22 +131,30 @@ public class Commands {
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
 
+                if (LOG.isDebugEnabled()) LOG.debug("Thread " + threadId + " has finished executing.");
+
+                endLatch.countDown();
+
                 numSuccessfulOps.addAndGet(numSuccessfulOpsCurrentThread);
                 numOps.addAndGet(numOpsCurrentThread);
 
                 if (!BENCHMARKING_MODE) {
+                    if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting operations performed.");
                     operationsPerformed.add(hdfs.getOperationsPerformed());
                     if (TRACK_OP_PERFORMED) {
+                        if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting statistics packages & tx events.");
                         statisticsPackages.add(hdfs.getStatisticsPackages());
                         transactionEvents.add(hdfs.getTransactionEvents());
                     }
                 }
 
+                if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting HTTP latencies.");
                 for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
                     latencyHttp.addValue(latency);
                     latencyBoth.addValue(latency);
                 }
 
+                if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting TCP latencies.");
                 for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
                     latencyTcp.addValue(latency);
                     latencyBoth.addValue(latency);
@@ -169,7 +182,7 @@ public class Commands {
         endSemaphore.acquire();
         long end = System.currentTimeMillis();
 
-        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
+        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining the " + threads.length + " threads now...");
         for (Thread thread : threads) {
             thread.join();
         }
