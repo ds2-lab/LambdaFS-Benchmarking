@@ -105,8 +105,8 @@ public class Commands {
             final String[] filesForCurrentThread = filesPerThread[i];
             Thread thread = new Thread(() -> {
                 DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
-                hdfs.setServerlessFunctionLogLevel(sharedHdfs.getServerlessFunctionLogLevel);
-                hdfs.setConsistencyProtocolEnabled(sharedHdfs.getConsistencyProtocolEnabled);
+                hdfs.setServerlessFunctionLogLevel(sharedHdfs.getServerlessFunctionLogLevel());
+                hdfs.setConsistencyProtocolEnabled(sharedHdfs.getConsistencyProtocolEnabled());
 
                 latch.countDown();
                 int numSuccessfulOpsCurrentThread = 0;
