@@ -21,7 +21,7 @@ public class Network {
 
         kryo.setReferences(true);
         kryo.setRegistrationRequired(false);
-        kryo.setWarnUnregisteredClasses(true);
+        // kryo.setWarnUnregisteredClasses(true);
 
         kryo.register(String[].class);
         kryo.register(DistributedBenchmarkResult.class);
@@ -35,29 +35,29 @@ public class Network {
         kryo.register(OperationPerformed[].class);
         kryo.register(java.util.HashMap[].class);
 
-        kryo.register(org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics.class);
-        kryo.register(org.apache.commons.math3.util.ResizableDoubleArray.class);
-        kryo.register(org.apache.commons.math3.util.ResizableDoubleArray.ExpansionMode.class);
-        kryo.register(double[].class);
-        kryo.register(org.apache.commons.math3.stat.descriptive.moment.GeometricMean.class);
-        kryo.register(org.apache.commons.math3.stat.descriptive.summary.SumOfLogs.class);
-        kryo.register(org.apache.commons.math3.stat.descriptive.moment.Kurtosis.class);
-        //kryo.register(org.apache.commons.math3.stat.descriptive.moment.FourthMoment.class);
-        kryo.register(org.apache.commons.math3.stat.descriptive.rank.Max.class);
-        kryo.register(org.apache.commons.math3.stat.descriptive.moment.Mean.class);
-        //kryo.register(org.apache.commons.math3.stat.descriptive.moment.FirstMoment.class);
-        kryo.register(org.apache.commons.math3.stat.descriptive.rank.Min.class);
-        kryo.register(org.apache.commons.math3.stat.descriptive.rank.Percentile.class);
-        kryo.register(int[].class);
-        kryo.register(org.apache.commons.math3.stat.descriptive.rank.Percentile.EstimationType.class);
-        kryo.register(org.apache.commons.math3.util.KthSelector.class);
-        kryo.register(org.apache.commons.math3.util.MedianOf3PivotingStrategy.class);
-        kryo.register(org.apache.commons.math3.stat.ranking.NaNStrategy.class);
-        kryo.register(org.apache.commons.math3.stat.descriptive.moment.Skewness.class);
-        //kryo.register(org.apache.commons.math3.stat.descriptive.moment.ThirdMoment.class);
-        kryo.register(org.apache.commons.math3.stat.descriptive.summary.Sum.class);
-        kryo.register(org.apache.commons.math3.stat.descriptive.summary.SumOfSquares.class);
-        kryo.register(org.apache.commons.math3.stat.descriptive.moment.Variance.class);
-        kryo.register(org.apache.commons.math3.stat.descriptive.moment.SecondMoment.class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics.class);
+//        kryo.register(org.apache.commons.math3.util.ResizableDoubleArray.class);
+//        kryo.register(org.apache.commons.math3.util.ResizableDoubleArray.ExpansionMode.class);
+//        kryo.register(double[].class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.moment.GeometricMean.class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.summary.SumOfLogs.class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.moment.Kurtosis.class);
+//        //kryo.register(org.apache.commons.math3.stat.descriptive.moment.FourthMoment.class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.rank.Max.class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.moment.Mean.class);
+//        //kryo.register(org.apache.commons.math3.stat.descriptive.moment.FirstMoment.class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.rank.Min.class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.rank.Percentile.class);
+//        kryo.register(int[].class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.rank.Percentile.EstimationType.class);
+//        kryo.register(org.apache.commons.math3.util.KthSelector.class);
+//        kryo.register(org.apache.commons.math3.util.MedianOf3PivotingStrategy.class);
+//        kryo.register(org.apache.commons.math3.stat.ranking.NaNStrategy.class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.moment.Skewness.class);
+//        //kryo.register(org.apache.commons.math3.stat.descriptive.moment.ThirdMoment.class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.summary.Sum.class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.summary.SumOfSquares.class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.moment.Variance.class);
+//        kryo.register(org.apache.commons.math3.stat.descriptive.moment.SecondMoment.class);
     }
 }

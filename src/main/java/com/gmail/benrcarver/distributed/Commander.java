@@ -1112,11 +1112,13 @@ public class Commander {
         LOG.info("Average combined latency: " + (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0 + " ms");
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
 
-        LOG.info(String.format("%f %f %f %f %f %f %f", aggregateThroughput, cacheHits.getSum(), cacheMisses.getSum(),
+        String metricsString = String.format("%f %f %f %f %f %f %f", aggregateThroughput, cacheHits.getSum(), cacheMisses.getSum(),
                 (cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum())), trialAvgTcpLatency,
-                trialAvgHttpLatency, (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0));
+                trialAvgHttpLatency, (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0);
 
-        return new AggregatedResult(aggregateThroughput, (int)cacheHits.getSum(), (int)cacheMisses.getSum());
+        LOG.info(metricsString);
+
+        return new AggregatedResult(aggregateThroughput, (int)cacheHits.getSum(), (int)cacheMisses.getSum(), metricsString);
     }
 
     /**
@@ -1148,6 +1150,7 @@ public class Commander {
         int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
 
         int currentTrial = 0;
+        AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
         Double[] results = new Double[numTrials];
         Integer[] cacheHits = new Integer[numTrials];
         Integer[] cacheMisses = new Integer[numTrials];
@@ -1189,6 +1192,7 @@ public class Commander {
                 throughput = aggregatedResult.throughput;
                 aggregatedCacheHits = aggregatedResult.cacheHits;
                 aggregatedCacheMisses = aggregatedResult.cacheMisses;
+                aggregatedResults[currentTrial] = aggregatedResult;
             } else {
                 throughput = localResult.getOpsPerSecond();
                 aggregatedCacheHits = localResult.cacheHits;
@@ -1250,6 +1254,7 @@ public class Commander {
         int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
 
         int currentTrial = 0;
+        AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
         Double[] results = new Double[numTrials];
         Integer[] cacheHits = new Integer[numTrials];
         Integer[] cacheMisses = new Integer[numTrials];
@@ -1293,6 +1298,7 @@ public class Commander {
                 throughput = aggregatedResult.throughput;
                 aggregatedCacheHits = aggregatedResult.cacheHits;
                 aggregatedCacheMisses = aggregatedResult.cacheMisses;
+                aggregatedResults[currentTrial] = aggregatedResult;
             } else {
                 throughput = localResult.getOpsPerSecond();
                 aggregatedCacheHits = localResult.cacheHits;
@@ -1321,6 +1327,9 @@ public class Commander {
         for (int i = 0; i < numTrials; i++) {
             System.out.printf((formatString) + "%n", cacheHits[i], cacheMisses[i], ((double)cacheHits[i] / (cacheHits[i] + cacheMisses[i])));
         }
+
+        for (AggregatedResult result : aggregatedResults)
+            System.out.println(result.metricsString);
     }
 
     private int getNextOperation() {
@@ -1499,11 +1508,13 @@ public class Commander {
         public double throughput;
         public int cacheHits;
         public int cacheMisses;
+        public String metricsString; // All the metrics I'd want formatted so I can copy and paste into Excel.
 
-        public AggregatedResult(double throughput, int cacheHits, int cacheMisses) {
+        public AggregatedResult(double throughput, int cacheHits, int cacheMisses, String metricsString) {
             this.throughput = throughput;
             this.cacheHits = cacheHits;
             this.cacheMisses = cacheMisses;
+            this.metricsString = metricsString;
         }
     }
 }
