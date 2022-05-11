@@ -96,7 +96,7 @@ public class Commands {
             return hdfs;
         }
         else {
-            hdfs = Commander.initDfsClient(nameNodeEndpoint, false);
+            hdfs = Commander.initDfsClient(sharedHdfs, nameNodeEndpoint, false);
             return hdfs;
         }
     }

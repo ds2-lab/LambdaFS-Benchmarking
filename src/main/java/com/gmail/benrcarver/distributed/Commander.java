@@ -279,7 +279,7 @@ public class Commander {
     private void interactiveLoop() {
         LOG.info("Beginning execution as LEADER now.");
 
-        primaryHdfs = initDfsClient(nameNodeEndpoint, true);
+        primaryHdfs = initDfsClient(null, nameNodeEndpoint, true);
 
         while (true) {
             updateGCMetrics();
