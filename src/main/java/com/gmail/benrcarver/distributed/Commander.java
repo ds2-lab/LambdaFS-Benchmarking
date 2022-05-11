@@ -1016,7 +1016,18 @@ public class Commander {
             DistributedBenchmarkResult localResult) throws InterruptedException {
         if (numDistributedResults < 1) {
             // LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
-            return new AggregatedResult(localResult.getOpsPerSecond(), localResult.cacheHits, localResult.cacheMisses);
+            String metricsString = "";
+
+            try {
+                metricsString = String.format("%f %d %d %f %f %f %f", localResult.getOpsPerSecond(),
+                        localResult.cacheHits, localResult.cacheMisses,
+                        ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses)), localResult.tcpLatencyStatistics.getMean(),
+                        localResult.httpLatencyStatistics.getMean(), (localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean()) / 2.0);
+            } catch (NullPointerException ex) {
+                LOG.warn("Could not generate metrics string due to NPE.");
+            }
+
+            return new AggregatedResult(localResult.getOpsPerSecond(), localResult.cacheHits, localResult.cacheMisses, metricsString);
         }
 
         LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
