@@ -1408,6 +1408,8 @@ public class Commander {
             System.exit(1);
         }
 
+        // For the HDFS instance we're creating, toggle the consistency protocol + benchmark mode
+        // based on whether the client has toggled those options within the benchmarking application.
         hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
         hdfs.setBenchmarkModeEnabled(Commands.BENCHMARKING_MODE);
 
