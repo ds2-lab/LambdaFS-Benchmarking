@@ -1044,7 +1044,10 @@ public class Commander {
         LOG.debug("Duration (sec)      : " + localResult.durationSeconds);
         LOG.debug("Cache hits          : " + localResult.cacheHits);
         LOG.debug("Cache misses        : " + localResult.cacheMisses);
-        LOG.debug("Cache hit percentage: " + (localResult.cacheHits/(localResult.cacheHits + localResult.cacheMisses)));
+        if (localResult.cacheHits + localResult.cacheMisses > 0)
+            LOG.debug("Cache hit percentage: " + (localResult.cacheHits/(localResult.cacheHits + localResult.cacheMisses)));
+        else
+            LOG.debug("Cache hit percentage: N/A");
         LOG.debug("Throughput          : " + localResult.getOpsPerSecond());
 
         double trialAvgTcpLatency = localResult.tcpLatencyStatistics.getMean();
@@ -1056,7 +1059,10 @@ public class Commander {
             LOG.debug("Duration (sec)      : " + res.durationSeconds);
             LOG.debug("Cache hits          : " + res.cacheHits);
             LOG.debug("Cache misses        : " + res.cacheMisses);
-            LOG.debug("Cache hit percentage: " + (res.cacheHits/(res.cacheHits + res.cacheMisses)));
+            if (res.cacheHits + res.cacheMisses > 0)
+                LOG.debug("Cache hit percentage: " + (res.cacheHits/(res.cacheHits + res.cacheMisses)));
+            else
+                LOG.debug("Cache hit percentage: N/A");
             LOG.debug("Throughput          : " + res.getOpsPerSecond());
 
             opsPerformed.addValue(res.numOpsPerformed);
