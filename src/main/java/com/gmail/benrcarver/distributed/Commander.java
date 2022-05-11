@@ -1339,10 +1339,13 @@ public class Commander {
 
     /**
      * Create an HDFS client.
+     * @param primaryHdfs The main/shared DistributedFileSystem instance. Will be null if we're creating it, of course.
      * @param nameNodeEndpoint Where HTTP requests are directed.
-     * @param primary Are we creating the primary/shared instance?
+     * @param creatingPrimary Are we creating the primary/shared instance?
      */
-    public static DistributedFileSystem initDfsClient(String nameNodeEndpoint, boolean primary) {
+    public static DistributedFileSystem initDfsClient(DistributedFileSystem primaryHdfs,
+                                                      String nameNodeEndpoint,
+                                                      boolean creatingPrimary) {
         LOG.debug("Creating HDFS client now...");
         Configuration hdfsConfiguration = Utils.getConfiguration(hdfsConfigFilePath);
         try {
@@ -1367,15 +1370,18 @@ public class Commander {
 
         hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
         hdfs.setBenchmarkModeEnabled(Commands.BENCHMARKING_MODE);
-        hdfs.setConsistencyProtocolEnabled(sharedHdfs.getConsistencyProtocolEnabled());
 
         // The primary HDFS instance should use whatever the default log level is for the HDFS instance we create,
         // as HopsFS has a default log level. If we're creating a non-primary HDFS instance, then we just assign it
         // whatever our primary instance has been set to (as it can change dynamically).
-        if (primary)
-            serverlessLogLevel = primaryHdfs.getServerlessFunctionLogLevel();
-        else
-            hdfs.setServerlessFunctionLogLevel(sharedHdfs.getServerlessFunctionLogLevel());
+        if (creatingPrimary) {
+            serverlessLogLevel = hdfs.getServerlessFunctionLogLevel();
+            consistencyEnabled = hdfs.getConsistencyProtocolEnabled();
+        }
+        else {
+            hdfs.setServerlessFunctionLogLevel(primaryHdfs.getServerlessFunctionLogLevel());
+            hdfs.setConsistencyProtocolEnabled(primaryHdfs.getConsistencyProtocolEnabled());
+        }
 
         return hdfs;
     }
