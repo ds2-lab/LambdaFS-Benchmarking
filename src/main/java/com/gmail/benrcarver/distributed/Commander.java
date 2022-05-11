@@ -39,6 +39,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import static com.gmail.benrcarver.distributed.Commands.hdfsClients;
 import static com.gmail.benrcarver.distributed.Constants.*;
 
 /**
@@ -308,10 +309,10 @@ public class Commander {
                         Commands.getActiveNameNodesOperation(primaryHdfs);
                         break;
                     case OP_SET_CONSISTENCY_PROTOCOL_ENABLED:
-                        handleSetConsistencyProtocolEnabled(primaryHdfs);
+                        handleSetConsistencyProtocolEnabled();
                         break;
                     case OP_SET_LOG_LEVEL:
-                        handleSetLogLevel(primaryHdfs);
+                        handleSetLogLevel();
                         break;
                     case OP_CLEAR_METRIC_DATA:
                         LOG.info("Clearing metric data (including latencies) now...");
@@ -487,6 +488,10 @@ public class Commander {
         Commands.BENCHMARKING_MODE = toggle;
         primaryHdfs.setBenchmarkModeEnabled(toggle);
 
+        for (DistributedFileSystem hdfs : hdfsClients) {
+            hdfs.setBenchmarkModeEnabled(toggle);
+        }
+
         if (!nondistributed) {
             JsonObject payload = new JsonObject();
             String operationId = UUID.randomUUID().toString();
@@ -540,13 +545,13 @@ public class Commander {
         System.gc();
     }
 
-    private void handleSetLogLevel(DistributedFileSystem hdfs) {
+    private void handleSetLogLevel() {
         if (!isServerless) {
             LOG.error("Modifying the NN debug level thru the benchmarking tool is not supported for Vanilla HopsFS!");
             return;
         }
 
-        String currentLogLevel = hdfs.getServerlessFunctionLogLevel();
+        String currentLogLevel = primaryHdfs.getServerlessFunctionLogLevel();
         LOG.info("");
         LOG.info("Current log level: " + currentLogLevel);
 
@@ -567,17 +572,21 @@ public class Commander {
             LOG.error("Invalid log level specified: '" + newLogLevel + "'");
         } else {
             serverlessLogLevel = newLogLevel;
-            hdfs.setServerlessFunctionLogLevel(newLogLevel);
+            primaryHdfs.setServerlessFunctionLogLevel(newLogLevel);
+
+            for (DistributedFileSystem hdfs : hdfsClients) {
+                hdfs.setBenchmarkModeEnabled(toggle);
+            }
         }
     }
 
-    private void handleSetConsistencyProtocolEnabled(DistributedFileSystem hdfs) {
+    private void handleSetConsistencyProtocolEnabled() {
         if (!isServerless) {
             LOG.error("The consistency protocol is not supported by Vanilla HopsFS!");
             return;
         }
 
-        boolean currentFlag = hdfs.getConsistencyProtocolEnabled();
+        boolean currentFlag = primaryHdfs.getConsistencyProtocolEnabled();
         LOG.info("");
         LOG.info("Consistency protocol is currently " + (currentFlag ? "ENABLED." : "DISABLED."));
 
@@ -591,8 +600,12 @@ public class Commander {
             else
                 LOG.info("Consistency protocol is already enabled.");
 
-            hdfs.setConsistencyProtocolEnabled(true);
+            primaryHdfs.setConsistencyProtocolEnabled(true);
             consistencyEnabled = true;
+
+            for (DistributedFileSystem hdfs : hdfsClients) {
+                hdfs.setBenchmarkModeEnabled(true);
+            }
         }
         else if (newFlag.equalsIgnoreCase("f") || newFlag.equalsIgnoreCase("n")) {
             if (currentFlag)
@@ -600,8 +613,12 @@ public class Commander {
             else
                 LOG.info("Consistency protocol is already disabled.");
 
-            hdfs.setConsistencyProtocolEnabled(false);
+            primaryHdfs.setConsistencyProtocolEnabled(false);
             consistencyEnabled = false;
+
+            for (DistributedFileSystem hdfs : hdfsClients) {
+                hdfs.setBenchmarkModeEnabled(false);
+            }
         }
     }
 

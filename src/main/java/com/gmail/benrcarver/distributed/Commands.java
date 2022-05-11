@@ -74,7 +74,7 @@ public class Commands {
     /**
      * Used to cache clients for reuse.
      */
-    private static BlockingQueue<DistributedFileSystem> hdfsClients
+    public static BlockingQueue<DistributedFileSystem> hdfsClients
             = new ArrayBlockingQueue<DistributedFileSystem>(1024);
 
     /**
@@ -377,6 +377,10 @@ public class Commands {
 
         if (input.equalsIgnoreCase("y")) {
             clearMetricDataNoPrompt(hdfs);
+
+            for (DistributedFileSystem otherHdfs : hdfsClients) {
+                clearMetricDataNoPrompt(otherHdfs);
+            }
 
             LOG.debug("Cleared both statistics and latency values.");
         } else {
