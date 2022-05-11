@@ -1232,6 +1232,9 @@ public class Commander {
         for (int i = 0; i < numTrials; i++) {
             System.out.printf((formatString) + "%n", cacheHits[i], cacheMisses[i], ((double)cacheHits[i] / (cacheHits[i] + cacheMisses[i])));
         }
+
+        for (AggregatedResult result : aggregatedResults)
+            System.out.println(result.metricsString);
     }
 
     /**
