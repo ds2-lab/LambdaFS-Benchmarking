@@ -575,7 +575,7 @@ public class Commander {
             primaryHdfs.setServerlessFunctionLogLevel(newLogLevel);
 
             for (DistributedFileSystem hdfs : hdfsClients) {
-                hdfs.setBenchmarkModeEnabled(toggle);
+                hdfs.setBenchmarkModeEnabled(newLogLevel);
             }
         }
     }
