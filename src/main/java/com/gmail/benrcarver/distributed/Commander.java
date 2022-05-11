@@ -575,7 +575,7 @@ public class Commander {
             primaryHdfs.setServerlessFunctionLogLevel(newLogLevel);
 
             for (DistributedFileSystem hdfs : hdfsClients) {
-                hdfs.setBenchmarkModeEnabled(newLogLevel);
+                hdfs.setServerlessFunctionLogLevel(newLogLevel);
             }
         }
     }
@@ -604,7 +604,7 @@ public class Commander {
             consistencyEnabled = true;
 
             for (DistributedFileSystem hdfs : hdfsClients) {
-                hdfs.setBenchmarkModeEnabled(true);
+                hdfs.setConsistencyProtocolEnabled(true);
             }
         }
         else if (newFlag.equalsIgnoreCase("f") || newFlag.equalsIgnoreCase("n")) {
@@ -617,7 +617,7 @@ public class Commander {
             consistencyEnabled = false;
 
             for (DistributedFileSystem hdfs : hdfsClients) {
-                hdfs.setBenchmarkModeEnabled(false);
+                hdfs.setConsistencyProtocolEnabled(false);
             }
         }
     }
