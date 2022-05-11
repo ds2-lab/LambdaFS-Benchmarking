@@ -43,7 +43,7 @@ import static com.gmail.benrcarver.distributed.Constants.*;
 //       being called. So, at some point I can generify everything.
 public class Commands {
     public static final Log LOG = LogFactory.getLog(Commands.class);
-    private static Scanner scanner = new Scanner(System.in);
+    private static final Scanner scanner = new Scanner(System.in);
 
     private static final String EMPTY_STRING = "";
 
@@ -568,11 +568,17 @@ public class Commands {
         Random rng = new Random(); // TODO: Optionally seed this?
 
         final String[][] fileBatches = new String[numThreads][filesPerThread];
+        int counter = 0;
         for (int i = 0; i < numThreads; i++) {
             for (int j = 0; j < filesPerThread; j++) {
-                int filePathIndex = rng.nextInt(paths.size());
+                int filePathIndex;
+                if (shuffle)
+                    filePathIndex = rng.nextInt(paths.size());
+                else
+                    filePathIndex = counter++;
                 fileBatches[i][j] = paths.get(filePathIndex);
             }
+            counter = 0;
         }
 
         return executeBenchmark(
