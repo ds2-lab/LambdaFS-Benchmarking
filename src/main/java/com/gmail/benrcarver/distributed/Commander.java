@@ -123,7 +123,7 @@ public class Commander {
     private final boolean nondistributed;
 
     private static String serverlessLogLevel = null;
-    private static boolean consistencyEnabled = true;
+    public static boolean consistencyEnabled = true;
 
     private static Commander instanace;
 
@@ -279,7 +279,7 @@ public class Commander {
     private void interactiveLoop() {
         LOG.info("Beginning execution as LEADER now.");
 
-        primaryHdfs = initDfsClient(nameNodeEndpoint);
+        primaryHdfs = initDfsClient(nameNodeEndpoint, true);
 
         while (true) {
             updateGCMetrics();
@@ -1337,7 +1337,12 @@ public class Commander {
         }
     }
 
-    public static DistributedFileSystem initDfsClient(String nameNodeEndpoint) {
+    /**
+     * Create an HDFS client.
+     * @param nameNodeEndpoint Where HTTP requests are directed.
+     * @param primary Are we creating the primary/shared instance?
+     */
+    public static DistributedFileSystem initDfsClient(String nameNodeEndpoint, boolean primary) {
         LOG.debug("Creating HDFS client now...");
         Configuration hdfsConfiguration = Utils.getConfiguration(hdfsConfigFilePath);
         try {
@@ -1361,8 +1366,16 @@ public class Commander {
         }
 
         hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
-        serverlessLogLevel = hdfs.getServerlessFunctionLogLevel();
         hdfs.setBenchmarkModeEnabled(Commands.BENCHMARKING_MODE);
+        hdfs.setConsistencyProtocolEnabled(sharedHdfs.getConsistencyProtocolEnabled());
+
+        // The primary HDFS instance should use whatever the default log level is for the HDFS instance we create,
+        // as HopsFS has a default log level. If we're creating a non-primary HDFS instance, then we just assign it
+        // whatever our primary instance has been set to (as it can change dynamically).
+        if (primary)
+            serverlessLogLevel = primaryHdfs.getServerlessFunctionLogLevel();
+        else
+            hdfs.setServerlessFunctionLogLevel(sharedHdfs.getServerlessFunctionLogLevel());
 
         return hdfs;
     }

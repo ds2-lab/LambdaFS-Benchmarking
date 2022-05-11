@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import io.hops.metrics.OperationPerformed;
 
+import static com.gmail.benrcarver.distributed.Commander.consistencyEnabled;
 import static com.gmail.benrcarver.distributed.Constants.*;
 
 // TODO: Condense the various functions and build some generic framework for executing benchmarks.
@@ -69,6 +70,40 @@ public class Commands {
      * If false, then the target filesystem is Vanilla HopsFS.
      */
     public static volatile boolean IS_SERVERLESS = true;
+
+    /**
+     * Used to cache clients for reuse.
+     */
+    private static BlockingQueue<DistributedFileSystem> hdfsClients
+            = new ArrayBlockingQueue<DistributedFileSystem>(1024);
+
+    /**
+     * Retrieve an HDFS client to use during a benchmark. This will attempt to reuse an existing client.
+     * If none are available, then a new client is created.
+     * @param sharedHdfs
+     * @param nameNodeEndpoint
+     * @return
+     */
+    private static DistributedFileSystem getHdfsClient(DistributedFileSystem sharedHdfs, String nameNodeEndpoint) {
+        DistributedFileSystem hdfs;
+        hdfs = hdfsClients.poll();
+
+        if (hdfs != null) {
+            hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
+            hdfs.setBenchmarkModeEnabled(Commands.BENCHMARKING_MODE);
+            hdfs.setConsistencyProtocolEnabled(sharedHdfs.getConsistencyProtocolEnabled());
+            hdfs.setServerlessFunctionLogLevel(sharedHdfs.getServerlessFunctionLogLevel());
+            return hdfs;
+        }
+        else {
+            hdfs = Commander.initDfsClient(nameNodeEndpoint, false);
+            return hdfs;
+        }
+    }
+
+    private static void returnHdfsClient(DistributedFileSystem hdfs) throws InterruptedException {
+        hdfsClients.add(hdfs);
+    }
 
     public static DistributedBenchmarkResult executeBenchmark(
             DistributedFileSystem sharedHdfs,
@@ -109,9 +144,7 @@ public class Commands {
             final String[] filesForCurrentThread = filesPerThread[i];
             final int threadId = i;
             Thread thread = new Thread(() -> {
-                DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
-                hdfs.setServerlessFunctionLogLevel(sharedHdfs.getServerlessFunctionLogLevel());
-                hdfs.setConsistencyProtocolEnabled(sharedHdfs.getConsistencyProtocolEnabled());
+                DistributedFileSystem hdfs = getHdfsClient(sharedHdfs, nameNodeEndpoint);
 
                 startLatch.countDown();
                 int numSuccessfulOpsCurrentThread = 0;
@@ -161,10 +194,31 @@ public class Commands {
                 }
 
                 try {
-                    hdfs.close();
-                } catch (IOException ex) {
-                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+                    returnHdfsClient(hdfs);
+                } catch (InterruptedException e) {
+                    LOG.error("Encountered error when trying to return HDFS client. Closing it instead.");
+                    e.printStackTrace();
+
+                    if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Terminating HDFS connection.");
+
+                    try {
+                        hdfs.close();
+
+                        if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Terminated HDFS connection.");
+                    } catch (IOException ex) {
+                        LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+                    }
                 }
+
+//                if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Terminating HDFS connection.");
+//
+//                try {
+//                    hdfs.close();
+//
+//                    if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Terminated HDFS connection.");
+//                } catch (IOException ex) {
+//                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+//                }
             });
             threads[i] = thread;
         }

@@ -134,7 +134,6 @@ public class Follower {
         }
 
         hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
-        serverlessLogLevel = hdfs.getServerlessFunctionLogLevel();
 
         return hdfs;
     }
@@ -427,6 +426,7 @@ public class Follower {
         LOG.debug("hdfsConfigFilePath: " + hdfsConfigFilePath);
 
         hdfs = initDfsClient();
+        serverlessLogLevel = hdfs.getServerlessFunctionLogLevel();
     }
 
     public void connect() {
