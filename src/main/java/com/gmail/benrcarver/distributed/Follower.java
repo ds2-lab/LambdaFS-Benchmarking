@@ -426,7 +426,8 @@ public class Follower {
         LOG.debug("hdfsConfigFilePath: " + hdfsConfigFilePath);
 
         hdfs = initDfsClient();
-        serverlessLogLevel = hdfs.getServerlessFunctionLogLevel();
+        serverlessLogLevel = "INFO";
+        hdfs.setServerlessFunctionLogLevel(serverlessLogLevel);
     }
 
     public void connect() {
