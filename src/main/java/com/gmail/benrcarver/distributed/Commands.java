@@ -93,24 +93,37 @@ public class Commands {
             hdfs.setBenchmarkModeEnabled(Commands.BENCHMARKING_MODE);
             hdfs.setConsistencyProtocolEnabled(sharedHdfs.getConsistencyProtocolEnabled());
             hdfs.setServerlessFunctionLogLevel(sharedHdfs.getServerlessFunctionLogLevel());
-            return hdfs;
         }
         else {
             hdfs = Commander.initDfsClient(sharedHdfs, nameNodeEndpoint, false);
-            return hdfs;
         }
+        return hdfs;
     }
 
     private static void returnHdfsClient(DistributedFileSystem hdfs) throws InterruptedException {
         hdfsClients.add(hdfs);
     }
 
+    /**
+     * Generic driver used to execute all/most benchmarks.
+     *
+     * @param sharedHdfs The primary/shared HDFS instance used to collect/aggregate metric information.
+     * @param nameNodeEndpoint Direct HTTP requests here.
+     * @param numThreads Number of HopsFS clients to use (one per thread).
+     * @param fileBatches Batches of files for each client. One batch per thread.
+     * @param operationsPerFile The number of times each client should perform the given operation on a file.
+     * @param opCode Identifies the benchmark being performed. Stored with the metric results of the benchmark.
+     * @param operation This is what the threads call. We basically specify the FS operation here. Like, we provide
+     *                  the code that executes the FS operation one time, and we execute it however many times
+     *                  we're supposed to based on the {@code } parameter.
+     * @return A result containing all the metric information and whatnot.
+     */
     public static DistributedBenchmarkResult executeBenchmark(
             DistributedFileSystem sharedHdfs,
             final Configuration configuration,
             String nameNodeEndpoint,
             int numThreads,
-            String[][] filesPerThread,
+            String[][] fileBatches,
             int operationsPerFile,
             int opCode,
             FSOperation operation) throws InterruptedException {
@@ -141,7 +154,7 @@ public class Commands {
         final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
 
         for (int i = 0; i < numThreads; i++) {
-            final String[] filesForCurrentThread = filesPerThread[i];
+            final String[] filesForCurrentThread = fileBatches[i];
             final int threadId = i;
             Thread thread = new Thread(() -> {
                 DistributedFileSystem hdfs = getHdfsClient(sharedHdfs, nameNodeEndpoint);
@@ -194,31 +207,24 @@ public class Commands {
                 }
 
                 try {
+                    // First clear the metric data associated with the client.
+                    clearMetricDataNoPrompt(hdfs);
+
+                    // Now return the client to the pool so that it can be used again in the future.
                     returnHdfsClient(hdfs);
                 } catch (InterruptedException e) {
                     LOG.error("Encountered error when trying to return HDFS client. Closing it instead.");
                     e.printStackTrace();
 
-                    if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Terminating HDFS connection.");
-
+                    LOG.warn("[THREAD " + threadId + "] Terminating HDFS connection.");
                     try {
                         hdfs.close();
 
-                        if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Terminated HDFS connection.");
+                        LOG.warn("[THREAD " + threadId + "] Terminated HDFS connection.");
                     } catch (IOException ex) {
                         LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
                     }
                 }
-
-//                if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Terminating HDFS connection.");
-//
-//                try {
-//                    hdfs.close();
-//
-//                    if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Terminated HDFS connection.");
-//                } catch (IOException ex) {
-//                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
-//                }
             });
             threads[i] = thread;
         }
