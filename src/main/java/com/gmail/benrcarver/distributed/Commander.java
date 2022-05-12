@@ -1214,18 +1214,13 @@ public class Commander {
             double throughput = 0;
             int aggregatedCacheMisses = 0;
             int aggregatedCacheHits = 0;
-            // Wait for followers' results if we had followers when we first started the operation.
-            if (numDistributedResults > 0) {
-                AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
-                throughput = aggregatedResult.throughput;
-                aggregatedCacheHits = aggregatedResult.cacheHits;
-                aggregatedCacheMisses = aggregatedResult.cacheMisses;
-                aggregatedResults[currentTrial] = aggregatedResult;
-            } else {
-                throughput = localResult.getOpsPerSecond();
-                aggregatedCacheHits = localResult.cacheHits;
-                aggregatedCacheMisses = localResult.cacheMisses;
-            }
+
+            // If we have no followers, this will just use the local result.
+            AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
+            throughput = aggregatedResult.throughput;
+            aggregatedCacheHits = aggregatedResult.cacheHits;
+            aggregatedCacheMisses = aggregatedResult.cacheMisses;
+            aggregatedResults[currentTrial] = aggregatedResult;
 
             results[currentTrial] = throughput;
             cacheHits[currentTrial] = aggregatedCacheHits;
