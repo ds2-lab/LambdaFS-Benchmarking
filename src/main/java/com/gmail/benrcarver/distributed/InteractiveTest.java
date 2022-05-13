@@ -60,6 +60,7 @@ public class InteractiveTest {
         Option localOption = new Option("n", "nondistributed", false, "Run in non-distributed mode, meaning we don't launch any followers.");
         //Option logLevelOption = new Option("ll", "loglevel", true, "The log4j log level to pass to the NameNodes.");
         Option consistencyProtocolOption = new Option("c", "disable_consistency", false, "If passed, then we default to disabling the consistency protocol.");
+        Option numFollowersOpt = new Option("f", "num_followers", true, "Start only the first 'f' followers listed in the config.");
 
         Option yamlPath = new Option("y", "yaml_path", true, "Path to YAML configuration file.");
 
@@ -68,6 +69,7 @@ public class InteractiveTest {
         cmdLineOpts.addOption(leaderPort);
         cmdLineOpts.addOption(yamlPath);
         cmdLineOpts.addOption(localOption);
+        cmdLineOpts.addOption(numFollowersOpt);
         //cmdLineOpts.addOption(logLevelOption);
         cmdLineOpts.addOption(consistencyProtocolOption);
 
@@ -84,6 +86,10 @@ public class InteractiveTest {
             System.exit(1);
         }
 
+        int numFollowers = -1;
+        if (cmd.hasOption("numFollowersOpt"))
+            numFollowers = Integer.parseInt(cmd.getOptionValue("numFollowersOpt"));
+
         if (cmd.hasOption("worker")) {
             LOG.info("Beginning execution as FOLLOWER now.");
             Follower follower = new Follower(
@@ -99,7 +105,8 @@ public class InteractiveTest {
                     Integer.parseInt(cmd.getOptionValue("leader_port")),
                     cmd.getOptionValue("yaml_path"),
                     cmd.hasOption("nondistributed"), /* If it has this option, then it is true */
-                    cmd.hasOption("disable_consistency") /* If it has this option, then it is true */);
+                    cmd.hasOption("disable_consistency"), /* If it has this option, then it is true */
+                    numFollowers);
             commander.start();
         }
     }

@@ -151,24 +151,31 @@ public class Commander {
      */
     private boolean isServerless = true;
 
+    /**
+     * Start the first 'numFollowersFromConfigToStart' followers listed in the config.
+     */
+    private int numFollowersFromConfigToStart;
+
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
-                                                 boolean disableConsistency) throws IOException {
+                                                 boolean disableConsistency, int numFollowers) throws IOException {
         if (instanace == null) {
             // serverlessLogLevel = logLevel;
             consistencyEnabled = !disableConsistency;
-            instanace = new Commander(ip, port, yamlPath, nondistributed);
+            instanace = new Commander(ip, port, yamlPath, nondistributed, numFollowers);
         }
 
         return instanace;
     }
 
-    private Commander(String ip, int port, String yamlPath, boolean nondistributed) throws IOException {
+    private Commander(String ip, int port, String yamlPath, boolean nondistributed, int numFollowersFromConfigToStart)
+            throws IOException {
         this.ip = ip;
         this.port = port;
         this.nondistributed = nondistributed;
         // TODO: Maybe do book-keeping or fault-tolerance here.
         this.followers = new ArrayList<>();
         this.resultQueues = new ConcurrentHashMap<>();
+        this.numFollowersFromConfigToStart = numFollowersFromConfigToStart;
 
         tcpServer = new Server(COMMANDER_TCP_BUFFER_SIZES, COMMANDER_TCP_BUFFER_SIZES) {
             @Override
@@ -221,8 +228,14 @@ public class Commander {
      */
     private void launchFollowers() throws IOException {
         final String fullCommand = String.format(LAUNCH_FOLLOWER_CMD, ip, port);
+        int counter = 1;
 
-        for (FollowerConfig config : followerConfigs) {
+        // If 'numFollowersFromConfigToStart' is negative, then use all followers.
+        if (numFollowersFromConfigToStart < 0)
+            numFollowersFromConfigToStart = followerConfigs.size();
+
+        for (int i = 0; i < numFollowersFromConfigToStart; i++) {
+            FollowerConfig config = followerConfigs.get(i);
             LOG.info("Starting follower at " + config.getUser() + "@" + config.getIp() + " now.");
 
             SSHClient ssh = new SSHClient();
@@ -1211,20 +1224,14 @@ public class Commander {
 
             //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
             localResult.setOperationId(operationId);
-            double throughput = 0;
-            int aggregatedCacheMisses = 0;
-            int aggregatedCacheHits = 0;
 
             // If we have no followers, this will just use the local result.
             AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
-            throughput = aggregatedResult.throughput;
-            aggregatedCacheHits = aggregatedResult.cacheHits;
-            aggregatedCacheMisses = aggregatedResult.cacheMisses;
-            aggregatedResults[currentTrial] = aggregatedResult;
 
-            results[currentTrial] = throughput;
-            cacheHits[currentTrial] = aggregatedCacheHits;
-            cacheMisses[currentTrial] = aggregatedCacheMisses;
+            aggregatedResults[currentTrial] = aggregatedResult;
+            results[currentTrial] = aggregatedResult.throughput;
+            cacheHits[currentTrial] = aggregatedResult.cacheHits;
+            cacheMisses[currentTrial] = aggregatedResult.cacheMisses;
             currentTrial++;
 
             if (!(currentTrial >= numTrials)) {
