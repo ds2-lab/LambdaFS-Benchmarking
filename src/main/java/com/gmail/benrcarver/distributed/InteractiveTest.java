@@ -87,8 +87,8 @@ public class InteractiveTest {
         }
 
         int numFollowers = -1;
-        if (cmd.hasOption("numFollowersOpt"))
-            numFollowers = Integer.parseInt(cmd.getOptionValue("numFollowersOpt"));
+        if (cmd.hasOption("num_followers"))
+            numFollowers = Integer.parseInt(cmd.getOptionValue("num_followers"));
 
         if (cmd.hasOption("worker")) {
             LOG.info("Beginning execution as FOLLOWER now.");

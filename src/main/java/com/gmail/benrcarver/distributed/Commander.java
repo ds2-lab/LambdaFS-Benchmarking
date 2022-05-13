@@ -228,11 +228,12 @@ public class Commander {
      */
     private void launchFollowers() throws IOException {
         final String fullCommand = String.format(LAUNCH_FOLLOWER_CMD, ip, port);
-        int counter = 1;
 
         // If 'numFollowersFromConfigToStart' is negative, then use all followers.
         if (numFollowersFromConfigToStart < 0)
             numFollowersFromConfigToStart = followerConfigs.size();
+
+        LOG.info("Starting " + numFollowersFromConfigToStart + " follower(s) now...");
 
         for (int i = 0; i < numFollowersFromConfigToStart; i++) {
             FollowerConfig config = followerConfigs.get(i);
