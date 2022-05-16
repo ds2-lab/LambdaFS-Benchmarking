@@ -155,18 +155,30 @@ public class Commander {
      */
     private int numFollowersFromConfigToStart;
 
+    /**
+     * If true, then we SCP the JAR files to each follower before starting them.
+     */
+    private boolean scpJars;
+
+    /**
+     * If true, then we SCP the config file to each follower before starting them.
+     */
+    private boolean scpConfig;
+
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
-                                                 boolean disableConsistency, int numFollowers) throws IOException {
+                                                 boolean disableConsistency, int numFollowers,
+                                                 boolean scpJars, boolean scpConfig) throws IOException {
         if (instanace == null) {
             // serverlessLogLevel = logLevel;
             consistencyEnabled = !disableConsistency;
-            instanace = new Commander(ip, port, yamlPath, nondistributed, numFollowers);
+            instanace = new Commander(ip, port, yamlPath, nondistributed, numFollowers, scpJars, scpConfig);
         }
 
         return instanace;
     }
 
-    private Commander(String ip, int port, String yamlPath, boolean nondistributed, int numFollowersFromConfigToStart)
+    private Commander(String ip, int port, String yamlPath, boolean nondistributed, int numFollowersFromConfigToStart,
+                      boolean scpJars, boolean scpConfig)
             throws IOException {
         this.ip = ip;
         this.port = port;
@@ -175,6 +187,8 @@ public class Commander {
         this.followers = new ArrayList<>();
         this.resultQueues = new ConcurrentHashMap<>();
         this.numFollowersFromConfigToStart = numFollowersFromConfigToStart;
+        this.scpJars = scpJars;
+        this.scpConfig = scpConfig;
 
         tcpServer = new Server(COMMANDER_TCP_BUFFER_SIZES, COMMANDER_TCP_BUFFER_SIZES) {
             @Override
@@ -233,7 +247,10 @@ public class Commander {
      * Using SSH, launch the follower processes.
      */
     private void launchFollowers() throws IOException, JSchException {
-        final String fullCommand = String.format(LAUNCH_FOLLOWER_CMD, ip, port);
+        final String launchCommand = String.format(LAUNCH_FOLLOWER_CMD, ip, port);
+        final String scpHadoopHdfsJarCommand = "scp /home/ben/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar %s@%s:/home/ben/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar";
+        final String scpBenchmarkJarCommand = "scp /home/ubuntu/repos/HopsFS-Benchmarking-Utility/target/HopsFSBenchmark-1.0-jar-with-dependencies.jar %s@%s:HopsFSBenchmark-1.0-jar-with-dependencies.jar";
+        final String scpConfigCommand = "scp /home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml %s@%s:/home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml";
 
         // If 'numFollowersFromConfigToStart' is negative, then use all followers.
         if (numFollowersFromConfigToStart < 0)
@@ -256,8 +273,31 @@ public class Commander {
                 session = jsch.getSession(config.getUser(), config.getIp(), 22);
                 session.setConfig(sshConfig);
                 session.connect();
-                Channel channel=session.openChannel("exec");
-                ((ChannelExec)channel).setCommand(fullCommand);
+
+                if (scpJars) {
+                    LOG.debug("SCP-ing hadoop-hdfs-3.2.0.3-SNAPSHOT.jar to Follower " + config.getIp() + ".");
+                    Channel channel = session.openChannel("exec");
+                    String command = String.format(scpHadoopHdfsJarCommand, config.getUser(), config.getIp());
+                    ((ChannelExec)channel).setCommand(command);
+                    channel.connect();
+
+                    LOG.debug("SCP-ing HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + config.getIp() + ".");
+                    channel = session.openChannel("exec");
+                    command = String.format(scpBenchmarkJarCommand, config.getUser(), config.getIp());
+                    ((ChannelExec)channel).setCommand(command);
+                    channel.connect();
+                }
+
+                if (scpConfig) {
+                    LOG.debug("SCP-ing hdfs-site.xml to Follower " + config.getIp() + ".");
+                    Channel channel = session.openChannel("exec");
+                    String command = String.format(scpConfigCommand, config.getUser(), config.getIp());
+                    ((ChannelExec)channel).setCommand(command);
+                    channel.connect();
+                }
+
+                Channel channel = session.openChannel("exec");
+                ((ChannelExec)channel).setCommand(launchCommand);
                 channel.setInputStream(null);
                 ((ChannelExec)channel).setErrStream(System.err);
 

@@ -61,6 +61,8 @@ public class InteractiveTest {
         //Option logLevelOption = new Option("ll", "loglevel", true, "The log4j log level to pass to the NameNodes.");
         Option consistencyProtocolOption = new Option("c", "disable_consistency", false, "If passed, then we default to disabling the consistency protocol.");
         Option numFollowersOpt = new Option("f", "num_followers", true, "Start only the first 'f' followers listed in the config.");
+        Option scpJars = new Option("j", "scp_jars", false, "The commander should SCP the JAR files to each follower.");
+        Option scpConfig = new Option("c", "scp_config", false, "The command should SCP the config file to each follower.");
 
         Option yamlPath = new Option("y", "yaml_path", true, "Path to YAML configuration file.");
 
@@ -72,6 +74,8 @@ public class InteractiveTest {
         cmdLineOpts.addOption(numFollowersOpt);
         //cmdLineOpts.addOption(logLevelOption);
         cmdLineOpts.addOption(consistencyProtocolOption);
+        cmdLineOpts.addOption(scpJars);
+        cmdLineOpts.addOption(scpConfig);
 
         CommandLineParser parser = new GnuParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -106,7 +110,9 @@ public class InteractiveTest {
                     cmd.getOptionValue("yaml_path"),
                     cmd.hasOption("nondistributed"), /* If it has this option, then it is true */
                     cmd.hasOption("disable_consistency"), /* If it has this option, then it is true */
-                    numFollowers);
+                    numFollowers,
+                    cmd.hasOption("scp_jars"),
+                    cmd.hasOption("scp_config"));
             commander.start();
         }
     }
