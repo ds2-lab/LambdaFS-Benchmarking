@@ -279,13 +279,45 @@ public class Commander {
                     Channel channel = session.openChannel("exec");
                     String command = String.format(scpHadoopHdfsJarCommand, config.getUser(), config.getIp());
                     ((ChannelExec)channel).setCommand(command);
+                    InputStream in=channel.getInputStream();
                     channel.connect();
+
+                    byte[] tmp=new byte[1024];
+                    while(true){
+                        while(in.available()>0){
+                            int j=in.read(tmp, 0, 1024);
+                            if(j<0)break;
+                            System.out.print(new String(tmp, 0, j));
+                        }
+                        if(channel.isClosed()){
+                            System.out.println("exit-status: "+channel.getExitStatus());
+                            break;
+                        }
+                        try{Thread.sleep(1000);}catch(Exception ee){}
+                    }
+                    channel.disconnect();
 
                     LOG.debug("SCP-ing HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + config.getIp() + ".");
                     channel = session.openChannel("exec");
                     command = String.format(scpBenchmarkJarCommand, config.getUser(), config.getIp());
                     ((ChannelExec)channel).setCommand(command);
+                    in=channel.getInputStream();
                     channel.connect();
+
+                    tmp=new byte[1024];
+                    while(true){
+                        while(in.available()>0){
+                            int j=in.read(tmp, 0, 1024);
+                            if(j<0)break;
+                            System.out.print(new String(tmp, 0, j));
+                        }
+                        if(channel.isClosed()){
+                            System.out.println("exit-status: "+channel.getExitStatus());
+                            break;
+                        }
+                        try{Thread.sleep(1000);}catch(Exception ee){}
+                    }
+                    channel.disconnect();
                 }
 
                 if (scpConfig) {
@@ -293,7 +325,23 @@ public class Commander {
                     Channel channel = session.openChannel("exec");
                     String command = String.format(scpConfigCommand, config.getUser(), config.getIp());
                     ((ChannelExec)channel).setCommand(command);
+                    InputStream in=channel.getInputStream();
                     channel.connect();
+
+                    byte[] tmp=new byte[1024];
+                    while(true){
+                        while(in.available()>0){
+                            int j=in.read(tmp, 0, 1024);
+                            if(j<0)break;
+                            System.out.print(new String(tmp, 0, j));
+                        }
+                        if(channel.isClosed()){
+                            System.out.println("exit-status: "+channel.getExitStatus());
+                            break;
+                        }
+                        try{Thread.sleep(1000);}catch(Exception ee){}
+                    }
+                    channel.disconnect();
                 }
 
                 Channel channel = session.openChannel("exec");
