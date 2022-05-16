@@ -215,7 +215,14 @@ public class Commander {
         if (!nondistributed) {
             LOG.info("Commander is operating in DISTRIBUTED mode.");
             startServer();
-            launchFollowers();
+
+            try {
+                launchFollowers();
+            } catch (IOException ex) {
+                LOG.error("Encountered IOException while starting followers:", ex);
+            } catch (JSchException ex) {
+                LOG.error("Encountered JSchException while starting followers:", ex);
+            }
         }
         Commands.TRACK_OP_PERFORMED = true;
         LOG.info("Commander is operating in NON-DISTRIBUTED mode.");
@@ -225,7 +232,7 @@ public class Commander {
     /**
      * Using SSH, launch the follower processes.
      */
-    private void launchFollowers() throws IOException {
+    private void launchFollowers() throws IOException, JSchException {
         final String fullCommand = String.format(LAUNCH_FOLLOWER_CMD, ip, port);
 
         // If 'numFollowersFromConfigToStart' is negative, then use all followers.
@@ -234,6 +241,9 @@ public class Commander {
 
         LOG.info("Starting " + numFollowersFromConfigToStart + " follower(s) now...");
 
+        JSch jsch = new JSch();
+        jsch.addIdentity("/home/ubuntu/.ssh/id_rsa");
+
         for (int i = 0; i < numFollowersFromConfigToStart; i++) {
             FollowerConfig config = followerConfigs.get(i);
             LOG.info("Starting follower at " + config.getUser() + "@" + config.getIp() + " now.");
@@ -241,7 +251,6 @@ public class Commander {
             java.util.Properties sshConfig = new java.util.Properties();
             sshConfig.put("StrictHostKeyChecking", "no");
 
-            JSch jsch = new JSch();
             Session session;
             try {
                 session = jsch.getSession(config.getUser(), config.getIp(), 22);
