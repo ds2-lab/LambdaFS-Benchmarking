@@ -9,10 +9,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.jcraft.jsch.*;
 import io.hops.metrics.TransactionEvent;
-import net.schmizz.sshj.SSHClient;
-import net.schmizz.sshj.common.IOUtils;
-import net.schmizz.sshj.connection.channel.direct.Session;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,6 +32,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,7 +57,7 @@ public class Commander {
     /**
      * Use with String.format(LAUNCH_FOLLOWER_CMD, leader_ip, leader_port)
      */
-    private static final String LAUNCH_FOLLOWER_CMD = "source ~/.bashrc & java -cp \".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/share/hadoop/hdfs/lib/*:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0-SNAPSHOT/share/hadoop/common/lib/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hops-leader-election/target/hops-leader-election-3.2.0.3-SNAPSHOT.jar:/home/ben/openwhisk-runtime-java/core/java8/libs/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hadoop-common-project/hadoop-common/target/hadoop-common-3.2.0.3-SNAPSHOT.jar\" com.gmail.benrcarver.distributed.InteractiveTest --worker --leader_ip %s --leader_port %d";
+    private static final String LAUNCH_FOLLOWER_CMD = "source ~/.bashrc & java -Dlog4j.configuration=file:/home/ubuntu/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties -Dsun.io.serialization.extendedDebugInfo=true -Xmx58g -Xms58g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions -XX:ParGCCardsPerStrideChunk=32768 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 -XX:MaxNewSize=32000m -XX:+CMSClassUnloadingEnabled -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=75 -XX:+ScavengeBeforeFullGC -verbose:gc -XX:+PrintGCTimeStamps -XX:+PrintGCDetails -cp \\\".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:/home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/share/hadoop/hdfs/lib/*:/home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0-SNAPSHOT/share/hadoop/common/lib/*:/home/ben/repos/hops/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-3.2.0.3-SNAPSHOT.jar:/home/ben/repos/hops/hops-leader-election/target/hops-leader-election-3.2.0.3-SNAPSHOT.jar:/home/ben/openwhisk-runtime-java/core/java8/libs/*:/home/ben/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar:/home/ben/repos/hops/hadoop-common-project/hadoop-common/target/hadoop-common-3.2.0.3-SNAPSHOT.jar\\\" com.gmail.benrcarver.distributed.InteractiveTest --leader_ip %s --leader_port %d --yaml_path /home/ubuntu/repos/HopsFS-Benchmarking-Utility/config.yaml --worker";
 
     /**
      * Has a default value.
@@ -114,7 +113,7 @@ public class Commander {
     /**
      * Map from follower IP to the associated SSH client.
      */
-    private HashMap<String, SSHClient> sshClients;
+    private HashMap<String, Session> sshClients;
 
     /**
      * Map from operation ID to the queue in which distributed results should be placed by the TCP server.
@@ -239,40 +238,73 @@ public class Commander {
             FollowerConfig config = followerConfigs.get(i);
             LOG.info("Starting follower at " + config.getUser() + "@" + config.getIp() + " now.");
 
-            SSHClient ssh = new SSHClient();
-            ssh.loadKnownHosts();
-            ssh.connect(config.getIp());
+            JSch jsch = new JSch();
+            Session session;
+            try {
+                session = jsch.getSession(config.getUser(), config.getIp(), 22);
+                session.connect();
+                Channel channel=session.openChannel("exec");
+                ((ChannelExec)channel).setCommand(fullCommand);
+                channel.setInputStream(null);
+                ((ChannelExec)channel).setErrStream(System.err);
+
+                InputStream in=channel.getInputStream();
+                channel.connect();
+                byte[] tmp=new byte[1024];
+                while(true){
+                    while(in.available()>0){
+                        int j=in.read(tmp, 0, 1024);
+                        if(j<0)break;
+                        System.out.print(new String(tmp, 0, j));
+                    }
+                    if(channel.isClosed()){
+                        System.out.println("exit-status: "+channel.getExitStatus());
+                        break;
+                    }
+                    try{Thread.sleep(1000);}catch(Exception ee){}
+                }
+                channel.disconnect();
+                session.disconnect();
+                System.out.println("DONE");
+
+            } catch (JSchException e) {
+                e.printStackTrace();
+            }
+
+//            SSHClient ssh = new SSHClient();
+//            ssh.loadKnownHosts();
+//            ssh.connect(config.getIp());
 
             LOG.debug("Connected to follower at " + config.getUser() + "@" + config.getIp() + " now.");
 
-            Session session = null;
-
-            try {
-                ssh.authPublickey(config.getUser());
-
-                LOG.debug("Authenticated with follower at " + config.getUser() + "@" + config.getIp() + " now.");
-
-                session = ssh.startSession();
-
-                LOG.debug("Started session with follower at " + config.getUser() + "@" + config.getIp() + " now.");
-
-                Session.Command cmd = session.exec(fullCommand);
-
-                LOG.debug("Executed command: " + fullCommand);
-
-                ByteArrayOutputStream inputStream = IOUtils.readFully(cmd.getInputStream());
-                LOG.debug("Output: " + inputStream);
-
-                con.writer().print(inputStream);
-                cmd.join(5, TimeUnit.SECONDS);
-                con.writer().print("\n** exit status: " + cmd.getExitStatus());
-                LOG.debug("Exit status: " + cmd.getExitStatus());
-            } finally {
-                if (session != null)
-                    session.close();
-
-                ssh.disconnect();
-            }
+//            Session session = null;
+//
+//            try {
+//                ssh.authPublickey(config.getUser());
+//
+//                LOG.debug("Authenticated with follower at " + config.getUser() + "@" + config.getIp() + " now.");
+//
+//                session = ssh.startSession();
+//
+//                LOG.debug("Started session with follower at " + config.getUser() + "@" + config.getIp() + " now.");
+//
+//                Session.Command cmd = session.exec(fullCommand);
+//
+//                LOG.debug("Executed command: " + fullCommand);
+//
+//                ByteArrayOutputStream inputStream = IOUtils.readFully(cmd.getInputStream());
+//                LOG.debug("Output: " + inputStream);
+//
+//                con.writer().print(inputStream);
+//                cmd.join(5, TimeUnit.SECONDS);
+//                con.writer().print("\n** exit status: " + cmd.getExitStatus());
+//                LOG.debug("Exit status: " + cmd.getExitStatus());
+//            } finally {
+//                if (session != null)
+//                    session.close();
+//
+//                ssh.disconnect();
+//            }
         }
     }
 
@@ -1172,8 +1204,8 @@ public class Commander {
      *  - The number of files each thread should read.
      */
     private void weakScalingReadOperationV2(final Configuration configuration,
-                                          final DistributedFileSystem sharedHdfs,
-                                          final String nameNodeEndpoint)
+                                            final DistributedFileSystem sharedHdfs,
+                                            final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         System.out.print("How many threads should be used?\n> ");
         String inputN = scanner.nextLine();
