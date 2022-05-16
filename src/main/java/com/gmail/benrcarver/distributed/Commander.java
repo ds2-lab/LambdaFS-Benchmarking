@@ -238,10 +238,14 @@ public class Commander {
             FollowerConfig config = followerConfigs.get(i);
             LOG.info("Starting follower at " + config.getUser() + "@" + config.getIp() + " now.");
 
+            java.util.Properties sshConfig = new java.util.Properties();
+            sshConfig.put("StrictHostKeyChecking", "no");
+
             JSch jsch = new JSch();
             Session session;
             try {
                 session = jsch.getSession(config.getUser(), config.getIp(), 22);
+                session.setConfig(sshConfig);
                 session.connect();
                 Channel channel=session.openChannel("exec");
                 ((ChannelExec)channel).setCommand(fullCommand);
