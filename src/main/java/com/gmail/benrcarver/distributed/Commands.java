@@ -186,22 +186,22 @@ public class Commands {
                 numOps.addAndGet(numOpsCurrentThread);
 
                 if (!BENCHMARKING_MODE) {
-                    if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting operations performed.");
+                    //if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting operations performed.");
                     operationsPerformed.add(hdfs.getOperationsPerformed());
                     if (TRACK_OP_PERFORMED) {
-                        if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting statistics packages & tx events.");
+                        //if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting statistics packages & tx events.");
                         statisticsPackages.add(hdfs.getStatisticsPackages());
                         transactionEvents.add(hdfs.getTransactionEvents());
                     }
                 }
 
-                if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting HTTP latencies.");
+                //if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting HTTP latencies.");
                 for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
                     latencyHttp.addValue(latency);
                     latencyBoth.addValue(latency);
                 }
 
-                if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting TCP latencies.");
+                //if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting TCP latencies.");
                 for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
                     latencyTcp.addValue(latency);
                     latencyBoth.addValue(latency);
