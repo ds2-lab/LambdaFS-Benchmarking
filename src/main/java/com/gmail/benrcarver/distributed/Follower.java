@@ -461,7 +461,7 @@ public class Follower {
         String message;
 
         try {
-            message = "Hello Commander. I am follower " + InetAddress.getLocalHost().getHostAddress();
+            message = "Hello Commander. I am Follower " + InetAddress.getLocalHost().getHostAddress() + ".";
         } catch (UnknownHostException e) {
             message = "Hello Commander. I am one of your followers.";
         }

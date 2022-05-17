@@ -290,23 +290,6 @@ public class Commander {
 
             InputStream in = channel.getInputStream();
             channel.connect();
-            byte[] tmp = new byte[1024];
-            while (true) {
-                while (in.available() > 0) {
-                    int j = in.read(tmp, 0, 1024);
-                    if (j < 0) break;
-                    System.out.print(new String(tmp, 0, j));
-                }
-                if (channel.isClosed()) {
-                    System.out.println("exit-status: " + channel.getExitStatus());
-                    break;
-                }
-                try {
-                    Thread.sleep(1000);
-                } catch (Exception ee) {
-
-                }
-            }
             channel.disconnect();
             session.disconnect();
             System.out.println("DONE");
