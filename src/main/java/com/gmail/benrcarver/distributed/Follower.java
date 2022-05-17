@@ -19,9 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -459,5 +457,16 @@ public class Follower {
             LOG.error("Failed to connect to master at " + masterIp + ":" + masterPort + ".");
             System.exit(1);
         }
+
+        String message;
+
+        try {
+            message = "Hello Commander. I am follower " + InetAddress.getLocalHost().getHostAddress();
+        } catch (UnknownHostException e) {
+            message = "Hello Commander. I am one of your followers.";
+        }
+
+        // Basically serves as a registration.
+        client.sendTCP(message);
     }
 }

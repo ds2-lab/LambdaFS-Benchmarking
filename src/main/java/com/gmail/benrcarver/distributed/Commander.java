@@ -1495,7 +1495,7 @@ public class Commander {
          * Name of the connection. It's just the unique ID of the NameNode to which we are connected.
          * NameNode IDs are longs, so that's why this is of type long.
          */
-        public long name = -1; // Hides super type.
+        public String name = null; // Hides super type.
 
         /**
          * Default constructor.
@@ -1506,7 +1506,7 @@ public class Commander {
 
         @Override
         public String toString() {
-            return this.name != -1 ? String.valueOf(this.name) : super.toString();
+            return "FollowerConnection[" + name + "]";
         }
     }
 
@@ -1541,6 +1541,10 @@ public class Commander {
          */
         @Override
         public void received(Connection conn, Object object) {
+            FollowerConnection connection = (FollowerConnection) conn;
+            if (connection.name == null)
+                connection.name = conn.getRemoteAddressTCP().getHostName();
+
             if (object instanceof String) {
                 JsonObject body = new JsonParser().parse((String)object).getAsJsonObject();
                 LOG.debug("Received message from follower: " + body);
@@ -1564,12 +1568,17 @@ public class Commander {
         }
 
         public void disconnected(Connection conn) {
-            LOG.info("Lost connection to follower at " + conn.getRemoteAddressTCP());
+            LOG.warn("Lost connection to follower at " + conn.getRemoteAddressTCP());
             followers.remove(conn);
 
-            LOG.debug("Trying to re-launch follower now...");
+            FollowerConnection connection = (FollowerConnection)conn;
 
-            launchFollower("ben", conn.getRemoteAddressTCP().getHostName(), String.format(LAUNCH_FOLLOWER_CMD, ip, port));
+            if (connection.name != null) {
+                LOG.info("Trying to re-launch Follower " + connection.name + " now...");
+                launchFollower("ben", connection.name, String.format(LAUNCH_FOLLOWER_CMD, ip, port));
+            } else {
+                LOG.error("Follower connection did not have a name. Cannot attempt to re-launch follower.");
+            }
         }
     }
 
