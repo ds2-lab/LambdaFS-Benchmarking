@@ -245,9 +245,10 @@ public class Commander {
             } catch (JSchException ex) {
                 LOG.error("Encountered JSchException while starting followers:", ex);
             }
+        } else {
+            LOG.info("Commander is operating in NON-DISTRIBUTED mode.");
         }
         Commands.TRACK_OP_PERFORMED = true;
-        LOG.info("Commander is operating in NON-DISTRIBUTED mode.");
         interactiveLoop();
     }
 
