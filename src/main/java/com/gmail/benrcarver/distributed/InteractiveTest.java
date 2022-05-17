@@ -17,7 +17,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import io.hops.metrics.OperationPerformed;
 
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.*;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -25,9 +25,6 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 /**
  * This is the class that is executed when running the application. It starts the Commander or Follower.
@@ -1097,7 +1094,7 @@ public class InteractiveTest {
 
         try {
             hdfs.ping(targetDeployment);
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException | ExecutionException ex) {
             LOG.info("Encountered IOException while pinging NameNode deployment " +
                     targetDeployment + ".");
             ex.printStackTrace();
