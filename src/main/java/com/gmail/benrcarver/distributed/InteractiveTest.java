@@ -1094,7 +1094,7 @@ public class InteractiveTest {
 
         try {
             hdfs.ping(targetDeployment);
-        } catch (IOException | InterruptedException | ExecutionException ex) {
+        } catch (IOException ex) {
             LOG.info("Encountered IOException while pinging NameNode deployment " +
                     targetDeployment + ".");
             ex.printStackTrace();
