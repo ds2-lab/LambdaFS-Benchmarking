@@ -46,7 +46,6 @@ import static com.gmail.benrcarver.distributed.Constants.*;
  */
 public class Commander {
     public static final Log LOG = LogFactory.getLog(Commander.class);
-    private static final Console con = System.console();
 
     private final List<Connection> followers;
 
@@ -58,6 +57,10 @@ public class Commander {
      * Use with String.format(LAUNCH_FOLLOWER_CMD, leader_ip, leader_port)
      */
     private static final String LAUNCH_FOLLOWER_CMD = "source ~/.bashrc & cd /home/ubuntu/repos/HopsFS-Benchmarking-Utility & java -Dlog4j.configuration=file:/home/ubuntu/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties -Dsun.io.serialization.extendedDebugInfo=true -Xmx58g -Xms58g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions -XX:ParGCCardsPerStrideChunk=32768 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 -XX:MaxNewSize=32000m -XX:+CMSClassUnloadingEnabled -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=75 -XX:+ScavengeBeforeFullGC -verbose:gc -XX:+PrintGCTimeStamps -XX:+PrintGCDetails -cp \".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:/home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/share/hadoop/hdfs/lib/*:/home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0-SNAPSHOT/share/hadoop/common/lib/*:/home/ben/repos/hops/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-3.2.0.3-SNAPSHOT.jar:/home/ben/repos/hops/hops-leader-election/target/hops-leader-election-3.2.0.3-SNAPSHOT.jar:/home/ben/openwhisk-runtime-java/core/java8/libs/*:/home/ben/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar:/home/ben/repos/hops/hadoop-common-project/hadoop-common/target/hadoop-common-3.2.0.3-SNAPSHOT.jar\" com.gmail.benrcarver.distributed.InteractiveTest --leader_ip %s --leader_port %d --yaml_path /home/ubuntu/repos/HopsFS-Benchmarking-Utility/config.yaml --worker";
+
+    private static final String BENCHMARK_JAR_PATH = "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/target/HopsFSBenchmark-1.0-jar-with-dependencies.jar %s@%s:HopsFSBenchmark-1.0-jar-with-dependencies.jar";
+
+    private static final String HADOOP_HDFS_JAR_PATH = "/home/ben/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar";
 
     /**
      * Has a default value.
@@ -248,9 +251,9 @@ public class Commander {
      */
     private void launchFollowers() throws IOException, JSchException {
         final String launchCommand = String.format(LAUNCH_FOLLOWER_CMD, ip, port);
-        final String scpHadoopHdfsJarCommand = "scp /home/ben/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar %s@%s:/home/ben/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar";
-        final String scpBenchmarkJarCommand = "scp /home/ubuntu/repos/HopsFS-Benchmarking-Utility/target/HopsFSBenchmark-1.0-jar-with-dependencies.jar %s@%s:HopsFSBenchmark-1.0-jar-with-dependencies.jar";
-        final String scpConfigCommand = "scp /home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml %s@%s:/home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml";
+        final String scpHadoopHdfsJarCommand = "scp " + HADOOP_HDFS_JAR_PATH + " %s@%s:" + HADOOP_HDFS_JAR_PATH;
+        final String scpBenchmarkJarCommand = "scp " + BENCHMARK_JAR_PATH + " %s@%s:" + BENCHMARK_JAR_PATH;
+        final String scpConfigCommand = "scp " + hdfsConfigFilePath + " %s@%s:" + hdfsConfigFilePath;
 
         // If 'numFollowersFromConfigToStart' is negative, then use all followers.
         if (numFollowersFromConfigToStart < 0)
@@ -275,73 +278,25 @@ public class Commander {
                 session.connect();
 
                 if (scpJars) {
-                    LOG.debug("SCP-ing hadoop-hdfs-3.2.0.3-SNAPSHOT.jar to Follower " + config.getIp() + ".");
-                    Channel channel = session.openChannel("exec");
-                    String command = String.format(scpHadoopHdfsJarCommand, config.getUser(), config.getIp());
-                    ((ChannelExec)channel).setCommand(command);
-                    InputStream in=channel.getInputStream();
-                    channel.connect();
+                    LOG.debug("SFTP-ing hadoop-hdfs-3.2.0.3-SNAPSHOT.jar to Follower " + config.getIp() + ".");
+                    ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                    sftpChannel.connect();
+                    sftpChannel.put(HADOOP_HDFS_JAR_PATH, HADOOP_HDFS_JAR_PATH);
+                    sftpChannel.disconnect();
 
-                    byte[] tmp=new byte[1024];
-                    while(true){
-                        while(in.available()>0){
-                            int j=in.read(tmp, 0, 1024);
-                            if(j<0)break;
-                            System.out.print(new String(tmp, 0, j));
-                        }
-                        if(channel.isClosed()){
-                            System.out.println("exit-status: "+channel.getExitStatus());
-                            break;
-                        }
-                        try{Thread.sleep(1000);}catch(Exception ee){}
-                    }
-                    channel.disconnect();
-
-                    LOG.debug("SCP-ing HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + config.getIp() + ".");
-                    channel = session.openChannel("exec");
-                    command = String.format(scpBenchmarkJarCommand, config.getUser(), config.getIp());
-                    ((ChannelExec)channel).setCommand(command);
-                    in=channel.getInputStream();
-                    channel.connect();
-
-                    tmp=new byte[1024];
-                    while(true){
-                        while(in.available()>0){
-                            int j=in.read(tmp, 0, 1024);
-                            if(j<0)break;
-                            System.out.print(new String(tmp, 0, j));
-                        }
-                        if(channel.isClosed()){
-                            System.out.println("exit-status: "+channel.getExitStatus());
-                            break;
-                        }
-                        try{Thread.sleep(1000);}catch(Exception ee){}
-                    }
-                    channel.disconnect();
+                    LOG.debug("SFTP-ing HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + config.getIp() + ".");
+                    sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                    sftpChannel.connect();
+                    sftpChannel.put(BENCHMARK_JAR_PATH, BENCHMARK_JAR_PATH);
+                    sftpChannel.disconnect();
                 }
 
                 if (scpConfig) {
-                    LOG.debug("SCP-ing hdfs-site.xml to Follower " + config.getIp() + ".");
-                    Channel channel = session.openChannel("exec");
-                    String command = String.format(scpConfigCommand, config.getUser(), config.getIp());
-                    ((ChannelExec)channel).setCommand(command);
-                    InputStream in=channel.getInputStream();
-                    channel.connect();
-
-                    byte[] tmp=new byte[1024];
-                    while(true){
-                        while(in.available()>0){
-                            int j=in.read(tmp, 0, 1024);
-                            if(j<0)break;
-                            System.out.print(new String(tmp, 0, j));
-                        }
-                        if(channel.isClosed()){
-                            System.out.println("exit-status: "+channel.getExitStatus());
-                            break;
-                        }
-                        try{Thread.sleep(1000);}catch(Exception ee){}
-                    }
-                    channel.disconnect();
+                    LOG.debug("SFTP-ing hdfs-site.xml to Follower " + config.getIp() + ".");
+                    ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                    sftpChannel.connect();
+                    sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
+                    sftpChannel.disconnect();
                 }
 
                 Channel channel = session.openChannel("exec");
@@ -368,7 +323,7 @@ public class Commander {
                 session.disconnect();
                 System.out.println("DONE");
 
-            } catch (JSchException e) {
+            } catch (JSchException | SftpException e) {
                 e.printStackTrace();
             }
 
