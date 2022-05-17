@@ -1266,7 +1266,7 @@ public class Commander {
                 JsonObject payload = new JsonObject();
                 payload.addProperty(OPERATION, OP_WEAK_SCALING_READS_V2);
                 payload.addProperty(OPERATION_ID, operationId);
-                payload.addProperty("n", numThreads);
+                payload.addProperty("numThreads", numThreads);
                 payload.addProperty("filesPerThread", filesPerThread);
                 payload.addProperty("inputPath", inputPath);
                 payload.addProperty("shuffle", shuffle);

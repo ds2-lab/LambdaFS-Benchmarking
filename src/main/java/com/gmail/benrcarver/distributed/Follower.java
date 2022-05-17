@@ -363,7 +363,7 @@ public class Follower {
                 LOG.info("OP_WEAK_SCALING_READS_V2 selected!");
                 result = Commands.weakScalingBenchmarkV2(hdfsConfiguration,
                         hdfs, nameNodeEndpoint,
-                        message.getAsJsonPrimitive("n").getAsInt(),
+                        message.getAsJsonPrimitive("numThreads").getAsInt(),
                         message.getAsJsonPrimitive("filesPerThread").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
                         message.getAsJsonPrimitive("shuffle").getAsBoolean(), OP_WEAK_SCALING_READS_V2);

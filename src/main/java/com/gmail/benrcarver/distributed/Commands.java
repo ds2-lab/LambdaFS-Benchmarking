@@ -127,6 +127,9 @@ public class Commands {
             int operationsPerFile,
             int opCode,
             FSOperation operation) throws InterruptedException {
+        if (LOG.isDebugEnabled())
+            LOG.debug("At start of benchmark, the HDFS Clients Cache has " + hdfsClients.size() + " clients.");
+
         Thread[] threads = new Thread[numThreads];
 
         // Used to synchronize threads; they each connect to HopsFS and then
@@ -268,6 +271,9 @@ public class Commands {
         sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
         LOG.info("Total Throughput: " + totalThroughput + " ops/sec.");
         LOG.info("Successful Throughput: " + successThroughput + " ops/sec.");
+
+        if (LOG.isDebugEnabled())
+            LOG.debug("At end of benchmark, the HDFS Clients Cache has " + hdfsClients.size() + " clients.");
 
         return new DistributedBenchmarkResult(null, opCode, numSuccess,
                 durationSeconds, start, end, totalCacheHits, totalCacheMisses,
@@ -643,6 +649,9 @@ public class Commands {
                 fileBatches[i][j] = paths.get(filePathIndex);
             }
             counter = 0;
+
+            if (shuffle)
+                Collections.shuffle(paths);
         }
 
         return executeBenchmark(
