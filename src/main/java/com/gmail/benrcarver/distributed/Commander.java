@@ -1566,16 +1566,16 @@ public class Commander {
         }
 
         public void disconnected(Connection conn) {
-            LOG.warn("Lost connection to follower at " + conn.getRemoteAddressTCP());
-            followers.remove(conn);
-            LOG.debug("We now have " + followers.size() + " followers registered.");
-
             FollowerConnection connection = (FollowerConnection)conn;
-
+            followers.remove(conn);
             if (connection.name != null) {
+                LOG.warn("Lost connection to follower at " + connection.name);
+                LOG.debug("We now have " + followers.size() + " followers registered.");
                 LOG.info("Trying to re-launch Follower " + connection.name + " now...");
                 launchFollower("ben", connection.name, String.format(LAUNCH_FOLLOWER_CMD, ip, port));
             } else {
+                LOG.warn("Lost connection to follower.");
+                LOG.debug("We now have " + followers.size() + " followers registered.");
                 LOG.error("Follower connection did not have a name. Cannot attempt to re-launch follower.");
             }
         }
