@@ -252,6 +252,31 @@ public class Commander {
         interactiveLoop();
     }
 
+    private void executeCommand(String user, String host, String launchCommand) {
+        java.util.Properties sshConfig = new java.util.Properties();
+        sshConfig.put("StrictHostKeyChecking", "no");
+
+        Session session;
+        try {
+            session = jsch.getSession(user, host, 22);
+            session.setConfig(sshConfig);
+            session.connect();
+
+            Channel channel = session.openChannel("exec");
+            ((ChannelExec) channel).setCommand(launchCommand);
+            channel.setInputStream(null);
+            ((ChannelExec) channel).setErrStream(System.err);
+
+            InputStream in = channel.getInputStream();
+            channel.connect();
+            channel.disconnect();
+            session.disconnect();
+            System.out.println("DONE");
+        } catch (JSchException | IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void launchFollower(String user, String host, String launchCommand) {
         java.util.Properties sshConfig = new java.util.Properties();
         sshConfig.put("StrictHostKeyChecking", "no");
@@ -284,17 +309,8 @@ public class Commander {
                 sftpChannel.disconnect();
             }
 
-            Channel channel = session.openChannel("exec");
-            ((ChannelExec) channel).setCommand(launchCommand);
-            channel.setInputStream(null);
-            ((ChannelExec) channel).setErrStream(System.err);
-
-            InputStream in = channel.getInputStream();
-            channel.connect();
-            channel.disconnect();
-            session.disconnect();
-            System.out.println("DONE");
-        } catch (JSchException | SftpException | IOException e) {
+            executeCommand(user, host, launchCommand);
+        } catch (JSchException | SftpException e) {
             e.printStackTrace();
         }
     }
@@ -317,6 +333,7 @@ public class Commander {
         for (int i = 0; i < numFollowersFromConfigToStart; i++) {
             FollowerConfig config = followerConfigs.get(i);
             LOG.info("Starting follower at " + config.getUser() + "@" + config.getIp() + " now.");
+            executeCommand(config.getUser(), config.getIp(), "pkill -9 java");
             launchFollower(config.getUser(), config.getIp(), launchCommand);
         }
     }
