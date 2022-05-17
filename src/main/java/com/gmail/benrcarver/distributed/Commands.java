@@ -9,10 +9,7 @@ import org.apache.hadoop.fs.FileStatus;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.hops.metrics.TransactionEvent;
@@ -2011,7 +2008,7 @@ public class Commands {
 
         try {
             hdfs.ping(targetDeployment);
-        } catch (IOException | InterruptedException ex) {
+        } catch (IOException | InterruptedException | ExecutionException ex) {
             LOG.info("Encountered IOException while pinging NameNode deployment " +
                     targetDeployment + ".");
             ex.printStackTrace();
