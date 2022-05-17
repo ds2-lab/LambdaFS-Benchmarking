@@ -2011,7 +2011,7 @@ public class Commands {
 
         try {
             hdfs.ping(targetDeployment);
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             LOG.info("Encountered IOException while pinging NameNode deployment " +
                     targetDeployment + ".");
             ex.printStackTrace();
