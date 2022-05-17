@@ -127,8 +127,9 @@ public class Commands {
             int operationsPerFile,
             int opCode,
             FSOperation operation) throws InterruptedException {
-        if (LOG.isDebugEnabled())
+        if (LOG.isDebugEnabled()) {
             LOG.debug("At start of benchmark, the HDFS Clients Cache has " + hdfsClients.size() + " clients.");
+        }
 
         Thread[] threads = new Thread[numThreads];
 
