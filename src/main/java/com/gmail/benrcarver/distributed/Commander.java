@@ -1526,21 +1526,28 @@ public class Commander {
         @Override
         public void received(Connection conn, Object object) {
             FollowerConnection connection = (FollowerConnection) conn;
-            if (connection.name == null)
-                connection.name = conn.getRemoteAddressTCP().getHostName();
+            String followerName;
+            if (connection.name == null) {
+                followerName = conn.getRemoteAddressTCP().getHostName();
+                connection.name = followerName;
+            } else {
+                followerName = connection.name;
+            }
 
             if (object instanceof String) {
                 try {
                     JsonObject body = new JsonParser().parse((String)object).getAsJsonObject();
                     LOG.debug("Received message from follower: " + body);
+                    LOG.debug("We now have " + followers.size() + " followers registered.");
                 } catch (Exception ex) {
                     LOG.debug("Received message from follower: " + object);
+                    LOG.debug("We now have " + followers.size() + " followers registered.");
                 }
             }
             else if (object instanceof DistributedBenchmarkResult) {
                 DistributedBenchmarkResult result = (DistributedBenchmarkResult)object;
 
-                LOG.info("Received result from follower: " + result);
+                LOG.info("Received result from Follower " + followerName + ": " + result);
 
                 String opId = result.opId;
 
@@ -1551,13 +1558,15 @@ public class Commander {
                 // Do nothing...
             }
             else {
-                LOG.error("Received object of unexpected/unsupported type " + object.getClass().getSimpleName());
+                LOG.error("Received object of unexpected/unsupported type from Follower " + followerName + ": " +
+                        object.getClass().getSimpleName());
             }
         }
 
         public void disconnected(Connection conn) {
             LOG.warn("Lost connection to follower at " + conn.getRemoteAddressTCP());
             followers.remove(conn);
+            LOG.debug("We now have " + followers.size() + " followers registered.");
 
             FollowerConnection connection = (FollowerConnection)conn;
 
