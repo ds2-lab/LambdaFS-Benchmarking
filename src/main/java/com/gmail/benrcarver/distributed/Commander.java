@@ -1506,6 +1506,8 @@ public class Commander {
             conn.setTimeout(12000);
             followers.add(conn);
 
+            LOG.debug("We now have " + followers.size() + " Followers connected.");
+
             JsonObject registrationPayload = new JsonObject();
             registrationPayload.addProperty(OPERATION, OP_REGISTRATION);
             registrationPayload.addProperty(NAMENODE_ENDPOINT, nameNodeEndpoint);
@@ -1538,10 +1540,10 @@ public class Commander {
                 try {
                     JsonObject body = new JsonParser().parse((String)object).getAsJsonObject();
                     LOG.debug("Received message from follower: " + body);
-                    LOG.debug("We now have " + followers.size() + " followers registered.");
+                    // LOG.debug("We now have " + followers.size() + " followers registered.");
                 } catch (Exception ex) {
                     LOG.debug("Received message from follower: " + object);
-                    LOG.debug("We now have " + followers.size() + " followers registered.");
+                    // LOG.debug("We now have " + followers.size() + " followers registered.");
                 }
             }
             else if (object instanceof DistributedBenchmarkResult) {
