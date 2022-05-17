@@ -1546,8 +1546,12 @@ public class Commander {
                 connection.name = conn.getRemoteAddressTCP().getHostName();
 
             if (object instanceof String) {
-                JsonObject body = new JsonParser().parse((String)object).getAsJsonObject();
-                LOG.debug("Received message from follower: " + body);
+                try {
+                    JsonObject body = new JsonParser().parse((String)object).getAsJsonObject();
+                    LOG.debug("Received message from follower: " + body);
+                } catch (Exception ex) {
+                    LOG.debug("Received message from follower: " + object);
+                }
             }
             else if (object instanceof DistributedBenchmarkResult) {
                 DistributedBenchmarkResult result = (DistributedBenchmarkResult)object;
