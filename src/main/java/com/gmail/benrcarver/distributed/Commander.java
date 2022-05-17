@@ -419,10 +419,6 @@ public class Commander {
                         LOG.info("");
                         int numConnections = primaryHdfs.printDebugInformation();
 
-                        for (DistributedFileSystem hdfs : hdfsClients) {
-                            numConnections += hdfs.printDebugInformation();
-                        }
-
                         LOG.info("Total number of active TCP/UDP connections: " + numConnections);
 
                         break;
