@@ -163,6 +163,8 @@ public class Commander {
      */
     private boolean scpJars;
 
+    private final JSch jsch;
+
     /**
      * If true, then we SCP the config file to each follower before starting them.
      */
@@ -170,7 +172,7 @@ public class Commander {
 
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
                                                  boolean disableConsistency, int numFollowers,
-                                                 boolean scpJars, boolean scpConfig) throws IOException {
+                                                 boolean scpJars, boolean scpConfig) throws IOException, JSchException {
         if (instanace == null) {
             // serverlessLogLevel = logLevel;
             consistencyEnabled = !disableConsistency;
@@ -182,7 +184,7 @@ public class Commander {
 
     private Commander(String ip, int port, String yamlPath, boolean nondistributed, int numFollowersFromConfigToStart,
                       boolean scpJars, boolean scpConfig)
-            throws IOException {
+            throws IOException, JSchException {
         this.ip = ip;
         this.port = port;
         this.nondistributed = nondistributed;
@@ -202,6 +204,9 @@ public class Commander {
         };
 
         tcpServer.addListener(new Listener.ThreadedListener(new ServerListener()));
+
+        jsch = new JSch();
+        jsch.addIdentity("/home/ubuntu/.ssh/id_rsa");
 
         processConfiguration(yamlPath);
     }
@@ -246,6 +251,70 @@ public class Commander {
         interactiveLoop();
     }
 
+    private void launchFollower(String user, String host, String launchCommand) {
+        java.util.Properties sshConfig = new java.util.Properties();
+        sshConfig.put("StrictHostKeyChecking", "no");
+
+        Session session;
+        try {
+            session = jsch.getSession(user, host, 22);
+            session.setConfig(sshConfig);
+            session.connect();
+
+            if (scpJars) {
+                LOG.debug("SFTP-ing hadoop-hdfs-3.2.0.3-SNAPSHOT.jar to Follower " + host + ".");
+                ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                sftpChannel.connect();
+                sftpChannel.put(HADOOP_HDFS_JAR_PATH, HADOOP_HDFS_JAR_PATH);
+                sftpChannel.disconnect();
+
+                LOG.debug("SFTP-ing HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + host + ".");
+                sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                sftpChannel.connect();
+                sftpChannel.put(BENCHMARK_JAR_PATH, BENCHMARK_JAR_PATH);
+                sftpChannel.disconnect();
+            }
+
+            if (scpConfig) {
+                LOG.debug("SFTP-ing hdfs-site.xml to Follower " + host + ".");
+                ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                sftpChannel.connect();
+                sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
+                sftpChannel.disconnect();
+            }
+
+            Channel channel = session.openChannel("exec");
+            ((ChannelExec) channel).setCommand(launchCommand);
+            channel.setInputStream(null);
+            ((ChannelExec) channel).setErrStream(System.err);
+
+            InputStream in = channel.getInputStream();
+            channel.connect();
+            byte[] tmp = new byte[1024];
+            while (true) {
+                while (in.available() > 0) {
+                    int j = in.read(tmp, 0, 1024);
+                    if (j < 0) break;
+                    System.out.print(new String(tmp, 0, j));
+                }
+                if (channel.isClosed()) {
+                    System.out.println("exit-status: " + channel.getExitStatus());
+                    break;
+                }
+                try {
+                    Thread.sleep(1000);
+                } catch (Exception ee) {
+
+                }
+            }
+            channel.disconnect();
+            session.disconnect();
+            System.out.println("DONE");
+        } catch (JSchException | SftpException | IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     /**
      * Using SSH, launch the follower processes.
      */
@@ -261,106 +330,10 @@ public class Commander {
 
         LOG.info("Starting " + numFollowersFromConfigToStart + " follower(s) now...");
 
-        JSch jsch = new JSch();
-        jsch.addIdentity("/home/ubuntu/.ssh/id_rsa");
-
         for (int i = 0; i < numFollowersFromConfigToStart; i++) {
             FollowerConfig config = followerConfigs.get(i);
             LOG.info("Starting follower at " + config.getUser() + "@" + config.getIp() + " now.");
-
-            java.util.Properties sshConfig = new java.util.Properties();
-            sshConfig.put("StrictHostKeyChecking", "no");
-
-            Session session;
-            try {
-                session = jsch.getSession(config.getUser(), config.getIp(), 22);
-                session.setConfig(sshConfig);
-                session.connect();
-
-                if (scpJars) {
-                    LOG.debug("SFTP-ing hadoop-hdfs-3.2.0.3-SNAPSHOT.jar to Follower " + config.getIp() + ".");
-                    ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
-                    sftpChannel.connect();
-                    sftpChannel.put(HADOOP_HDFS_JAR_PATH, HADOOP_HDFS_JAR_PATH);
-                    sftpChannel.disconnect();
-
-                    LOG.debug("SFTP-ing HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + config.getIp() + ".");
-                    sftpChannel = (ChannelSftp) session.openChannel("sftp");
-                    sftpChannel.connect();
-                    sftpChannel.put(BENCHMARK_JAR_PATH, BENCHMARK_JAR_PATH);
-                    sftpChannel.disconnect();
-                }
-
-                if (scpConfig) {
-                    LOG.debug("SFTP-ing hdfs-site.xml to Follower " + config.getIp() + ".");
-                    ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
-                    sftpChannel.connect();
-                    sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
-                    sftpChannel.disconnect();
-                }
-
-                Channel channel = session.openChannel("exec");
-                ((ChannelExec)channel).setCommand(launchCommand);
-                channel.setInputStream(null);
-                ((ChannelExec)channel).setErrStream(System.err);
-
-                InputStream in=channel.getInputStream();
-                channel.connect();
-                byte[] tmp=new byte[1024];
-                while(true){
-                    while(in.available()>0){
-                        int j=in.read(tmp, 0, 1024);
-                        if(j<0)break;
-                        System.out.print(new String(tmp, 0, j));
-                    }
-                    if(channel.isClosed()){
-                        System.out.println("exit-status: "+channel.getExitStatus());
-                        break;
-                    }
-                    try{Thread.sleep(1000);}catch(Exception ee){}
-                }
-                channel.disconnect();
-                session.disconnect();
-                System.out.println("DONE");
-
-            } catch (JSchException | SftpException e) {
-                e.printStackTrace();
-            }
-
-//            SSHClient ssh = new SSHClient();
-//            ssh.loadKnownHosts();
-//            ssh.connect(config.getIp());
-
-            LOG.debug("Connected to follower at " + config.getUser() + "@" + config.getIp() + " now.");
-
-//            Session session = null;
-//
-//            try {
-//                ssh.authPublickey(config.getUser());
-//
-//                LOG.debug("Authenticated with follower at " + config.getUser() + "@" + config.getIp() + " now.");
-//
-//                session = ssh.startSession();
-//
-//                LOG.debug("Started session with follower at " + config.getUser() + "@" + config.getIp() + " now.");
-//
-//                Session.Command cmd = session.exec(fullCommand);
-//
-//                LOG.debug("Executed command: " + fullCommand);
-//
-//                ByteArrayOutputStream inputStream = IOUtils.readFully(cmd.getInputStream());
-//                LOG.debug("Output: " + inputStream);
-//
-//                con.writer().print(inputStream);
-//                cmd.join(5, TimeUnit.SECONDS);
-//                con.writer().print("\n** exit status: " + cmd.getExitStatus());
-//                LOG.debug("Exit status: " + cmd.getExitStatus());
-//            } finally {
-//                if (session != null)
-//                    session.close();
-//
-//                ssh.disconnect();
-//            }
+            launchFollower(config.getUser(), config.getIp(), launchCommand);
         }
     }
 
@@ -1591,8 +1564,12 @@ public class Commander {
         }
 
         public void disconnected(Connection conn) {
-            LOG.info("Lost connection to follower.");
+            LOG.info("Lost connection to follower at " + conn.getRemoteAddressTCP());
             followers.remove(conn);
+
+            LOG.debug("Trying to re-launch follower now...");
+
+            launchFollower("ben", conn.getRemoteAddressTCP().getHostName(), String.format(LAUNCH_FOLLOWER_CMD, ip, port));
         }
     }
 

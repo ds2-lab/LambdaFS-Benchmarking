@@ -2,6 +2,7 @@ package com.gmail.benrcarver.distributed;
 
 import com.gmail.benrcarver.distributed.util.TreeNode;
 import com.gmail.benrcarver.distributed.util.Utils;
+import com.jcraft.jsch.JSchException;
 import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,7 +53,7 @@ public class InteractiveTest {
      */
     private static boolean pingFirst = false;
 
-    public static void main(String[] args) throws InterruptedException, IOException {
+    public static void main(String[] args) throws InterruptedException, IOException, JSchException {
         Options cmdLineOpts = new Options();
         Option workerOpt = new Option("w", "worker", false, "If true, run this program as a worker, listening to commands from a remote leader.");
         Option leaderIpOpt = new Option("l", "leader_ip", true, "The IP address of the Leader. Only used when this process is designated as a worker.");
