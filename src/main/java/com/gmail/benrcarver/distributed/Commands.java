@@ -1946,7 +1946,7 @@ public class Commands {
                 totalActiveNNs += numNodes;
                 System.out.println("Deployment " + i + ": " + numNodes);
                 if (nodes.size() > 0)
-                    System.out.println("Nodes: " + StringUtils.join(", ", nodes));
+                    System.out.println("Nodes: " + StringUtils.join(nodes, ","));
                 System.out.println();
             }
 
