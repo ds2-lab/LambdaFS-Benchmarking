@@ -221,7 +221,12 @@ public class Commander {
         tcpServer.addListener(new Listener.ThreadedListener(new ServerListener()));
 
         jsch = new JSch();
-        jsch.addIdentity("/home/ubuntu/.ssh/id_rsa");
+
+        // Only bother with identity file if we're running as Commander.
+        // That keyfile isn't on any of the Follower VMs.
+        if (!nondistributed) {
+            jsch.addIdentity("/home/ubuntu/.ssh/id_rsa");
+        }
 
         processConfiguration(yamlPath);
     }
