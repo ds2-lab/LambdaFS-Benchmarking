@@ -75,7 +75,7 @@ public class InteractiveTest {
         cmdLineOpts.addOption(consistencyProtocolOption);
         cmdLineOpts.addOption(scpJarsOpt);
         cmdLineOpts.addOption(scpConfigOpt);
-        cmdLineOpts.addOption(manualLaunchFollowersOpt)
+        cmdLineOpts.addOption(manualLaunchFollowersOpt);
 
         CommandLineParser parser = new GnuParser();
         HelpFormatter formatter = new HelpFormatter();
