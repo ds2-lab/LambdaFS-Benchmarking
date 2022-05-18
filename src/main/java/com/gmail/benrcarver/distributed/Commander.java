@@ -170,20 +170,28 @@ public class Commander {
      */
     private boolean scpConfig;
 
+    /**
+     * When true, Commander does not automatically launch followers. The user is expected to do it manually.
+     * The commander will still copy over any specified files.
+     */
+    private boolean manuallyLaunchFollowers;
+
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
                                                  boolean disableConsistency, int numFollowers,
-                                                 boolean scpJars, boolean scpConfig) throws IOException, JSchException {
+                                                 boolean scpJars, boolean scpConfig,
+                                                 boolean manuallyLaunchFollowers) throws IOException, JSchException {
         if (instanace == null) {
             // serverlessLogLevel = logLevel;
             consistencyEnabled = !disableConsistency;
-            instanace = new Commander(ip, port, yamlPath, nondistributed, numFollowers, scpJars, scpConfig);
+            instanace = new Commander(ip, port, yamlPath, nondistributed,
+                    numFollowers, scpJars, scpConfig, manuallyLaunchFollowers);
         }
 
         return instanace;
     }
 
     private Commander(String ip, int port, String yamlPath, boolean nondistributed, int numFollowersFromConfigToStart,
-                      boolean scpJars, boolean scpConfig)
+                      boolean scpJars, boolean scpConfig, boolean manuallyLaunchFollowers)
             throws IOException, JSchException {
         this.ip = ip;
         this.port = port;
@@ -194,6 +202,7 @@ public class Commander {
         this.numFollowersFromConfigToStart = numFollowersFromConfigToStart;
         this.scpJars = scpJars;
         this.scpConfig = scpConfig;
+        this.manuallyLaunchFollowers = manuallyLaunchFollowers;
 
         tcpServer = new Server(COMMANDER_TCP_BUFFER_SIZES, COMMANDER_TCP_BUFFER_SIZES) {
             @Override
@@ -309,7 +318,10 @@ public class Commander {
                 sftpChannel.disconnect();
             }
 
-            executeCommand(user, host, launchCommand);
+            if (!manuallyLaunchFollowers)
+                executeCommand(user, host, launchCommand);
+            else
+                LOG.debug("'Manually Launch Followers' is set to TRUE. Commander will not auto-launch Follower.");
         } catch (JSchException | SftpException e) {
             e.printStackTrace();
         }
@@ -333,7 +345,11 @@ public class Commander {
         for (int i = 0; i < numFollowersFromConfigToStart; i++) {
             FollowerConfig config = followerConfigs.get(i);
             LOG.info("Starting follower at " + config.getUser() + "@" + config.getIp() + " now.");
-            executeCommand(config.getUser(), config.getIp(), "pkill -9 java");
+
+            // Don't kill Java processes if we're not auto-launching Followers. We might kill the user's process.
+            if (!manuallyLaunchFollowers)
+                executeCommand(config.getUser(), config.getIp(), "pkill -9 java");
+
             launchFollower(config.getUser(), config.getIp(), launchCommand);
         }
     }
