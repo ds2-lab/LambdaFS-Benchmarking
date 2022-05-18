@@ -1568,8 +1568,8 @@ public class Commander {
         public void connected(Connection conn) {
             LOG.debug(LEADER_PREFIX + " Connection established with remote NameNode at "
                     + conn.getRemoteAddressTCP());
-            conn.setKeepAliveTCP(6000);
-            conn.setTimeout(12000);
+            conn.setKeepAliveTCP(5000);
+            conn.setTimeout(30000);
             followers.add((FollowerConnection) conn);
 
             LOG.debug("We now have " + followers.size() + " Followers connected.");
