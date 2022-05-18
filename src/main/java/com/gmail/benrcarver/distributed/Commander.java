@@ -1170,7 +1170,7 @@ public class Commander {
 
             counter += (System.currentTimeMillis() - time);
             time = System.currentTimeMillis();
-            if (counter >= 10000) {
+            if (counter >= 60000) {
                 boolean decision = getBooleanFromUser("Stop waiting early?");
 
                 if (decision)
