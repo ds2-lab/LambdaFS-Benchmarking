@@ -442,7 +442,7 @@ public class Follower {
         });
         connectThread.start();
 
-        client.setKeepAliveTCP(7500);
+        client.setKeepAliveTCP(10000);
         // client.setKeepAliveUDP(7500);
 
         try {

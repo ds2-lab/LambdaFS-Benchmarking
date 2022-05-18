@@ -12,6 +12,7 @@ import com.google.gson.JsonParser;
 import com.jcraft.jsch.*;
 import io.hops.metrics.TransactionEvent;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
@@ -37,6 +38,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.gmail.benrcarver.distributed.Commands.hdfsClients;
 import static com.gmail.benrcarver.distributed.Constants.*;
@@ -47,7 +49,7 @@ import static com.gmail.benrcarver.distributed.Constants.*;
 public class Commander {
     public static final Log LOG = LogFactory.getLog(Commander.class);
 
-    private final List<Connection> followers;
+    private final List<FollowerConnection> followers;
 
     private static final int COMMANDER_TCP_BUFFER_SIZES = Follower.FOLLOWER_TCP_BUFFER_SIZES * 4;
 
@@ -175,6 +177,10 @@ public class Commander {
      * The commander will still copy over any specified files.
      */
     private boolean manuallyLaunchFollowers;
+
+    private AtomicInteger numDisconnections = new AtomicInteger(0);
+
+    private Set<String> waitingOn = ConcurrentHashMap.newKeySet();
 
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
                                                  boolean disableConsistency, int numFollowers,
@@ -594,7 +600,7 @@ public class Commander {
             payload.addProperty(OPERATION_ID, operationId);
             payload.addProperty(BENCHMARK_MODE, toggle);
 
-            issueCommandToFollowers((toggle ? "Enabling" : "Disabling" ) + " Benchmark Mode", operationId, payload);
+            issueCommandToFollowers((toggle ? "Enabling" : "Disabling" ) + " Benchmark Mode", operationId, payload, false);
         } else {
             LOG.warn("Running in non-distributed mode. We have no followers.");
         }
@@ -619,7 +625,7 @@ public class Commander {
             payload.addProperty(OPERATION_ID, operationId);
             payload.addProperty(TRACK_OP_PERFORMED, followersTrackOpsPerformed);
 
-            issueCommandToFollowers("Toggle Operation Performed", operationId, payload);
+            issueCommandToFollowers("Toggle Operation Performed", operationId, payload, false);
         } else {
             LOG.warn("Running in non-distributed mode. We have no followers.");
         }
@@ -635,7 +641,7 @@ public class Commander {
             payload.addProperty(OPERATION, OP_TRIGGER_CLIENT_GC);
             payload.addProperty(OPERATION_ID, operationId);
 
-            issueCommandToFollowers("Client VM Garbage Collection", operationId, payload);
+            issueCommandToFollowers("Client VM Garbage Collection", operationId, payload, false);
         }
         System.gc();
     }
@@ -749,7 +755,7 @@ public class Commander {
      * @param operationId Unique ID of this operation.
      * @param payload Contains the command and necessary arguments.
      */
-    private void issueCommandToFollowers(String opName, String operationId, JsonObject payload) {
+    private void issueCommandToFollowers(String opName, String operationId, JsonObject payload, boolean addToWaiting) {
         int numFollowers = followers.size();
         if (numFollowers == 0) {
             LOG.warn("We have no followers (though we are in distributed mode).");
@@ -764,10 +770,13 @@ public class Commander {
         resultQueues.put(operationId, resultQueue);
 
         String payloadStr = new Gson().toJson(payload);
-        for (Connection followerConnection : followers) {
+        for (FollowerConnection followerConnection : followers) {
             LOG.debug("Sending '" + opName + "' operation to follower at " +
                     followerConnection.getRemoteAddressTCP());
             followerConnection.sendTCP(payloadStr);
+
+            if (addToWaiting)
+                waitingOn.add(followerConnection.name);
         }
     }
 
@@ -921,7 +930,7 @@ public class Commander {
 
             payload.add("directories", directoriesJson);
 
-            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload);
+            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload, true);
         }
 
         LOG.info("Each thread should be writing " + writesPerThread + " files...");
@@ -969,7 +978,7 @@ public class Commander {
             payload.addProperty("numThreads", numThreads);
             payload.addProperty("inputPath", inputPath);
 
-            issueCommandToFollowers("Read n Files y Times with z Threads (Strong Scaling)", operationId, payload);
+            issueCommandToFollowers("Read n Files y Times with z Threads (Strong Scaling)", operationId, payload, true);
         }
 
         DistributedBenchmarkResult localResult =
@@ -1094,7 +1103,7 @@ public class Commander {
 
             payload.add("directories", directoriesJson);
 
-            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload);
+            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload, true);
         }
 
         LOG.info("Each thread should be writing " + writesPerThread + " files...");
@@ -1146,8 +1155,29 @@ public class Commander {
         BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
         assert(resultQueue != null);
 
-        while (resultQueue.size() < numDistributedResults) {
-            Thread.sleep(50);
+        int counter = 0;
+        long time = System.currentTimeMillis();
+
+        while (waitingOn.size() > 0) {
+            LOG.debug("Still waiting on the following Followers: " + StringUtils.join(waitingOn, ", "));
+            Thread.sleep(1000);
+
+            int numDisconnects = numDisconnections.getAndSet(0);
+
+            if (numDisconnects > 0) {
+                LOG.warn("There has been at least one disconnection.");
+            }
+
+            counter += (System.currentTimeMillis() - time);
+            time = System.currentTimeMillis();
+            if (counter >= 10000) {
+                boolean decision = getBooleanFromUser("Stop waiting early?");
+
+                if (decision)
+                    break;
+
+                counter = 0;
+            }
         }
 
         DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
@@ -1290,7 +1320,7 @@ public class Commander {
                 payload.addProperty("inputPath", inputPath);
                 payload.addProperty("shuffle", shuffle);
 
-                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload);
+                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload, true);
             }
 
             // TODO: Make this return some sort of 'result' object encapsulating the result.
@@ -1386,7 +1416,7 @@ public class Commander {
                 payload.addProperty("inputPath", inputPath);
                 payload.addProperty("shuffle", shuffle);
 
-                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload);
+                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload, true);
             }
 
             // TODO: Make this return some sort of 'result' object encapsulating the result.
@@ -1540,7 +1570,7 @@ public class Commander {
                     + conn.getRemoteAddressTCP());
             conn.setKeepAliveTCP(6000);
             conn.setTimeout(12000);
-            followers.add(conn);
+            followers.add((FollowerConnection) conn);
 
             LOG.debug("We now have " + followers.size() + " Followers connected.");
 
@@ -1591,6 +1621,8 @@ public class Commander {
 
                 BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(opId);
                 resultQueue.add(result);
+
+                waitingOn.remove(followerName);
             }
             else if (object instanceof FrameworkMessage.KeepAlive) {
                 // Do nothing...
@@ -1603,7 +1635,9 @@ public class Commander {
 
         public void disconnected(Connection conn) {
             FollowerConnection connection = (FollowerConnection)conn;
-            followers.remove(conn);
+            followers.remove(connection);
+            numDisconnections.incrementAndGet();
+            waitingOn.remove(connection.name);
             if (connection.name != null) {
                 LOG.warn("Lost connection to follower at " + connection.name);
                 LOG.debug("We now have " + followers.size() + " followers registered.");
