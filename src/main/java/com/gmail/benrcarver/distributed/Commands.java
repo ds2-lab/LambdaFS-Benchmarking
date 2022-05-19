@@ -5,7 +5,6 @@ import com.gmail.benrcarver.distributed.util.Utils;
 
 import java.io.*;
 
-import org.apache.hadoop.fs.FileStatus;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -1656,7 +1655,7 @@ public class Commands {
      *
      * @param input The user's input.
      */
-    private static void checkForExit(String input) {
+    private static void checkForCancel(String input) {
         if (input.equalsIgnoreCase("abort") || input.equalsIgnoreCase("cancel") ||
                 input.equalsIgnoreCase("exit"))
             throw new IllegalArgumentException("User specified '" + input + "'. Aborting operation.");
@@ -1800,8 +1799,13 @@ public class Commands {
     public static void createFileOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
+
+        checkForCancel(fileName);
+
         System.out.print("File contents:\n> ");
         String fileContents = scanner.nextLine().trim();
+
+        checkForCancel(fileName);
 
         createFile(fileName, fileContents, hdfs, nameNodeEndpoint);
     }
@@ -1867,11 +1871,25 @@ public class Commands {
         return false;
     }
 
+    /**
+     * Check if the user is trying to cancel the current operation.
+     *
+     * @param input The user's input.
+     */
+    private static void checkForExit(String input) {
+        if (input.equalsIgnoreCase("abort") || input.equalsIgnoreCase("cancel") ||
+                input.equalsIgnoreCase("exit"))
+            throw new IllegalArgumentException("User specified '" + input + "'. Aborting operation.");
+    }
+
     public static void renameOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
         System.out.print("Original file path:\n> ");
         String originalFileName = scanner.nextLine();
+        checkForExit(originalFileName);
+
         System.out.print("Renamed file path:\n> ");
         String renamedFileName = scanner.nextLine();
+        checkForExit(renamedFileName);
 
         Path filePath = new Path(nameNodeEndpoint + originalFileName);
         Path filePathRename = new Path(nameNodeEndpoint + renamedFileName);
@@ -2049,7 +2067,7 @@ public class Commands {
     private static int getIntFromUser(String prompt) {
         System.out.print(prompt + "\n> ");
         String input = scanner.nextLine();
-        checkForExit(input);
+        checkForCancel(input);
         return Integer.parseInt(input);
     }
 
