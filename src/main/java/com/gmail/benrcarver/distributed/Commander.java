@@ -1248,12 +1248,12 @@ public class Commander {
             if (res.opsPerformed != null)
                 primaryHdfs.addOperationPerformeds(res.opsPerformed);
 
-            if (res.txEvents != null) {
-                for (HashMap<String, List<TransactionEvent>> txEvents : res.txEvents) {
-                    //LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
-                    primaryHdfs.mergeTransactionEvents(txEvents, true);
-                }
-            }
+//            if (res.txEvents != null) {
+//                for (HashMap<String, List<TransactionEvent>> txEvents : res.txEvents) {
+//                    //LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
+//                    primaryHdfs.mergeTransactionEvents(txEvents, true);
+//                }
+//            }
         }
 
         trialAvgTcpLatency = trialAvgTcpLatency / (1 + numDistributedResults);   // Add 1 to account for local result.

@@ -140,10 +140,10 @@ public class Commands {
 
         final BlockingQueue<List<OperationPerformed>> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
-        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
-                = new ArrayBlockingQueue<>(numThreads);
-        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
-                = new ArrayBlockingQueue<>(numThreads);
+//        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
+//                = new ArrayBlockingQueue<>(numThreads);
+//        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
+//                = new ArrayBlockingQueue<>(numThreads);
 
         // Keep track of number of successful operations.
         AtomicInteger numSuccessfulOps = new AtomicInteger(0);
@@ -187,11 +187,11 @@ public class Commands {
                 if (!BENCHMARKING_MODE) {
                     //if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting operations performed.");
                     operationsPerformed.add(hdfs.getOperationsPerformed());
-                    if (TRACK_OP_PERFORMED) {
-                        //if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting statistics packages & tx events.");
-                        statisticsPackages.add(hdfs.getStatisticsPackages());
-                        transactionEvents.add(hdfs.getTransactionEvents());
-                    }
+//                    if (TRACK_OP_PERFORMED) {
+//                        //if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting statistics packages & tx events.");
+//                        statisticsPackages.add(hdfs.getStatisticsPackages());
+//                        transactionEvents.add(hdfs.getTransactionEvents());
+//                    }
                 }
 
                 //if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting HTTP latencies.");
@@ -248,8 +248,8 @@ public class Commands {
         }
 
         List<OperationPerformed> allOperationsPerformed = new ArrayList<>();
-        Pair<Integer, Integer> cacheHitsAndMisses = mergeMetricInformation(sharedHdfs, operationsPerformed,
-                statisticsPackages, transactionEvents, allOperationsPerformed);
+        Pair<Integer, Integer> cacheHitsAndMisses = mergeMetricInformation(sharedHdfs, operationsPerformed, allOperationsPerformed);
+                // statisticsPackages, transactionEvents, allOperationsPerformed);
         int totalCacheHits = cacheHitsAndMisses.getFirst();
         int totalCacheMisses = cacheHitsAndMisses.getSecond();
 
@@ -275,7 +275,7 @@ public class Commands {
         return new DistributedBenchmarkResult(null, opCode, numSuccess,
                 durationSeconds, start, end, totalCacheHits, totalCacheMisses,
                 TRACK_OP_PERFORMED ? allOperationsPerformed.toArray(new OperationPerformed[0]) : null,
-                TRACK_OP_PERFORMED ? transactionEvents.toArray(new HashMap[0]) : null,
+                TRACK_OP_PERFORMED ? sharedHdfs.getTransactionEvents().toArray(new HashMap[0]) : null,
                 latencyTcp, latencyHttp);
     }
 
@@ -423,8 +423,8 @@ public class Commands {
     private static Pair<Integer, Integer> mergeMetricInformation(
             final DistributedFileSystem sharedHdfs,
             final BlockingQueue<List<OperationPerformed>> operationsPerformed,
-            final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages,
-            final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents,
+//            final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages,
+//            final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents,
             final List<OperationPerformed> allOperationsPerformed) {
         int totalCacheHits = 0;
         int totalCacheMisses = 0;
@@ -440,17 +440,17 @@ public class Commands {
                 }
             }
 
-            if (!IS_FOLLOWER) {
-                for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-                    //LOG.info("Adding list of " + statPackages.size() + " statistics packages to master/shared HDFS object.");
-                    sharedHdfs.mergeStatisticsPackages(statPackages, true);
-                }
-
-                for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-                    // LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
-                    sharedHdfs.mergeTransactionEvents(txEvents, true);
-                }
-            }
+//            if (!IS_FOLLOWER) {
+//                for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
+//                    //LOG.info("Adding list of " + statPackages.size() + " statistics packages to master/shared HDFS object.");
+//                    sharedHdfs.mergeStatisticsPackages(statPackages, true);
+//                }
+//
+//                for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
+//                    // LOG.info("Merging " + txEvents.size() + " new transaction event(s) into master/shared HDFS object.");
+//                    sharedHdfs.mergeTransactionEvents(txEvents, true);
+//                }
+//            }
         }
 
         return new Pair<>(totalCacheHits, totalCacheMisses);
