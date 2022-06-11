@@ -949,7 +949,7 @@ public class Commands {
 
         hdfs.printOperationsPerformed();
 
-        HashMap<String, List<TransactionEvent>> transactionEvents = hdfs.getTransactionEvents();
+        ConcurrentHashMap<String, List<TransactionEvent>> transactionEvents = hdfs.getTransactionEvents();
         ArrayList<TransactionEvent> allTransactionEvents = new ArrayList<TransactionEvent>();
 
         for (Map.Entry<String, List<TransactionEvent>> entry : transactionEvents.entrySet()) {
