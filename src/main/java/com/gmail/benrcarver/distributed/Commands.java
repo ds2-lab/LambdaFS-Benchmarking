@@ -275,7 +275,7 @@ public class Commands {
         return new DistributedBenchmarkResult(null, opCode, numSuccess,
                 durationSeconds, start, end, totalCacheHits, totalCacheMisses,
                 TRACK_OP_PERFORMED ? allOperationsPerformed.toArray(new OperationPerformed[0]) : null,
-                TRACK_OP_PERFORMED ? sharedHdfs.getTransactionEvents().toArray(new HashMap[0]) : null,
+                TRACK_OP_PERFORMED ? sharedHdfs.getTransactionEvents().toArray(new ConcurrentHashMap[0]) : null,
                 latencyTcp, latencyHttp);
     }
 
