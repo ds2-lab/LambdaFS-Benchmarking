@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+
 import io.hops.metrics.TransactionEvent;
 
 import io.hops.metrics.OperationPerformed;
@@ -20,7 +22,7 @@ public class DistributedBenchmarkResult implements Serializable {
     public int operation;
     public int numOpsPerformed;
     public OperationPerformed[] opsPerformed;
-    public HashMap<String, List<TransactionEvent>> txEvents;
+    public ConcurrentHashMap<String, List<TransactionEvent>> txEvents;
 
     /**
      * Duration in seconds.
@@ -79,14 +81,14 @@ public class DistributedBenchmarkResult implements Serializable {
 
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed, double duration, long startTime,
                                       long stopTime, int cacheHits, int cacheMisses, OperationPerformed[] opsPerformed,
-                                      HashMap<String, List<TransactionEvent>> txEvents) {
+                                      ConcurrentHashMap<String, List<TransactionEvent>> txEvents) {
         this(opId, operation, numOpsPerformed, duration, startTime, stopTime, cacheHits, cacheMisses,
                 opsPerformed, txEvents, null, null);
     }
 
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed, double duration, long startTime,
                                       long stopTime, int cacheHits, int cacheMisses, OperationPerformed[] opsPerformed,
-                                      HashMap<String, List<TransactionEvent>> txEvents,
+                                      ConcurrentHashMap<String, List<TransactionEvent>> txEvents,
                                       DescriptiveStatistics tcpLatencyStatistics,
                                       DescriptiveStatistics httpLatencyStatistics) {
         this.opId = opId;
