@@ -71,16 +71,16 @@ public class Commands {
      * Used to cache clients for reuse.
      */
     public static BlockingQueue<DistributedFileSystem> hdfsClients
-            = new ArrayBlockingQueue<DistributedFileSystem>(1024);
+            = new ArrayBlockingQueue<>(1024);
 
     /**
      * Retrieve an HDFS client to use during a benchmark. This will attempt to reuse an existing client.
      * If none are available, then a new client is created.
-     * @param sharedHdfs
-     * @param nameNodeEndpoint
-     * @return
+     *
+     * @return An HDFS client instance.
      */
-    private static DistributedFileSystem getHdfsClient(DistributedFileSystem sharedHdfs, String nameNodeEndpoint) {
+    private static synchronized DistributedFileSystem getHdfsClient(
+            DistributedFileSystem sharedHdfs, String nameNodeEndpoint) {
         DistributedFileSystem hdfs;
         hdfs = hdfsClients.poll();
 
@@ -91,6 +91,7 @@ public class Commands {
             hdfs.setServerlessFunctionLogLevel(sharedHdfs.getServerlessFunctionLogLevel());
         }
         else {
+            LOG.warn("No HDFS client instances available. Creating a new client now...");
             hdfs = Commander.initDfsClient(sharedHdfs, nameNodeEndpoint, false);
         }
         return hdfs;
@@ -206,10 +207,10 @@ public class Commands {
                     latencyBoth.addValue(latency);
                 }
 
-                try {
-                    // First clear the metric data associated with the client.
-                    clearMetricDataNoPrompt(hdfs);
+                // First clear the metric data associated with the client.
+                clearMetricDataNoPrompt(hdfs);
 
+                try {
                     // Now return the client to the pool so that it can be used again in the future.
                     returnHdfsClient(hdfs);
                 } catch (InterruptedException e) {
