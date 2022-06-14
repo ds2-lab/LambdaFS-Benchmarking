@@ -130,9 +130,13 @@ public class Commands {
 
         Thread[] threads = new Thread[numThreads];
 
+        // All threads, including the main thread, decrement this barrier in
+        // order to show that they have an HDFS client and are ready to start.
+        final CountDownLatch readyLatch = new CountDownLatch(numThreads + 1);
+
         // Used to synchronize threads; they each connect to HopsFS and then
         // count down. So, they all cannot start until they are all connected.
-        final CountDownLatch startLatch = new CountDownLatch(numThreads);
+        final CountDownLatch startLatch = new CountDownLatch(numThreads + 1);
 
         // Used to synchronize threads; they block when they finish executing to avoid using CPU cycles
         // by aggregating their results. Once all the threads have finished, they aggregate their results.
@@ -160,7 +164,8 @@ public class Commands {
             Thread thread = new Thread(() -> {
                 DistributedFileSystem hdfs = getHdfsClient(sharedHdfs, nameNodeEndpoint);
 
-                startLatch.countDown();
+                readyLatch.countDown(); // Ready to start. Once all threads have done this, the timer begins.
+                startLatch.countDown(); // Wait for the main thread's signal to actually begin.
                 int numSuccessfulOpsCurrentThread = 0;
                 int numOpsCurrentThread = 0;
 
@@ -231,10 +236,13 @@ public class Commands {
         }
 
         LOG.info("Starting threads.");
-        long start = System.currentTimeMillis();
         for (Thread thread : threads) {
             thread.start();
         }
+
+        readyLatch.countDown(); // Will block until all client threads are ready to go.
+        long start = System.currentTimeMillis(); // Start the clock.
+        startLatch.countDown(); // Let the threads start.
 
         // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
         // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
