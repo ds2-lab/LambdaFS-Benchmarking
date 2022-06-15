@@ -91,7 +91,8 @@ public class Commands {
             hdfs.setServerlessFunctionLogLevel(sharedHdfs.getServerlessFunctionLogLevel());
         }
         else {
-            LOG.warn("No HDFS client instances available. Creating a new client now...");
+            LOG.warn("No HDFS client instances available (size = " +
+                    hdfsClients.size() + "). Creating a new client now...");
             hdfs = Commander.initDfsClient(sharedHdfs, nameNodeEndpoint, false);
         }
         return hdfs;
@@ -240,9 +241,9 @@ public class Commands {
             thread.start();
         }
 
-        readyLatch.countDown(); // Will block until all client threads are ready to go.
-        long start = System.currentTimeMillis(); // Start the clock.
-        startLatch.countDown(); // Let the threads start.
+        readyLatch.countDown();                     // Will block until all client threads are ready to go.
+        long start = System.currentTimeMillis();    // Start the clock.
+        startLatch.countDown();                     // Let the threads start.
 
         // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
         // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
