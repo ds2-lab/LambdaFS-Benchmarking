@@ -12,7 +12,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.hops.metrics.TransactionEvent;
-import io.hops.transaction.context.TransactionsStats;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -118,7 +117,6 @@ public class Commands {
      */
     public static DistributedBenchmarkResult executeBenchmark(
             DistributedFileSystem sharedHdfs,
-            final Configuration configuration,
             String nameNodeEndpoint,
             int numThreads,
             String[][] fileBatches,
@@ -142,6 +140,7 @@ public class Commands {
         // Used to synchronize threads; they block when they finish executing to avoid using CPU cycles
         // by aggregating their results. Once all the threads have finished, they aggregate their results.
         final CountDownLatch endLatch = new CountDownLatch(numThreads);
+        final Semaphore readySemaphore = new Semaphore((numThreads * -1) + 1);
         final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
 
         final BlockingQueue<List<OperationPerformed>> operationsPerformed =
@@ -165,7 +164,7 @@ public class Commands {
             Thread thread = new Thread(() -> {
                 DistributedFileSystem hdfs = getHdfsClient(sharedHdfs, nameNodeEndpoint);
 
-                readyLatch.countDown(); // Ready to start. Once all threads have done this, the timer begins.
+                readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
                 startLatch.countDown(); // Wait for the main thread's signal to actually begin.
                 int numSuccessfulOpsCurrentThread = 0;
                 int numOpsCurrentThread = 0;
@@ -241,7 +240,7 @@ public class Commands {
             thread.start();
         }
 
-        readyLatch.countDown();                     // Will block until all client threads are ready to go.
+        readySemaphore.acquire();                   // Will block until all client threads are ready to go.
         long start = System.currentTimeMillis();    // Start the clock.
         startLatch.countDown();                     // Let the threads start.
 
@@ -376,7 +375,7 @@ public class Commands {
         assert(targetPathsPerThread != null);
         assert(targetPathsPerThread.length == numberOfThreads);
 
-        return executeBenchmark(hdfs, configuration, nameNodeEndpoint, numberOfThreads, targetPathsPerThread,
+        return executeBenchmark(hdfs, nameNodeEndpoint, numberOfThreads, targetPathsPerThread,
                 1, OP_WRITE_FILES_TO_DIRS, new FSOperation(nameNodeEndpoint, configuration) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
@@ -503,7 +502,7 @@ public class Commands {
         LOG.debug("Each of the " + numThreads + " thread(s) will read " + numFilesPerThread + " random file(s).");
 
         return executeBenchmark(
-                sharedHdfs, configuration, endpoint, numThreads, filesPerThread, readsPerFile, OP_STRONG_SCALING_READS,
+                sharedHdfs, endpoint, numThreads, filesPerThread, readsPerFile, OP_STRONG_SCALING_READS,
                 new FSOperation(endpoint, configuration) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
@@ -562,7 +561,7 @@ public class Commands {
         }
 
         return executeBenchmark(
-                sharedHdfs, configuration, nameNodeEndpoint, numThreads, fileBatches, 1, opCode,
+                sharedHdfs, nameNodeEndpoint, numThreads, fileBatches, 1, opCode,
                 new FSOperation(nameNodeEndpoint, configuration) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
@@ -606,7 +605,7 @@ public class Commands {
         }
 
         return executeBenchmark(
-                sharedHdfs, configuration, nameNodeEndpoint, numThreads, pathsPerThread, readsPerFile, opCode,
+                sharedHdfs, nameNodeEndpoint, numThreads, pathsPerThread, readsPerFile, opCode,
                 new FSOperation(nameNodeEndpoint, configuration) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
@@ -736,7 +735,7 @@ public class Commands {
         LOG.info("pathsPerThread.length: " + pathsPerThread.length);
 
         return executeBenchmark(
-                sharedHdfs, configuration, endpoint, numThreads, pathsPerThread, opsPerFile, OP_GET_FILE_STATUS,
+                sharedHdfs, endpoint, numThreads, pathsPerThread, opsPerFile, OP_GET_FILE_STATUS,
                 new FSOperation(endpoint, configuration) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
@@ -856,130 +855,13 @@ public class Commands {
         LOG.info("pathsPerThread.length: " + pathsPerThread.length);
 
         return executeBenchmark(
-                sharedHdfs, configuration, nameNodeEndpoint, numThreads, pathsPerThread, readsPerFile, opCode,
+                sharedHdfs, nameNodeEndpoint, numThreads, pathsPerThread, readsPerFile, opCode,
                 new FSOperation(nameNodeEndpoint, configuration) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
                         return readFile(path, hdfs, nameNodeEndpoint);
                     }
                 });
-
-//        Thread[] threads = new Thread[numThreads];
-//
-//        // Used to synchronize threads; they each connect to HopsFS and then
-//        // count down. So, they all cannot start until they are all connected.
-//        final CountDownLatch latch = new CountDownLatch(numThreads);
-//        final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
-//
-//        final BlockingQueue<List<OperationPerformed>> operationsPerformed =
-//                new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
-//        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
-//                = new ArrayBlockingQueue<>(numThreads);
-//        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
-//                = new ArrayBlockingQueue<>(numThreads);
-//
-//        final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
-//        final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
-//        final SynchronizedDescriptiveStatistics latencyBoth = new SynchronizedDescriptiveStatistics();
-//
-//        for (int i = 0; i < numThreads; i++) {
-//            final String[] pathsForThread = pathsPerThread[i];
-//            Thread thread = new Thread(() -> {
-//                DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
-//
-//                latch.countDown();
-//
-//                for (String filePath : pathsForThread) {
-//                    for (int j = 0; j < readsPerFile; j++)
-//                        readFile(filePath, hdfs, nameNodeEndpoint);
-//                }
-//
-//                // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
-//                // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
-//                // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
-//                // so that all the statistics are placed into the appropriate collections where we can aggregate them.
-//                endSemaphore.release();
-//
-//                if (!BENCHMARKING_MODE) {
-//                    operationsPerformed.add(hdfs.getOperationsPerformed());
-//                    if (TRACK_OP_PERFORMED) {
-//                        statisticsPackages.add(hdfs.getStatisticsPackages());
-//                        transactionEvents.add(hdfs.getTransactionEvents());
-//                    }
-//                }
-//
-//                for (double latency : hdfs.getLatencyStatistics().getValues()) {
-//                    latencyBoth.addValue(latency);
-//                }
-//
-//                for (double latency : hdfs.getLatencyHttpStatistics().getValues()) {
-//                    latencyHttp.addValue(latency);
-//                }
-//
-//                for (double latency : hdfs.getLatencyTcpStatistics().getValues()) {
-//                    latencyTcp.addValue(latency);
-//                }
-//
-//                try {
-//                    hdfs.close();
-//                } catch (IOException ex) {
-//                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
-//                }
-//            });
-//            threads[i] = thread;
-//        }
-//
-//        LOG.info("Starting threads.");
-//        long start = System.currentTimeMillis();
-//        for (Thread thread : threads) {
-//            thread.start();
-//        }
-//
-//        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
-//        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
-//        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
-//        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
-//        endSemaphore.acquire();
-//        long end = System.currentTimeMillis();
-//
-//        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
-//        for (Thread thread : threads) {
-//            thread.join();
-//        }
-//
-//        int totalCacheHits = 0;
-//        int totalCacheMisses = 0;
-//
-//        if (!BENCHMARKING_MODE) {
-//            for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-//                if (!IS_FOLLOWER)
-//                    sharedHdfs.addOperationPerformeds(opsPerformed);
-//                for (OperationPerformed op : opsPerformed) {
-//                    totalCacheHits += op.getMetadataCacheHits();
-//                    totalCacheMisses += op.getMetadataCacheMisses();
-//                }
-//            }
-//
-//            if (!IS_FOLLOWER) {
-//                for (HashMap<String, TransactionsStats.ServerlessStatisticsPackage> statPackages : statisticsPackages) {
-//                    sharedHdfs.mergeStatisticsPackages(statPackages, true);
-//                }
-//
-//                for (HashMap<String, List<TransactionEvent>> txEvents : transactionEvents) {
-//                    sharedHdfs.mergeTransactionEvents(txEvents, true);
-//                }
-//            }
-//        }
-//
-//        double durationSeconds = (end - start) / 1000.0;
-//
-//        LOG.info("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + durationSeconds);
-//        double totalReads = (double)n * (double)readsPerFile;
-//        double throughput = (totalReads / durationSeconds);
-//
-//        printLatencyStatistics(latencyBoth, latencyTcp, latencyHttp);
-//        sharedHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
-//        LOG.info("Throughput: " + throughput + " ops/sec.");
     }
 
     /**
@@ -1092,7 +974,7 @@ public class Commands {
         assert(targetPathsPerThread.length == numThreads);
 
         return executeBenchmark(
-                sharedHdfs, configuration, nameNodeEndpoint, numThreads, targetPathsPerThread, 1, opCode,
+                sharedHdfs, nameNodeEndpoint, numThreads, targetPathsPerThread, 1, opCode,
                 new FSOperation(nameNodeEndpoint, configuration) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
