@@ -129,10 +129,6 @@ public class Commands {
 
         Thread[] threads = new Thread[numThreads];
 
-        // All threads, including the main thread, decrement this barrier in
-        // order to show that they have an HDFS client and are ready to start.
-        final CountDownLatch readyLatch = new CountDownLatch(numThreads + 1);
-
         // Used to synchronize threads; they each connect to HopsFS and then
         // count down. So, they all cannot start until they are all connected.
         final CountDownLatch startLatch = new CountDownLatch(numThreads + 1);
