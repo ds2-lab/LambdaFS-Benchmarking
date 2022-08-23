@@ -166,7 +166,21 @@ public class Commands {
                 DistributedFileSystem hdfs = getHdfsClient(sharedHdfs, nameNodeEndpoint);
 
                 readyLatch.countDown(); // Ready to start. Once all threads have done this, the timer begins.
+
+                try {
+                    readyLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
                 startLatch.countDown(); // Wait for the main thread's signal to actually begin.
+
+                try {
+                    startLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
                 int numSuccessfulOpsCurrentThread = 0;
                 int numOpsCurrentThread = 0;
 
@@ -187,6 +201,12 @@ public class Commands {
                 if (LOG.isDebugEnabled()) LOG.debug("Thread " + threadId + " has finished executing.");
 
                 endLatch.countDown();
+
+                try {
+                    endLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
 
                 numSuccessfulOps.addAndGet(numSuccessfulOpsCurrentThread);
                 numOps.addAndGet(numOpsCurrentThread);
