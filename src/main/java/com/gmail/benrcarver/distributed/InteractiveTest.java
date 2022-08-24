@@ -1,30 +1,12 @@
 package com.gmail.benrcarver.distributed;
 
-import com.gmail.benrcarver.distributed.util.TreeNode;
-import com.gmail.benrcarver.distributed.util.Utils;
 import com.jcraft.jsch.JSchException;
+import io.grpc.LoadBalancerRegistry;
+import io.grpc.internal.PickFirstLoadBalancerProvider;
 import org.apache.commons.cli.*;
-import io.hops.metrics.TransactionEvent;
-import io.hops.metrics.TransactionAttempt;
-import io.hops.transaction.context.TransactionsStats;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.fs.FileStatus;
-import io.hops.metrics.OperationPerformed;
-
-import java.util.concurrent.*;
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
 
 /**
  * Application Driver.
@@ -35,6 +17,8 @@ public class InteractiveTest {
     public static final Log LOG = LogFactory.getLog(InteractiveTest.class);
 
     public static void main(String[] args) throws InterruptedException, IOException, JSchException {
+        LoadBalancerRegistry.getDefaultRegistry().register(new PickFirstLoadBalancerProvider());
+
         Options cmdLineOpts = new Options();
         Option workerOpt = new Option("w", "worker", false, "If true, run this program as a worker, listening to commands from a remote leader.");
         Option leaderIpOpt = new Option("l", "leader_ip", true, "The IP address of the Leader. Only used when this process is designated as a worker.");
