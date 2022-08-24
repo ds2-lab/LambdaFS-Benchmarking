@@ -107,7 +107,7 @@ public class Commander {
     /**
      * Map from operation ID to the queue in which distributed results should be placed by the TCP server.
      */
-    private ConcurrentHashMap<String, BlockingQueue<DistributedBenchmarkResult>> resultQueues;
+    private final ConcurrentHashMap<String, BlockingQueue<DistributedBenchmarkResult>> resultQueues;
 
     /**
      * Indicates whether we're running in the so-called non-distributed mode or not.
@@ -115,9 +115,7 @@ public class Commander {
      * In non-distributed mode, we assume that there is only one client VM.
      * The Commander operates as if there are no other client VMs to connect to.
      */
-    private final boolean nondistributed;
-
-    private static String serverlessLogLevel = null;
+    private final boolean nonDistributed;
 
     /**
      * Indicates whether the consistency protocol is enabled.
@@ -161,7 +159,7 @@ public class Commander {
     /**
      * If true, then we SCP the JAR files to each follower before starting them.
      */
-    private boolean scpJars;
+    private final boolean scpJars;
 
     /**
      * Used by the Commander to SSH into {@link Follower} VMs.
@@ -174,26 +172,26 @@ public class Commander {
     /**
      * If true, then we SCP the config file to each follower before starting them.
      */
-    private boolean scpConfig;
+    private final boolean scpConfig;
 
     /**
      * When true, Commander does not automatically launch followers. The user is expected to do it manually.
      * The commander will still copy over any specified files.
      */
-    private boolean manuallyLaunchFollowers;
+    private final boolean manuallyLaunchFollowers;
 
     /**
      * Tracks if Followers disconnect during a benchmark, as we don't need to wait for as many results
      * if Followers disconnect in the middle of the benchmark (i.e., one less result per disconnected Follower).
      */
-    private AtomicInteger numDisconnections = new AtomicInteger(0);
+    private final AtomicInteger numDisconnections = new AtomicInteger(0);
 
     /**
      * The Follower VMs whom we are still waiting on for results.
      *
      * This is reset at the beginning/end of each trial of a particular benchmark.
      */
-    private Set<String> waitingOn = ConcurrentHashMap.newKeySet();
+    private final Set<String> waitingOn = ConcurrentHashMap.newKeySet();
 
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
                                                  boolean disableConsistency, int numFollowers,
@@ -214,7 +212,7 @@ public class Commander {
             throws IOException, JSchException {
         this.ip = ip;
         this.port = port;
-        this.nondistributed = nondistributed;
+        this.nonDistributed = nondistributed;
         // TODO: Maybe do book-keeping or fault-tolerance here.
         this.followers = new ArrayList<>();
         this.resultQueues = new ConcurrentHashMap<>();
@@ -267,7 +265,7 @@ public class Commander {
     }
 
     public void start() throws IOException, InterruptedException {
-        if (!nondistributed) {
+        if (!nonDistributed) {
             LOG.info("Commander is operating in DISTRIBUTED mode.");
             startServer();
 
@@ -611,7 +609,7 @@ public class Commander {
             hdfs.setBenchmarkModeEnabled(toggle);
         }
 
-        if (!nondistributed) {
+        if (!nonDistributed) {
             JsonObject payload = new JsonObject();
             String operationId = UUID.randomUUID().toString();
             payload.addProperty(OPERATION, OP_TOGGLE_BENCHMARK_MODE);
@@ -628,7 +626,7 @@ public class Commander {
      * Enable/disable followers tracking OperationPerformed instances and sending them after benchmarks.
      */
     private void toggleOperationsPerformedInFollowers() {
-        if (!nondistributed) {
+        if (!nonDistributed) {
             if (followersTrackOpsPerformed) {
                 LOG.info("DISABLING OperationPerformed tracking.");
             } else {
@@ -653,7 +651,7 @@ public class Commander {
      * Perform GCs on this Client VM as well as any other client VMs if we're the Commander for a distributed setup.
      */
     private void performClientVMGarbageCollection() {
-        if (!nondistributed) {
+        if (!nonDistributed) {
             JsonObject payload = new JsonObject();
             String operationId = UUID.randomUUID().toString();
             payload.addProperty(OPERATION, OP_TRIGGER_CLIENT_GC);
