@@ -105,16 +105,6 @@ public class Commander {
     public static String hdfsConfigFilePath;
 
     /**
-     * The hdfs-site.xml configuration file.
-     */
-    private Configuration hdfsConfiguration;
-
-    /**
-     * Map from follower IP to the associated SSH client.
-     */
-    private HashMap<String, Session> sshClients;
-
-    /**
      * Map from operation ID to the queue in which distributed results should be placed by the TCP server.
      */
     private ConcurrentHashMap<String, BlockingQueue<DistributedBenchmarkResult>> resultQueues;
@@ -128,6 +118,11 @@ public class Commander {
     private final boolean nondistributed;
 
     private static String serverlessLogLevel = null;
+
+    /**
+     * Indicates whether the consistency protocol is enabled.
+     * This is passed into the client-facing Serverless HopsFS API.
+     */
     public static boolean consistencyEnabled = true;
 
     /**
@@ -187,8 +182,17 @@ public class Commander {
      */
     private boolean manuallyLaunchFollowers;
 
+    /**
+     * Tracks if Followers disconnect during a benchmark, as we don't need to wait for as many results
+     * if Followers disconnect in the middle of the benchmark (i.e., one less result per disconnected Follower).
+     */
     private AtomicInteger numDisconnections = new AtomicInteger(0);
 
+    /**
+     * The Follower VMs whom we are still waiting on for results.
+     *
+     * This is reset at the beginning/end of each trial of a particular benchmark.
+     */
     private Set<String> waitingOn = ConcurrentHashMap.newKeySet();
 
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
