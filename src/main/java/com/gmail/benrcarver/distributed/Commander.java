@@ -124,6 +124,11 @@ public class Commander {
     public static boolean consistencyEnabled = true;
 
     /**
+     * The hdfs-site.xml configuration file.
+     */
+    private Configuration hdfsConfiguration;
+
+    /**
      * The {@link Commander} class uses a singleton pattern.
      */
     private static Commander instance;
@@ -192,6 +197,11 @@ public class Commander {
      * This is reset at the beginning/end of each trial of a particular benchmark.
      */
     private final Set<String> waitingOn = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Controls the log level of the serverless functions/namenodes.
+     */
+    private static String serverlessLogLevel = null;
 
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
                                                  boolean disableConsistency, int numFollowers,
