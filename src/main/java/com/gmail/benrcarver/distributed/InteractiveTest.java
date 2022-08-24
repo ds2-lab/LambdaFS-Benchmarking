@@ -27,6 +27,8 @@ import java.time.Instant;
 import java.util.*;
 
 /**
+ * Application Driver.
+ *
  * This is the class that is executed when running the application. It starts the Commander or Follower.
  */
 public class InteractiveTest {

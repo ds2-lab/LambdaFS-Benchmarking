@@ -10,18 +10,13 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jcraft.jsch.*;
-import io.hops.metrics.TransactionEvent;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.fs.FileStatus;
 import org.yaml.snakeyaml.Yaml;
 
 import java.lang.management.GarbageCollectorMXBean;
@@ -37,7 +32,6 @@ import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.gmail.benrcarver.distributed.Commands.hdfsClients;
@@ -125,12 +119,21 @@ public class Commander {
      */
     private ConcurrentHashMap<String, BlockingQueue<DistributedBenchmarkResult>> resultQueues;
 
+    /**
+     * Indicates whether we're running in the so-called non-distributed mode or not.
+     *
+     * In non-distributed mode, we assume that there is only one client VM.
+     * The Commander operates as if there are no other client VMs to connect to.
+     */
     private final boolean nondistributed;
 
     private static String serverlessLogLevel = null;
     public static boolean consistencyEnabled = true;
 
-    private static Commander instanace;
+    /**
+     * The {@link Commander} class uses a singleton pattern.
+     */
+    private static Commander instance;
 
     /**
      * The main DistributedFileSystem instance. Used by the main thread and also to keep track of metrics.
@@ -165,6 +168,12 @@ public class Commander {
      */
     private boolean scpJars;
 
+    /**
+     * Used by the Commander to SSH into {@link Follower} VMs.
+     *
+     * The Commander copies over configuration files and the latest .JAR file(s) before launching the followers.
+     * (This feature is toggled by command-line arguments. The Commander does not copy anything over by default.)
+     */
     private final JSch jsch;
 
     /**
@@ -186,14 +195,14 @@ public class Commander {
                                                  boolean disableConsistency, int numFollowers,
                                                  boolean scpJars, boolean scpConfig,
                                                  boolean manuallyLaunchFollowers) throws IOException, JSchException {
-        if (instanace == null) {
+        if (instance == null) {
             // serverlessLogLevel = logLevel;
             consistencyEnabled = !disableConsistency;
-            instanace = new Commander(ip, port, yamlPath, nondistributed,
+            instance = new Commander(ip, port, yamlPath, nondistributed,
                     numFollowers, scpJars, scpConfig, manuallyLaunchFollowers);
         }
 
-        return instanace;
+        return instance;
     }
 
     private Commander(String ip, int port, String yamlPath, boolean nondistributed, int numFollowersFromConfigToStart,
