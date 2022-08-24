@@ -55,6 +55,13 @@
             <version>2.12.2</version>
             <scope>compile</scope>
         </dependency>
+        <!-- Logback appender for Cloud Logging with Google Cloud Platform -->
+        <!-- https://cloud.google.com/logging/docs/setup/java -->
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-logging-logback</artifactId>
+            <version>0.127.5-alpha</version>
+        </dependency>
         <dependency>
             <groupId>io.hops.metadata</groupId>
             <artifactId>hops-metadata-dal</artifactId>
@@ -79,11 +86,16 @@
             <artifactId>netty-all</artifactId>
             <version>4.1.70.Final</version>
         </dependency>
+<!--        <dependency>-->
+<!--            <groupId>log4j</groupId>-->
+<!--            <artifactId>log4j</artifactId>-->
+<!--            <scope>compile</scope>-->
+<!--            <version>1.2.17</version>-->
+<!--        </dependency>-->
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <scope>compile</scope>
-            <version>1.2.17</version>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.3</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -132,24 +144,24 @@
             <scope>compile</scope>
             <version>5.0.3</version>
         </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.25</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.7.25</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>jul-to-slf4j</artifactId>
-            <version>1.7.25</version>
-            <scope>compile</scope>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.slf4j</groupId>-->
+<!--            <artifactId>slf4j-api</artifactId>-->
+<!--            <version>1.7.25</version>-->
+<!--            <scope>compile</scope>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>org.slf4j</groupId>-->
+<!--            <artifactId>slf4j-log4j12</artifactId>-->
+<!--            <version>1.7.25</version>-->
+<!--            <scope>compile</scope>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>org.slf4j</groupId>-->
+<!--            <artifactId>jul-to-slf4j</artifactId>-->
+<!--            <version>1.7.25</version>-->
+<!--            <scope>compile</scope>-->
+<!--        </dependency>-->
         <!-- https://mvnrepository.com/artifact/com.esotericsoftware/reflectasm -->
         <!-- Needed by the Kryo TCP library. -->
         <dependency>
@@ -188,7 +200,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.gmail.benrcarver.BenchmarkDriver</mainClass>
+                            <mainClass>com.gmail.benrcarver.distributed.InteractiveTest</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
