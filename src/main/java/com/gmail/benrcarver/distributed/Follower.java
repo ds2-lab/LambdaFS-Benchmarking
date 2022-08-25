@@ -5,8 +5,8 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.gmail.benrcarver.distributed.util.Utils;
 import com.google.gson.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -29,7 +29,7 @@ import static com.gmail.benrcarver.distributed.Constants.*;
  * Runs HopsFS benchmarks as directed by a {@link Commander}.
  */
 public class Follower {
-    public static final Log LOG = LogFactory.getLog(Follower.class);
+    public static final Logger LOG = LoggerFactory.getLogger(Follower.class);
 
     private static final int CONN_TIMEOUT_MILLISECONDS = 5000;
 

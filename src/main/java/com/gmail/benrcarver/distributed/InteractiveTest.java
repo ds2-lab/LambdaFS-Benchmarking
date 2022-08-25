@@ -4,8 +4,8 @@ import com.jcraft.jsch.JSchException;
 import io.grpc.LoadBalancerRegistry;
 import io.grpc.internal.PickFirstLoadBalancerProvider;
 import org.apache.commons.cli.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.*;
 
 /**
@@ -14,7 +14,7 @@ import java.io.*;
  * This is the class that is executed when running the application. It starts the Commander or Follower.
  */
 public class InteractiveTest {
-    public static final Log LOG = LogFactory.getLog(InteractiveTest.class);
+    public static final Logger LOG = LoggerFactory.getLogger(InteractiveTest.class);
 
     public static void main(String[] args) throws InterruptedException, IOException, JSchException {
         LoadBalancerRegistry.getDefaultRegistry().register(new PickFirstLoadBalancerProvider());

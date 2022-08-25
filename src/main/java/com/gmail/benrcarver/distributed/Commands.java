@@ -13,8 +13,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import io.hops.metrics.TransactionEvent;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
 import io.hops.leader_election.node.SortedActiveNodeList;
@@ -38,7 +38,7 @@ import static com.gmail.benrcarver.distributed.Constants.*;
 //       to temporarily store metrics info and print the results. The only difference is the FS operation
 //       being called. So, at some point I can generify everything.
 public class Commands {
-    public static final Log LOG = LogFactory.getLog(Commands.class);
+    public static final Logger LOG = LoggerFactory.getLogger(Commands.class);
     private static final Scanner scanner = new Scanner(System.in);
 
     private static final String EMPTY_STRING = "";

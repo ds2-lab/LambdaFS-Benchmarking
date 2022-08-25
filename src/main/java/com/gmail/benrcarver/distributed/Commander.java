@@ -12,8 +12,8 @@ import com.google.gson.JsonParser;
 import com.jcraft.jsch.*;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -41,7 +41,7 @@ import static com.gmail.benrcarver.distributed.Constants.*;
  * Controls a fleet of distributed machines. Executes HopsFS benchmarks based on user input/commands.
  */
 public class Commander {
-    public static final Log LOG = LogFactory.getLog(Commander.class);
+    public static final Logger LOG = LoggerFactory.getLogger(Commander.class);
 
     private final List<FollowerConnection> followers;
 
@@ -270,7 +270,7 @@ public class Commander {
             Commands.IS_SERVERLESS = isServerless;
 
             LOG.info("Loaded configuration!");
-            LOG.info(config);
+            LOG.info(String.valueOf(config));
         }
     }
 
