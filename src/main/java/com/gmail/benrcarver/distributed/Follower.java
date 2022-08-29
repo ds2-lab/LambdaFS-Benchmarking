@@ -171,7 +171,6 @@ public class Follower {
                     LOG.debug("DISABLING Benchmark Mode.");
 
                 Commands.BENCHMARKING_MODE = benchmarkModeEnabled;
-                hdfs.setBenchmarkModeEnabled(benchmarkModeEnabled);
 
                 if (benchmarkModeEnabled)
                     Commands.TRACK_OP_PERFORMED = false;
