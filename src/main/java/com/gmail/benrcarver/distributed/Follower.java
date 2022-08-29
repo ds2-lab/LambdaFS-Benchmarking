@@ -85,6 +85,8 @@ public class Follower {
                         LOG.error("Encountered IOException while handling message from Leader:", e);
                     } catch (InterruptedException e) {
                         LOG.error("Encountered InterruptedException while handling message from Leader:", e);
+                    } catch (Exception e) {
+                        LOG.error("Unexpected exception while handling message from Leader:", e);
                     }
                 }
             }
@@ -365,12 +367,6 @@ public class Follower {
         LOG.debug("Received REGISTRATION message from Leader.");
         nameNodeEndpoint = message.getAsJsonPrimitive(NAMENODE_ENDPOINT).getAsString();
         hdfsConfigFilePath = message.getAsJsonPrimitive(HDFS_CONFIG_PATH).getAsString();
-        Commands.TRACK_OP_PERFORMED = message.getAsJsonPrimitive(TRACK_OP_PERFORMED).getAsBoolean();
-
-        if (Commands.TRACK_OP_PERFORMED)
-            LOG.debug("ENABLING OperationPerformed tracking.");
-        else
-            LOG.debug("DISABLING OperationPerformed tracking.");
 
         // The initDfsClient() function in the Commander file uses the Commander's static 'hdfsConfigFilePath'
         // variable. This is basically a hack, pretty gross.
