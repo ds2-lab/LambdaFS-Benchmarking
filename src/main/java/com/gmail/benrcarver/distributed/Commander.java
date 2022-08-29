@@ -861,7 +861,12 @@ public class Commander {
                 LOG.warn("Could not generate metrics string due to NPE.");
             }
 
-            return new AggregatedResult(localResult.getOpsPerSecond(), metricsString);
+            double avgLatency = 0.0;
+
+            if (localResult.latencyStatistics != null)
+                avgLatency = localResult.latencyStatistics.getMean();
+
+            return new AggregatedResult(localResult.getOpsPerSecond(), avgLatency, metricsString);
         }
 
         LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
@@ -943,7 +948,7 @@ public class Commander {
 
         LOG.info(metricsString);
 
-        return new AggregatedResult(aggregateThroughput, metricsString);
+        return new AggregatedResult(aggregateThroughput, trialAvgLatency, metricsString);
     }
 
     /**
@@ -1287,10 +1292,12 @@ public class Commander {
 
     public static class AggregatedResult {
         public double throughput;
+        public double averageLatency;
         public String metricsString; // All the metrics I'd want formatted so that I can copy & paste into Excel.
 
-        public AggregatedResult(double throughput, String metricsString) {
+        public AggregatedResult(double throughput, double averageLatency, String metricsString) {
             this.throughput = throughput;
+            this.averageLatency = averageLatency;
             this.metricsString = metricsString;
         }
     }
