@@ -316,7 +316,7 @@ public class Commander {
             else
                 LOG.debug("'Manually Launch Followers' is set to TRUE. Commander will not auto-launch Follower.");
         } catch (JSchException | SftpException e) {
-            LOG.error("Exception encountered while trying to launch follower at " + user + "@" + host);
+            LOG.error("Exception encountered while trying to launch follower at " + user + "@" + host + ":", e);
             e.printStackTrace();
         }
     }
