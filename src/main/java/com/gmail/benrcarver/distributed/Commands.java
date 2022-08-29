@@ -132,10 +132,13 @@ public class Commands {
         AtomicInteger numSuccessfulOps = new AtomicInteger(0);
         AtomicInteger numOps = new AtomicInteger(0);
 
+        SynchronizedDescriptiveStatistics totalLatencyStatistics = new SynchronizedDescriptiveStatistics();
+
         for (int i = 0; i < numThreads; i++) {
             final String[] filesForCurrentThread = fileBatches[i];
             final int threadId = i;
             Thread thread = new Thread(() -> {
+                DescriptiveStatistics latencyStatistics = new DescriptiveStatistics();
                 DistributedFileSystem hdfs = getHdfsClient(nameNodeEndpoint);
 
                 readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
@@ -153,8 +156,11 @@ public class Commands {
 
                 for (String filePath : filesForCurrentThread) {
                     for (int j = 0; j < operationsPerFile; j++) {
-                        if (operation.call(hdfs, filePath, EMPTY_STRING))
+                        long start = System.currentTimeMillis();
+                        if (operation.call(hdfs, filePath, EMPTY_STRING)) {
                             numSuccessfulOpsCurrentThread++;
+                            latencyStatistics.addValue(System.currentTimeMillis() - start);
+                        }
                         numOpsCurrentThread++;
                     }
                 }
@@ -177,6 +183,9 @@ public class Commands {
 
                 numSuccessfulOps.addAndGet(numSuccessfulOpsCurrentThread);
                 numOps.addAndGet(numOpsCurrentThread);
+
+                for (double latency : latencyStatistics.getValues())
+                totalLatencyStatistics.addValue(latency);
 
                 try {
                     // Now return the client to the pool so that it can be used again in the future.
@@ -237,7 +246,7 @@ public class Commands {
             LOG.debug("At end of benchmark, the HDFS Clients Cache has " + hdfsClients.size() + " clients.");
 
         return new DistributedBenchmarkResult(null, opCode, numSuccess,
-                durationSeconds, start, end);
+                durationSeconds, start, end, totalLatencyStatistics);
     }
 
     public static DistributedBenchmarkResult writeFilesToDirectories(final Configuration configuration,
@@ -548,7 +557,7 @@ public class Commands {
 
         int numSuccessfulDeletes = 0;
         long s = System.currentTimeMillis();
-        List<Long> latencies = new ArrayList<>();
+        SynchronizedDescriptiveStatistics latencies = new SynchronizedDescriptiveStatistics();
         for (String path : paths) {
             try {
                 Path filePath = new Path(nameNodeEndpoint + path);
@@ -563,7 +572,7 @@ public class Commands {
                 else
                     LOG.error("\t Failed to delete '" + path + "' after " + (end - start) + " ms.");
 
-                latencies.add(end - start);
+                latencies.addValue(end - start);
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -576,14 +585,12 @@ public class Commands {
         double throughput = (numSuccessfulDeletes / durationSeconds);
         LOG.info("Throughput: " + throughput + " ops/sec.");
         LOG.info("Throughput (ALL ops): " + (paths.size() / durationSeconds) + " ops/sec.");
-        /*LOG.info("(Note that, if we were deleting directories, then the number of 'actual' deletes " +
-                "-- and therefore the overall throughput -- could be far higher...");*/
 
         LOG.info("Latencies (ms): ");
-        for (Long latency : latencies)
+        for (double latency : latencies.getValues())
             System.out.println(latency);
 
-        return new DistributedBenchmarkResult(null, OP_DELETE_FILES, paths.size(), durationSeconds, s, t);
+        return new DistributedBenchmarkResult(null, OP_DELETE_FILES, paths.size(), durationSeconds, s, t, latencies);
     }
 
     /**
