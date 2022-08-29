@@ -5,6 +5,7 @@ import com.gmail.benrcarver.distributed.util.Utils;
 
 import java.io.*;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -298,9 +299,7 @@ public class Commands {
                 latencyTcp, latencyHttp);
     }
 
-    public static DistributedBenchmarkResult writeFilesToDirectories(DistributedFileSystem hdfs,
-                                               final Configuration configuration,
-                                               String nameNodeEndpoint)
+    public static DistributedBenchmarkResult writeFilesToDirectories(DistributedFileSystem hdfs, String nameNodeEndpoint)
             throws IOException, InterruptedException {
         System.out.print("Manually input (comma-separated list) [1], or specify file containing directories [2]? \n>");
         int choice = Integer.parseInt(scanner.nextLine());
@@ -341,25 +340,10 @@ public class Commands {
             LOG.info("Defaulting to " + filesPerDirectory + ".");
         }
 
-        int minLength = 0;
-        System.out.print("Min string length (default " + minLength + "):\n> ");
-        try {
-            minLength = Integer.parseInt(scanner.nextLine());
-        } catch (NumberFormatException ex) {
-            LOG.info("Defaulting to " + minLength + ".");
-        }
-
-        int maxLength = 0;
-        System.out.print("Max string length (default " + maxLength + "):\n> ");
-        try {
-            maxLength = Integer.parseInt(scanner.nextLine());
-        } catch (NumberFormatException ex) {
-            LOG.info("Defaulting to " + maxLength + ".");
-        }
-
         // Generate the file contents and file names. targetDirectories has length equal to numThreads
         // except when randomWrites is true (in which case, in may vary). But either way, each thread
         // will be reading n files, so this works.
+        assert directories != null;
         int totalNumberOfFiles = filesPerDirectory * directories.size();
         LOG.info("Generating " + filesPerDirectory + " files for each directory (total of " + totalNumberOfFiles + " files).");
         final String[] targetPaths = new String[totalNumberOfFiles];
@@ -386,7 +370,7 @@ public class Commands {
         assert(targetPathsPerThread.length == numberOfThreads);
 
         return executeBenchmark(hdfs, nameNodeEndpoint, numberOfThreads, targetPathsPerThread,
-                1, OP_WRITE_FILES_TO_DIRS, new FSOperation(nameNodeEndpoint, configuration) {
+                1, OP_WRITE_FILES_TO_DIRS, new FSOperation(nameNodeEndpoint) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
                         return createFile(path, content, hdfs, nameNodeEndpoint);
@@ -478,8 +462,7 @@ public class Commands {
     /**
      * Gets the user inputs for this benchmark, then calls the actual benchmark itself.
      */
-    public static DistributedBenchmarkResult strongScalingBenchmark(final Configuration configuration,
-                                                                    final DistributedFileSystem sharedHdfs,
+    public static DistributedBenchmarkResult strongScalingBenchmark(final DistributedFileSystem sharedHdfs,
                                                                     final String endpoint,
                                                                     int numFilesPerThread, int readsPerFile,
                                                                     int numThreads, String inputPath)
@@ -513,7 +496,7 @@ public class Commands {
 
         return executeBenchmark(
                 sharedHdfs, endpoint, numThreads, filesPerThread, readsPerFile, OP_STRONG_SCALING_READS,
-                new FSOperation(endpoint, configuration) {
+                new FSOperation(endpoint) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
                         return readFile(path, hdfs, endpoint);
@@ -531,8 +514,7 @@ public class Commands {
      * @param filesPerThread How many files should be read by each thread.
      * @param inputPath Path to local file containing HopsFS file paths (of the files to read).
      */
-    public static DistributedBenchmarkResult weakScalingBenchmarkV2(final Configuration configuration,
-                                                        final DistributedFileSystem sharedHdfs,
+    public static DistributedBenchmarkResult weakScalingBenchmarkV2(final DistributedFileSystem sharedHdfs,
                                                         final String nameNodeEndpoint, int numThreads,
                                                         final int filesPerThread, String inputPath,
                                                         boolean shuffle, int opCode)
@@ -572,7 +554,7 @@ public class Commands {
 
         return executeBenchmark(
                 sharedHdfs, nameNodeEndpoint, numThreads, fileBatches, 1, opCode,
-                new FSOperation(nameNodeEndpoint, configuration) {
+                new FSOperation(nameNodeEndpoint) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
                         return readFile(path, hdfs, nameNodeEndpoint);
@@ -589,8 +571,7 @@ public class Commands {
      * @param readsPerFile How many times each file should be read.
      * @param inputPath Path to local file containing HopsFS filepaths (of the files to read).
      */
-    public static DistributedBenchmarkResult weakScalingReadsV1(final Configuration configuration,
-                                                                final DistributedFileSystem sharedHdfs,
+    public static DistributedBenchmarkResult weakScalingReadsV1(final DistributedFileSystem sharedHdfs,
                                                                 final String nameNodeEndpoint, int numThreads,
                                                                 int readsPerFile, String inputPath, boolean shuffle,
                                                                 int opCode)
@@ -616,7 +597,7 @@ public class Commands {
 
         return executeBenchmark(
                 sharedHdfs, nameNodeEndpoint, numThreads, pathsPerThread, readsPerFile, opCode,
-                new FSOperation(nameNodeEndpoint, configuration) {
+                new FSOperation(nameNodeEndpoint) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
                         return readFile(path, hdfs, nameNodeEndpoint);
@@ -659,7 +640,7 @@ public class Commands {
         hdfs.printOperationsPerformed();
 
         ConcurrentHashMap<String, List<TransactionEvent>> transactionEvents = hdfs.getTransactionEvents();
-        ArrayList<TransactionEvent> allTransactionEvents = new ArrayList<TransactionEvent>();
+        ArrayList<TransactionEvent> allTransactionEvents = new ArrayList<>();
 
         for (Map.Entry<String, List<TransactionEvent>> entry : transactionEvents.entrySet()) {
             allTransactionEvents.addAll(entry.getValue());
@@ -708,8 +689,7 @@ public class Commands {
         }
     }
 
-    public static DistributedBenchmarkResult getFileStatusOperation(final Configuration configuration,
-                                                                    DistributedFileSystem sharedHdfs,
+    public static DistributedBenchmarkResult getFileStatusOperation(DistributedFileSystem sharedHdfs,
                                                                     final String endpoint) throws InterruptedException {
         System.out.print("Path to local file containing HopsFS/HDFS paths:\n> ");
         String localFilePath = scanner.nextLine();
@@ -746,7 +726,7 @@ public class Commands {
 
         return executeBenchmark(
                 sharedHdfs, endpoint, numThreads, pathsPerThread, opsPerFile, OP_GET_FILE_STATUS,
-                new FSOperation(endpoint, configuration) {
+                new FSOperation(endpoint) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
                         return getFileStatus(path, hdfs, endpoint);
@@ -754,8 +734,7 @@ public class Commands {
                 });
     }
 
-    public static void readFilesOperation(final Configuration configuration,
-                                          DistributedFileSystem sharedHdfs,
+    public static void readFilesOperation(DistributedFileSystem sharedHdfs,
                                           final String nameNodeEndpoint,
                                           int opCode)
             throws InterruptedException {
@@ -768,10 +747,11 @@ public class Commands {
         System.out.print("Number of threads:\n> ");
         int numThreads = Integer.parseInt(scanner.nextLine());
 
-        readFiles(localFilePath, readsPerFile, numThreads, configuration, sharedHdfs, nameNodeEndpoint, opCode);
+        readFiles(localFilePath, readsPerFile, numThreads, sharedHdfs, nameNodeEndpoint, opCode);
     }
 
-    public static DistributedBenchmarkResult deleteFilesOperation(DistributedFileSystem sharedHdfs, final String nameNodeEndpoint) {
+    public static DistributedBenchmarkResult deleteFilesOperation(DistributedFileSystem sharedHdfs,
+                                                                  final String nameNodeEndpoint) {
         System.out.print("Path to file containing HopsFS paths? \n> ");
         String input = scanner.nextLine();
         return deleteFiles(input, sharedHdfs, nameNodeEndpoint);
@@ -837,8 +817,9 @@ public class Commands {
      * @param readsPerFile Number of times each file should be read.
      * @param numThreads Number of threads to use when performing the reads concurrently.
      */
-    public static DistributedBenchmarkResult readFiles(String path, int readsPerFile, int numThreads, final Configuration configuration,
-                                 DistributedFileSystem sharedHdfs, final String nameNodeEndpoint, int opCode)
+    public static DistributedBenchmarkResult readFiles(String path, int readsPerFile, int numThreads,
+                                                       DistributedFileSystem sharedHdfs, final String nameNodeEndpoint,
+                                                       int opCode)
             throws InterruptedException {
         List<String> paths;
         try {
@@ -866,7 +847,7 @@ public class Commands {
 
         return executeBenchmark(
                 sharedHdfs, nameNodeEndpoint, numThreads, pathsPerThread, readsPerFile, opCode,
-                new FSOperation(nameNodeEndpoint, configuration) {
+                new FSOperation(nameNodeEndpoint) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
                         return readFile(path, hdfs, nameNodeEndpoint);
@@ -880,7 +861,6 @@ public class Commands {
      * @param sharedHdfs Passed by main thread. We only use this if we're doing single-threaded.
      */
     public static void writeFilesToDirectory(DistributedFileSystem sharedHdfs,
-                                             final Configuration configuration,
                                              final String nameNodeEndpoint)
             throws InterruptedException, IOException {
         System.out.print("Target directory:\n> ");
@@ -888,12 +868,6 @@ public class Commands {
 
         System.out.print("Number of files:\n> ");
         int numFiles = Integer.parseInt(scanner.nextLine());
-
-        System.out.print("Min string length:\n> ");
-        int minLength = Integer.parseInt(scanner.nextLine());
-
-        System.out.print("Max string length:\n> ");
-        int maxLength = Integer.parseInt(scanner.nextLine());
 
         // If 'y', create the files one-by-one. If 'n', we'll use a configurable number of threads.
         System.out.print("Sequentially create files? [Y/n]\n>");
@@ -906,8 +880,8 @@ public class Commands {
             numThreads = Integer.parseInt(scanner.nextLine());
         }
 
-        writeFilesInternal(numFiles, minLength, maxLength, numThreads, Collections.singletonList(targetDirectory),
-                sharedHdfs, OP_WEAK_SCALING_WRITES, configuration, nameNodeEndpoint, false);
+        writeFilesInternal(numFiles, numThreads, Collections.singletonList(targetDirectory),
+                sharedHdfs, OP_WEAK_SCALING_WRITES, nameNodeEndpoint, false);
     }
 
     /**
@@ -918,19 +892,15 @@ public class Commands {
      * using all provided directories as part of the sample space.
      *
      * @param filesPerDirectory Number of files per directory (or per thread for random writes).
-     * @param minLength Minimum length of randomly-generated file contents.
-     * @param maxLength Maximum length of randomly-generated file contents.
      * @param numThreads The number of threads to use when performing the operation.
      * @param targetDirectories The target directories.
      * @param sharedHdfs Shared/master DistributedFileSystem instance.
-     * @param configuration Configuration for per-thread DistributedFileSystem objects.
      * @param randomWrites Generate a bunch of random writes across all directories,
      *                     rather than doing the writes per-directory.
      */
-    public static DistributedBenchmarkResult writeFilesInternal(int filesPerDirectory, int minLength, int maxLength,
-                                                                int numThreads, List<String> targetDirectories,
+    public static DistributedBenchmarkResult writeFilesInternal(int filesPerDirectory, int numThreads,
+                                                                List<String> targetDirectories,
                                                                 DistributedFileSystem sharedHdfs, int opCode,
-                                                                Configuration configuration,
                                                                 final String nameNodeEndpoint, boolean randomWrites)
             throws IOException, InterruptedException {
         // Generate the file contents and file names. targetDirectories has length equal to numThreads
@@ -985,7 +955,7 @@ public class Commands {
 
         return executeBenchmark(
                 sharedHdfs, nameNodeEndpoint, numThreads, targetPathsPerThread, 1, opCode,
-                new FSOperation(nameNodeEndpoint, configuration) {
+                new FSOperation(nameNodeEndpoint) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
                         return createFile(path, content, hdfs, nameNodeEndpoint);
@@ -1072,9 +1042,9 @@ public class Commands {
         mkdir(subtreeRootPath, hdfs, nameNodeEndpoint);
         numDirectoriesCreated++;
 
-        Set<String> directoriesCreated = new HashSet<String>();
-        Stack<TreeNode> directoryStack = new Stack<TreeNode>();
-        TreeNode subtreeRoot = new TreeNode(subtreeRootPath, new ArrayList<TreeNode>());
+        Set<String> directoriesCreated = new HashSet<>();
+        Stack<TreeNode> directoryStack = new Stack<>();
+        TreeNode subtreeRoot = new TreeNode(subtreeRootPath, new ArrayList<>());
         directoryStack.push(subtreeRoot);
 
         while (currentDepth <= subtreeDepth) {
@@ -1085,7 +1055,6 @@ public class Commands {
             List<Stack<TreeNode>> currentDepthStacks = new ArrayList<>();
             while (!directoryStack.empty()) {
                 TreeNode directory = directoryStack.pop();
-                //directoriesCreated.add(directory.getPath());
 
                 String basePath = directory.getPath() + "/dir";
 
@@ -1127,12 +1096,12 @@ public class Commands {
                                                          DistributedFileSystem hdfs,
                                                          String nameNodeEndpoint,
                                                          Collection<String> directoriesCreated) {
-        Stack<TreeNode> directoryStack = new Stack<TreeNode>();
+        Stack<TreeNode> directoryStack = new Stack<>();
         for (int i = 0; i < subDirs; i++) {
             String path = basePath + i;
             mkdir(path, hdfs, nameNodeEndpoint);
             directoriesCreated.add(path);
-            TreeNode node = new TreeNode(path, new ArrayList<TreeNode>());
+            TreeNode node = new TreeNode(path, new ArrayList<>());
             directoryStack.push(node);
         }
 
@@ -1154,33 +1123,6 @@ public class Commands {
     }
 
     /**
-     * Create files using the names and contents provide by the two parameters.
-     *
-     * The two argument lists must have the same length.
-     *
-     * @param names File names.
-     * @param content File contents.
-     *
-     * @return The number of successful create operations.
-     */
-    public static int createFiles(String[] names, String[] content, DistributedFileSystem hdfs, String nameNodeEndpoint) {
-        assert(names.length == content.length);
-
-        int numSuccess = 0;
-
-        for (int i = 0; i < names.length; i++) {
-            LOG.info("Writing file " + i + "/" + names.length);
-            long s = System.currentTimeMillis();
-            boolean success = createFile(names[i], content[i], hdfs, nameNodeEndpoint);
-            if (success) numSuccess++;
-            long t = System.currentTimeMillis();
-            LOG.info("Wrote file " + (i+1) + "/" + names.length + " in " + (t - s) + " ms.");
-        }
-
-        return numSuccess;
-    }
-
-    /**
      * Create a new file with the given name and contents.
      * @param name The name of the file.
      * @param contents The content to be written to the file.
@@ -1197,7 +1139,7 @@ public class Commands {
             FSDataOutputStream outputStream = hdfs.create(filePath);
 
             if (!contents.isEmpty()) {
-                BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
+                BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
                 br.write(contents);
                 br.close();
                 LOG.info("\t Successfully created non-empty file '" + filePath + "'");
@@ -1283,7 +1225,7 @@ public class Commands {
             return;
         }
 
-        SortedActiveNodeList activeNameNodes = null;
+        SortedActiveNodeList activeNameNodes;
         try {
             activeNameNodes = hdfs.getActiveNamenodesForClient();
         } catch (IOException ex) {
@@ -1340,7 +1282,7 @@ public class Commands {
         try {
             FSDataOutputStream outputStream = hdfs.append(filePath);
             LOG.info("\t Called append() successfully.");
-            BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
+            BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
             LOG.info("\t Created BufferedWriter object.");
             br.write(fileContents);
             LOG.info("\t Appended \"" + fileContents + "\" to file using BufferedWriter.");
@@ -1394,7 +1336,7 @@ public class Commands {
             FSDataInputStream inputStream = hdfs.open(filePath);
 
             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
-            String line = null;
+            String line;
 
             while ((line = br.readLine()) != null)
                 LOG.info(line);

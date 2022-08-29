@@ -124,11 +124,6 @@ public class Commander {
     public static boolean consistencyEnabled = true;
 
     /**
-     * The hdfs-site.xml configuration file.
-     */
-    private Configuration hdfsConfiguration;
-
-    /**
      * The {@link Commander} class uses a singleton pattern.
      */
     private static Commander instance;
@@ -197,11 +192,6 @@ public class Commander {
      * This is reset at the beginning/end of each trial of a particular benchmark.
      */
     private final Set<String> waitingOn = ConcurrentHashMap.newKeySet();
-
-    /**
-     * Controls the log level of the serverless functions/namenodes.
-     */
-    private static String serverlessLogLevel = null;
 
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
                                                  boolean disableConsistency, int numFollowers,
@@ -308,12 +298,11 @@ public class Commander {
             channel.setInputStream(null);
             ((ChannelExec) channel).setErrStream(System.err);
 
-            InputStream in = channel.getInputStream();
             channel.connect();
             channel.disconnect();
             session.disconnect();
             System.out.println("DONE");
-        } catch (JSchException | IOException e) {
+        } catch (JSchException e) {
             e.printStackTrace();
         }
     }
@@ -364,9 +353,6 @@ public class Commander {
      */
     private void launchFollowers() throws IOException, JSchException {
         final String launchCommand = String.format(LAUNCH_FOLLOWER_CMD, ip, port);
-        final String scpHadoopHdfsJarCommand = "scp " + HADOOP_HDFS_JAR_PATH + " %s@%s:" + HADOOP_HDFS_JAR_PATH;
-        final String scpBenchmarkJarCommand = "scp " + BENCHMARK_JAR_PATH + " %s@%s:" + BENCHMARK_JAR_PATH;
-        final String scpConfigCommand = "scp " + hdfsConfigFilePath + " %s@%s:" + hdfsConfigFilePath;
 
         // If 'numFollowersFromConfigToStart' is negative, then use all followers.
         if (numFollowersFromConfigToStart < 0)
@@ -387,7 +373,6 @@ public class Commander {
     }
 
     private void startServer() throws IOException {
-        //com.esotericsoftware.minlog.Log.set(com.esotericsoftware.minlog.Log.LEVEL_DEBUG);
         tcpServer.start();
         Network.register(tcpServer);
         tcpServer.bind(port, port+1);
@@ -412,7 +397,6 @@ public class Commander {
             long startingGCTime = garbageCollectionTime;
 
             try {
-                Thread.sleep(50);
                 printMenu();
                 int op = getNextOperation();
 
@@ -487,7 +471,6 @@ public class Commander {
                     case OP_MKDIR:
                         LOG.info("MAKE DIRECTORY selected!");
                         Commands.mkdirOperation(primaryHdfs, nameNodeEndpoint);
-                        ;
                         break;
                     case OP_READ_FILE:
                         LOG.info("READ FILE selected!");
@@ -523,11 +506,11 @@ public class Commander {
                         break;
                     case OP_WRITE_FILES_TO_DIR:
                         LOG.info("WRITE FILES TO DIRECTORY selected!");
-                        Commands.writeFilesToDirectory(primaryHdfs, hdfsConfiguration, nameNodeEndpoint);
+                        Commands.writeFilesToDirectory(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_READ_FILES:
                         LOG.info("READ FILES selected!");
-                        Commands.readFilesOperation(hdfsConfiguration, primaryHdfs, nameNodeEndpoint, OP_READ_FILES);
+                        Commands.readFilesOperation(primaryHdfs, nameNodeEndpoint, OP_READ_FILES);
                         break;
                     case OP_DELETE_FILES:
                         LOG.info("DELETE FILES selected!");
@@ -535,34 +518,35 @@ public class Commander {
                         break;
                     case OP_WRITE_FILES_TO_DIRS:
                         LOG.info("WRITE FILES TO DIRECTORIES selected!");
-                        Commands.writeFilesToDirectories(primaryHdfs, hdfsConfiguration, nameNodeEndpoint);
+                        Commands.writeFilesToDirectories(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_WEAK_SCALING_READS:
                         LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
-                        weakScalingReadOperation(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
+                        weakScalingReadOperation(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_STRONG_SCALING_READS:
                         LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
-                        strongScalingReadOperation(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
+                        strongScalingReadOperation(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_WEAK_SCALING_WRITES:
                         LOG.info("'Write n Files with n Threads (Weak Scaling - Write)' selected!");
-                        weakScalingWriteOperation(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
+                        weakScalingWriteOperation(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_STRONG_SCALING_WRITES:
                         LOG.info("'Write n Files y Times with z Threads (Strong Scaling - Write)' selected!");
-                        throw new NotImplementedException("Not yet implemented.");
+                        strongScalingWriteOperation(primaryHdfs, nameNodeEndpoint);
+                        break;
                     case OP_CREATE_DIRECTORIES:
                         LOG.info("CREATE DIRECTORIES selected!");
                         Commands.createDirectories(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_WEAK_SCALING_READS_V2:
                         LOG.info("WeakScalingReadsV2 Selected!");
-                        weakScalingReadOperationV2(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
+                        weakScalingReadOperationV2(primaryHdfs, nameNodeEndpoint);
                         break;
                     case OP_GET_FILE_STATUS:
                         LOG.info("OP_GET_FILE_STATUS selected!");
-                        Commands.getFileStatusOperation(hdfsConfiguration, primaryHdfs, nameNodeEndpoint);
+                        Commands.getFileStatusOperation(primaryHdfs, nameNodeEndpoint);
                         break;
                     default:
                         LOG.info("ERROR: Unknown or invalid operation specified: " + op);
@@ -698,7 +682,6 @@ public class Commander {
                 newLogLevel.equalsIgnoreCase("TRACE"))) {
             LOG.error("Invalid log level specified: '" + newLogLevel + "'");
         } else {
-            serverlessLogLevel = newLogLevel;
             primaryHdfs.setServerlessFunctionLogLevel(newLogLevel);
 
             for (DistributedFileSystem hdfs : hdfsClients) {
@@ -850,8 +833,7 @@ public class Commander {
         return Integer.parseInt(input);
     }
 
-    public void strongScalingWriteOperation(final Configuration configuration,
-                                            final DistributedFileSystem sharedHdfs,
+    public void strongScalingWriteOperation(final DistributedFileSystem sharedHdfs,
                                             final String nameNodeEndpoint)
             throws InterruptedException, IOException {
         int totalNumberOfFiles = getIntFromUser("Total number of files to write?");
@@ -962,8 +944,8 @@ public class Commander {
         LOG.info("Each thread should be writing " + writesPerThread + " files...");
 
         DistributedBenchmarkResult localResult =
-                Commands.writeFilesInternal(writesPerThread, minLength, maxLength, numberOfThreads, directories,
-                        sharedHdfs, OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, false);
+                Commands.writeFilesInternal(writesPerThread, numberOfThreads, directories,
+                        sharedHdfs, OP_WEAK_SCALING_WRITES, nameNodeEndpoint, false);
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
@@ -975,8 +957,7 @@ public class Commander {
             waitForDistributedResult(numDistributedResults, operationId, localResult);
     }
 
-    public void strongScalingReadOperation(final Configuration configuration,
-                                           final DistributedFileSystem sharedHdfs,
+    public void strongScalingReadOperation(final DistributedFileSystem sharedHdfs,
                                            final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         // User provides file containing HopsFS file paths.
@@ -1008,7 +989,7 @@ public class Commander {
         }
 
         DistributedBenchmarkResult localResult =
-                Commands.strongScalingBenchmark(configuration, sharedHdfs, nameNodeEndpoint, filesPerThread, readsPerFile,
+                Commands.strongScalingBenchmark(sharedHdfs, nameNodeEndpoint, filesPerThread, readsPerFile,
                         numThreads, inputPath);
 
         if (localResult == null) {
@@ -1027,8 +1008,7 @@ public class Commander {
     /**
      * Weak scaling, writes.
      */
-    public void weakScalingWriteOperation(final Configuration configuration,
-                                          final DistributedFileSystem sharedHdfs,
+    public void weakScalingWriteOperation(final DistributedFileSystem sharedHdfs,
                                           final String nameNodeEndpoint)
             throws IOException, InterruptedException {
         int directoryChoice = getIntFromUser("Should the threads write their files to the SAME DIRECTORY [1], DIFFERENT DIRECTORIES [2], or RANDOM WRITES [3]?");
@@ -1042,7 +1022,7 @@ public class Commander {
 
         int dirInputMethodChoice = getIntFromUser("Manually input (comma-separated list) [1], or specify file containing directories [2]?");
 
-        List<String> directories = null;
+        List<String> directories;
         if (dirInputMethodChoice == 1) {
             System.out.print("Please enter the directories as a comma-separated list:\n> ");
             String listOfDirectories = scanner.nextLine();
@@ -1071,12 +1051,6 @@ public class Commander {
 
         System.out.print("Number of threads? \n> ");
         int numberOfThreads = Integer.parseInt(scanner.nextLine());
-
-        // IMPORTANT: Make directories the same size as the number of threads, so we have one directory per thread.
-        //            This allows us to directly reuse the writeFilesInternal() function, which creates a certain
-        //            number of files per directory. If number of threads is equal to number of directories, then
-        //            we are essentially creating a certain number of files per thread, which is what we want.
-        assert(directories != null);
 
         if (directoryChoice == 1) {
             Random rng = new Random();
@@ -1135,8 +1109,8 @@ public class Commander {
         LOG.info("Each thread should be writing " + writesPerThread + " files...");
 
         DistributedBenchmarkResult localResult =
-                Commands.writeFilesInternal(writesPerThread, minLength, maxLength, numberOfThreads, directories,
-                        sharedHdfs, OP_STRONG_SCALING_READS, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3));
+                Commands.writeFilesInternal(writesPerThread, numberOfThreads, directories,
+                        sharedHdfs, OP_STRONG_SCALING_READS, nameNodeEndpoint, (directoryChoice == 3));
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
@@ -1305,8 +1279,7 @@ public class Commander {
      *  - The path to a local file containing HopsFS file paths.
      *  - The number of files each thread should read.
      */
-    private void weakScalingReadOperationV2(final Configuration configuration,
-                                            final DistributedFileSystem sharedHdfs,
+    private void weakScalingReadOperationV2(final DistributedFileSystem sharedHdfs,
                                             final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         System.out.print("How many threads should be used?\n> ");
@@ -1349,7 +1322,7 @@ public class Commander {
             // TODO: Make this return some sort of 'result' object encapsulating the result.
             //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
             DistributedBenchmarkResult localResult =
-                    Commands.weakScalingBenchmarkV2(configuration, sharedHdfs, nameNodeEndpoint, numThreads,
+                    Commands.weakScalingBenchmarkV2(sharedHdfs, nameNodeEndpoint, numThreads,
                             filesPerThread, inputPath, shuffle, OP_WEAK_SCALING_READS_V2);
 
             if (localResult == null) {
@@ -1401,8 +1374,7 @@ public class Commander {
      *
      * This function will use `n` threads to read those `n` files.
      */
-    private void weakScalingReadOperation(final Configuration configuration,
-                                          final DistributedFileSystem sharedHdfs,
+    private void weakScalingReadOperation(final DistributedFileSystem sharedHdfs,
                                           final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         System.out.print("How many files should be read?\n> ");
@@ -1445,7 +1417,7 @@ public class Commander {
             // TODO: Make this return some sort of 'result' object encapsulating the result.
             //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
             DistributedBenchmarkResult localResult =
-                    Commands.weakScalingReadsV1(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile,
+                    Commands.weakScalingReadsV1(sharedHdfs, nameNodeEndpoint, n, readsPerFile,
                             inputPath, shuffle, OP_WEAK_SCALING_READS);
 
             if (localResult == null) {
@@ -1457,9 +1429,9 @@ public class Commander {
             localResult.setOperationId(operationId);
 
             localResult.setOperationId(operationId);
-            double throughput = 0;
-            int aggregatedCacheMisses = 0;
-            int aggregatedCacheHits = 0;
+            double throughput;
+            int aggregatedCacheMisses;
+            int aggregatedCacheHits;
             // Wait for followers' results if we had followers when we first started the operation.
             AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
             throughput = aggregatedResult.throughput;
@@ -1548,7 +1520,6 @@ public class Commander {
         // as HopsFS has a default log level. If we're creating a non-primary HDFS instance, then we just assign it
         // whatever our primary instance has been set to (as it can change dynamically).
         if (creatingPrimary) {
-            serverlessLogLevel = hdfs.getServerlessFunctionLogLevel();
             consistencyEnabled = hdfs.getConsistencyProtocolEnabled();
         }
         else {
@@ -1627,12 +1598,10 @@ public class Commander {
 
             if (object instanceof String) {
                 try {
-                    JsonObject body = new JsonParser().parse((String)object).getAsJsonObject();
+                    JsonObject body = JsonParser.parseString((String)object).getAsJsonObject();
                     LOG.debug("Received message from follower: " + body);
-                    // LOG.debug("We now have " + followers.size() + " followers registered.");
                 } catch (Exception ex) {
                     LOG.debug("Received message from follower: " + object);
-                    // LOG.debug("We now have " + followers.size() + " followers registered.");
                 }
             }
             else if (object instanceof DistributedBenchmarkResult) {
@@ -1675,8 +1644,7 @@ public class Commander {
     }
 
     private static void printMenu() {
-        System.out.println("");
-        System.out.println("====== MENU ======");
+        System.out.println("\n====== MENU ======");
         System.out.println("Debug Operations:");
         System.out.println(
                 "(-11) Toggle 'Benchmarking Mode' in self and followers\n" +
@@ -1694,8 +1662,7 @@ public class Commander {
                 "\n(15) Read n Files with n Threads (Weak Scaling - Read)\n(16) Read n Files y Times with z Threads (Strong Scaling - Read)" +
                 "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)" +
                 "\n(19) Create directories.\n(20) Weak Scaling Reads v2\n(21) File Stat Benchmark\n");
-        System.out.println("==================");
-        System.out.println("");
+        System.out.println("==================\n");
         System.out.println("What would you like to do?");
         System.out.print("> ");
     }

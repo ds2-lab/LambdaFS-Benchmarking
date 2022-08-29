@@ -283,11 +283,11 @@ public class Follower {
                 break;
             case OP_WRITE_FILES_TO_DIR:
                 LOG.info("WRITE FILES TO DIRECTORY selected!");
-                Commands.writeFilesToDirectory(hdfs, hdfsConfiguration, nameNodeEndpoint);
+                Commands.writeFilesToDirectory(hdfs, nameNodeEndpoint);
                 break;
             case OP_READ_FILES:
                 LOG.info("READ FILES selected!");
-                Commands.readFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint, OP_READ_FILES);
+                Commands.readFilesOperation(hdfs, nameNodeEndpoint, OP_READ_FILES);
                 break;
             case OP_DELETE_FILES:
                 LOG.info("DELETE FILES selected!");
@@ -295,29 +295,29 @@ public class Follower {
                 break;
             case OP_WRITE_FILES_TO_DIRS:
                 LOG.info("WRITE FILES TO DIRECTORIES selected!");
-                Commands.writeFilesToDirectories(hdfs, hdfsConfiguration, nameNodeEndpoint);
+                Commands.writeFilesToDirectories(hdfs, nameNodeEndpoint);
                 break;
             case OP_WEAK_SCALING_READS:
                 LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
-                DistributedBenchmarkResult result = Commands.weakScalingReadsV1(hdfsConfiguration,
-                        hdfs, nameNodeEndpoint,
+                DistributedBenchmarkResult result = Commands.weakScalingReadsV1(hdfs, nameNodeEndpoint,
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
                         message.getAsJsonPrimitive("shuffle").getAsBoolean(),
                         OP_WEAK_SCALING_READS);
+                assert result != null;
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for WEAK SCALING (READ) benchmark: " + result);
                 sendResultToLeader(result);
                 break;
             case OP_STRONG_SCALING_READS:
                 LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
-                result = Commands.strongScalingBenchmark(hdfsConfiguration,
-                        hdfs, nameNodeEndpoint,
+                result = Commands.strongScalingBenchmark(hdfs, nameNodeEndpoint,
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString());
+                assert result != null;
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for STRONG SCALING (READ) benchmark: " + result);
                 sendResultToLeader(result);
@@ -331,10 +331,8 @@ public class Follower {
                 }
                 result = Commands.writeFilesInternal(
                         message.getAsJsonPrimitive("n").getAsInt(),
-                        message.getAsJsonPrimitive("minLength").getAsInt(),
-                        message.getAsJsonPrimitive("maxLength").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
-                        directories, hdfs, OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint,
+                        directories, hdfs, OP_WEAK_SCALING_WRITES, nameNodeEndpoint,
                         message.getAsJsonPrimitive("randomWrites").getAsBoolean());
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for WEAK SCALING (WRITE) benchmark: " + result);
@@ -350,10 +348,8 @@ public class Follower {
                 }
                 result = Commands.writeFilesInternal(
                         message.getAsJsonPrimitive("n").getAsInt(),
-                        message.getAsJsonPrimitive("minLength").getAsInt(),
-                        message.getAsJsonPrimitive("maxLength").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
-                        directories, hdfs, OP_STRONG_SCALING_WRITES, hdfsConfiguration,
+                        directories, hdfs, OP_STRONG_SCALING_WRITES,
                         nameNodeEndpoint, false);
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for STRONG SCALING (WRITE) benchmark: " + result);
@@ -361,19 +357,20 @@ public class Follower {
                 break;
             case OP_WEAK_SCALING_READS_V2:
                 LOG.info("OP_WEAK_SCALING_READS_V2 selected!");
-                result = Commands.weakScalingBenchmarkV2(hdfsConfiguration,
-                        hdfs, nameNodeEndpoint,
+                result = Commands.weakScalingBenchmarkV2(hdfs, nameNodeEndpoint,
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
                         message.getAsJsonPrimitive("filesPerThread").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
                         message.getAsJsonPrimitive("shuffle").getAsBoolean(), OP_WEAK_SCALING_READS_V2);
+                assert result != null;
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for OP_WEAK_SCALING_READS_V2 benchmark: " + result);
                 sendResultToLeader(result);
                 break;
             case OP_GET_FILE_STATUS:
                 LOG.info("OP_GET_FILE_STATUS selected!");
-                result = Commands.getFileStatusOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                result = Commands.getFileStatusOperation(hdfs, nameNodeEndpoint);
+                assert result != null;
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for OP_GET_FILE_DIR_INFO benchmark: " + result);
                 sendResultToLeader(result);
@@ -396,13 +393,6 @@ public class Follower {
         assert result != null;
         LOG.debug("Sending result for operation " + result.opId + " now...");
         int bytesSent = this.client.sendTCP(result);
-        LOG.debug("Successfully sent " + bytesSent + " byte(s) to leader.");
-    }
-
-    private void sendMessageToLeader(JsonObject payload) {
-        assert payload != null;
-        LOG.debug("Sending message to Leader now...");
-        int bytesSent = this.client.sendTCP(new Gson().toJson(payload));
         LOG.debug("Successfully sent " + bytesSent + " byte(s) to leader.");
     }
 

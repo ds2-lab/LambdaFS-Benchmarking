@@ -5,11 +5,9 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 
 public abstract class FSOperation {
     public final String endpoint;
-    public final Configuration conf;
 
-    public FSOperation(String endpoint, Configuration conf) {
+    public FSOperation(String endpoint) {
         this.endpoint = endpoint;
-        this.conf = conf;
     }
 
     /**
