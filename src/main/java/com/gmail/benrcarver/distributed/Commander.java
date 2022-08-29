@@ -269,7 +269,7 @@ public class Commander {
             channel.connect();
             channel.disconnect();
             session.disconnect();
-            System.out.println("DONE");
+            System.out.println("Finished executing command \"" + launchCommand + "\" at " + user + "@" + host + ".");
         } catch (JSchException e) {
             e.printStackTrace();
         }
@@ -286,25 +286,29 @@ public class Commander {
             session.connect();
 
             if (scpJars) {
-                LOG.debug("SFTP-ing hadoop-hdfs-3.2.0.3-SNAPSHOT.jar to Follower " + host + ".");
+                LOG.debug("SFTP-ing hadoop-hdfs-3.2.0.3-SNAPSHOT.jar to Follower " + host + " now.");
                 ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
                 sftpChannel.connect();
                 sftpChannel.put(HADOOP_HDFS_JAR_PATH, HADOOP_HDFS_JAR_PATH);
                 sftpChannel.disconnect();
 
-                LOG.debug("SFTP-ing HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + host + ".");
+                LOG.debug("SFTP'd hadoop-hdfs-3.2.0.3-SNAPSHOT.jar to Follower " + host + ".");
+
+                LOG.debug("SFTP-ing HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + host + " now.");
                 sftpChannel = (ChannelSftp) session.openChannel("sftp");
                 sftpChannel.connect();
                 sftpChannel.put(BENCHMARK_JAR_PATH, BENCHMARK_JAR_PATH);
                 sftpChannel.disconnect();
+                LOG.debug("SFTP'd HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + host + ".");
             }
 
             if (scpConfig) {
-                LOG.debug("SFTP-ing hdfs-site.xml to Follower " + host + ".");
+                LOG.debug("SFTP-ing hdfs-site.xml to Follower " + host + " now.");
                 ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
                 sftpChannel.connect();
                 sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
                 sftpChannel.disconnect();
+                LOG.debug("SFTP'd hdfs-site.xml to Follower " + host + ".");
             }
 
             if (!manuallyLaunchFollowers)
@@ -312,6 +316,7 @@ public class Commander {
             else
                 LOG.debug("'Manually Launch Followers' is set to TRUE. Commander will not auto-launch Follower.");
         } catch (JSchException | SftpException e) {
+            LOG.error("Exception encountered while trying to launch follower at " + user + "@" + host);
             e.printStackTrace();
         }
     }
@@ -333,8 +338,10 @@ public class Commander {
             LOG.info("Starting follower at " + config.getUser() + "@" + config.getIp() + " now.");
 
             // Don't kill Java processes if we're not auto-launching Followers. We might kill the user's process.
-            if (!manuallyLaunchFollowers)
+            if (!manuallyLaunchFollowers) {
+                LOG.debug("Killing running Java processes at " + config.getUser() + "@" + config.getIp() + " now.");
                 executeCommand(config.getUser(), config.getIp(), "pkill -9 java");
+            }
 
             launchFollower(config.getUser(), config.getIp(), launchCommand);
         }
