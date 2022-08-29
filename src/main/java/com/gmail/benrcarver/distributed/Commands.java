@@ -240,9 +240,8 @@ public class Commands {
                 durationSeconds, start, end);
     }
 
-    public static DistributedBenchmarkResult writeFilesToDirectories(
-                                               final Configuration configuration,
-                                               String nameNodeEndpoint)
+    public static DistributedBenchmarkResult writeFilesToDirectories(final Configuration configuration,
+                                                                     String nameNodeEndpoint)
             throws IOException, InterruptedException {
         System.out.print("Manually input (comma-separated list) [1], or specify file containing directories [2]? \n>");
         int choice = Integer.parseInt(scanner.nextLine());

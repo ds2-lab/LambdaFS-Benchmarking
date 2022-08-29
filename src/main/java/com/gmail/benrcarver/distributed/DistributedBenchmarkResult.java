@@ -31,6 +31,8 @@ public class DistributedBenchmarkResult implements Serializable {
      */
     public long stopTime;
 
+    public SynchronizedDescriptiveStatistics latencyStatistics;
+
     public DistributedBenchmarkResult() { }
 
     /**
@@ -44,15 +46,18 @@ public class DistributedBenchmarkResult implements Serializable {
      * @param duration How long, in seconds.
      * @param startTime Start time, epoch millisecond.
      * @param stopTime End time, epoch millisecond.
+     * @param latencyStatistics Latency statistics for the associated workload.
      */
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed,
-                                      double duration, long startTime, long stopTime) {
+                                      double duration, long startTime, long stopTime,
+                                      SynchronizedDescriptiveStatistics latencyStatistics) {
         this.opId = opId;
         this.operation = operation;
         this.numOpsPerformed = numOpsPerformed;
         this.durationSeconds = duration;
         this.startTime = startTime;
         this.stopTime = stopTime;
+        this.latencyStatistics = latencyStatistics;
         this.jvmId = ManagementFactory.getRuntimeMXBean().getName();
     }
 

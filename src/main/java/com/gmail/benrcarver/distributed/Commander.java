@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.fs.FileStatus;
 import org.yaml.snakeyaml.Yaml;
 
 import java.lang.management.GarbageCollectorMXBean;
@@ -35,7 +34,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.gmail.benrcarver.distributed.Commands.hdfsClients;
 import static com.gmail.benrcarver.distributed.Constants.*;
 
 /**
@@ -116,19 +114,9 @@ public class Commander {
     private static Commander instance;
 
     /**
-     * The operations each follower is involved in.
-     */
-    private ConcurrentHashMap<String, HashSet<String>> followerIdToInvolvedOperations;
-
-    /**
      * The approximate number of collections that occurred.
      */
     private long numGarbageCollections = 0L;
-    /**
-     * The followers we're waiting on for each operation.
-     * If a follower disconnects, this gets updated.
-     */
-    private ConcurrentHashMap<String, HashSet<String>> waitingOnPerOperation;
 
     private final boolean nondistributed;
 
@@ -136,14 +124,6 @@ public class Commander {
      * The approximate time, in milliseconds, that has elapsed during GCs
      */
     private long garbageCollectionTime = 0L;
-
-    /**
-     * Indicates whether the target filesystem is Serverless HopsFS or Vanilla HopsFS.
-     *
-     * If true, then the target filesystem is Serverless HopsFS.
-     * If false, then the target filesystem is Vanilla HopsFS.
-     */
-    private boolean isServerless = false;
 
     /**
      * Start the first 'numFollowersFromConfigToStart' followers listed in the config.
@@ -246,9 +226,6 @@ public class Commander {
             nameNodeEndpoint = config.getNamenodeEndpoint();
             followerConfigs = config.getFollowers();
             hdfsConfigFilePath = config.getHdfsConfigFile();
-            isServerless = config.getIsServerless();
-
-            Commands.IS_SERVERLESS = isServerless;
 
             LOG.info("Loaded configuration!");
             LOG.info(String.valueOf(config));
@@ -289,12 +266,11 @@ public class Commander {
             channel.setInputStream(null);
             ((ChannelExec) channel).setErrStream(System.err);
 
-            InputStream in = channel.getInputStream();
             channel.connect();
             channel.disconnect();
             session.disconnect();
             System.out.println("DONE");
-        } catch (JSchException | IOException e) {
+        } catch (JSchException e) {
             e.printStackTrace();
         }
     }
@@ -345,9 +321,6 @@ public class Commander {
      */
     private void launchFollowers() throws IOException, JSchException {
         final String launchCommand = String.format(LAUNCH_FOLLOWER_CMD, ip, port);
-        final String scpHadoopHdfsJarCommand = "scp " + HADOOP_HDFS_JAR_PATH + " %s@%s:" + HADOOP_HDFS_JAR_PATH;
-        final String scpBenchmarkJarCommand = "scp " + BENCHMARK_JAR_PATH + " %s@%s:" + BENCHMARK_JAR_PATH;
-        final String scpConfigCommand = "scp " + hdfsConfigFilePath + " %s@%s:" + hdfsConfigFilePath;
 
         // If 'numFollowersFromConfigToStart' is negative, then use all followers.
         if (numFollowersFromConfigToStart < 0)
@@ -368,7 +341,6 @@ public class Commander {
     }
 
     private void startServer() throws IOException {
-        //com.esotericsoftware.minlog.Log.set(com.esotericsoftware.minlog.Log.LEVEL_DEBUG);
         tcpServer.start();
         Network.register(tcpServer);
         tcpServer.bind(port, port+1);
@@ -393,7 +365,6 @@ public class Commander {
             long startingGCTime = garbageCollectionTime;
 
             try {
-                Thread.sleep(50);
                 printMenu();
                 int op = getNextOperation();
 
@@ -418,7 +389,6 @@ public class Commander {
                     case OP_MKDIR:
                         LOG.info("MAKE DIRECTORY selected!");
                         Commands.mkdirOperation(hdfs, nameNodeEndpoint);
-                        ;
                         break;
                     case OP_READ_FILE:
                         LOG.info("READ FILE selected!");
@@ -452,11 +422,11 @@ public class Commander {
                         break;
                     case OP_WRITE_FILES_TO_DIR:
                         LOG.info("WRITE FILES TO DIRECTORY selected!");
-                        Commands.writeFilesToDirectory(hdfs, hdfsConfiguration, nameNodeEndpoint);
+                        Commands.writeFilesToDirectory(hdfsConfiguration, nameNodeEndpoint);
                         break;
                     case OP_READ_FILES:
                         LOG.info("READ FILES selected!");
-                        Commands.readFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        Commands.readFilesOperation(hdfsConfiguration, nameNodeEndpoint, OP_READ_FILES);
                         break;
                     case OP_DELETE_FILES:
                         LOG.info("DELETE FILES selected!");
@@ -464,30 +434,31 @@ public class Commander {
                         break;
                     case OP_WRITE_FILES_TO_DIRS:
                         LOG.info("WRITE FILES TO DIRECTORIES selected!");
-                        Commands.writeFilesToDirectories(hdfs, hdfsConfiguration, nameNodeEndpoint);
+                        Commands.writeFilesToDirectories(hdfsConfiguration, nameNodeEndpoint);
                         break;
                     case OP_WEAK_SCALING_READS:
                         LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
-                        weakScalingReadOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        weakScalingReadOperation(hdfsConfiguration, nameNodeEndpoint);
                         break;
                     case OP_STRONG_SCALING_READS:
                         LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
-                        strongScalingReadOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        strongScalingReadOperation(hdfsConfiguration, nameNodeEndpoint);
                         break;
                     case OP_WEAK_SCALING_WRITES:
                         LOG.info("'Write n Files with n Threads (Weak Scaling - Write)' selected!");
-                        weakScalingWriteOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        weakScalingWriteOperation(nameNodeEndpoint);
                         break;
                     case OP_STRONG_SCALING_WRITES:
                         LOG.info("'Write n Files y Times with z Threads (Strong Scaling - Write)' selected!");
-                        throw new NotImplementedException("Not yet implemented.");
+                        strongScalingWriteOperation(nameNodeEndpoint);
+                        break;
                     case OP_CREATE_DIRECTORIES:
                         LOG.info("CREATE DIRECTORIES selected!");
                         Commands.createDirectories(hdfs, nameNodeEndpoint);
                         break;
                     case OP_WEAK_SCALING_READS_V2:
                         LOG.info("WeakScalingReadsV2 Selected!");
-                        weakScalingReadOperationV2(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                        weakScalingReadOperationV2(hdfsConfiguration, nameNodeEndpoint);
                         break;
                     default:
                         LOG.info("ERROR: Unknown or invalid operation specified: " + op);
@@ -532,7 +503,7 @@ public class Commander {
      * @param operationId Unique ID of this operation.
      * @param payload Contains the command and necessary arguments.
      */
-    private void issueCommandToFollowers(String opName, String operationId, JsonObject payload, boolean addToWaiting) {
+    private void issueCommandToFollowers(String opName, String operationId, JsonObject payload) {
         int numFollowers = followers.size();
         if (numFollowers == 0) {
             LOG.warn("We have no followers (though we are in distributed mode).");
@@ -552,8 +523,7 @@ public class Commander {
                     followerConnection.getRemoteAddressTCP());
             followerConnection.sendTCP(payloadStr);
 
-            if (addToWaiting)
-                waitingOn.add(followerConnection.name);
+            waitingOn.add(followerConnection.name);
         }
     }
 
@@ -616,9 +586,7 @@ public class Commander {
         System.gc();
     }
 
-    public void strongScalingWriteOperation(final Configuration configuration,
-                                            final DistributedFileSystem sharedHdfs,
-                                            final String nameNodeEndpoint)
+    public void strongScalingWriteOperation(final String nameNodeEndpoint)
             throws InterruptedException, IOException {
         int totalNumberOfFiles = getIntFromUser("Total number of files to write?");
         int numberOfThreads = getIntFromUser("Number of threads to use?");
@@ -648,7 +616,7 @@ public class Commander {
 
         int dirInputMethodChoice = getIntFromUser("Manually input (comma-separated list) [1], or specify file containing directories [2]?");
 
-        List<String> directories = null;
+        List<String> directories;
         if (dirInputMethodChoice == 1) {
             System.out.print("Please enter the directories as a comma-separated list:\n> ");
             String listOfDirectories = scanner.nextLine();
@@ -691,20 +659,6 @@ public class Commander {
             directories = directories.subList(0, numberOfThreads);
         }
 
-        int minLength = 0;
-        try {
-            minLength = getIntFromUser("Min string length (default: " + minLength + ")?");
-        } catch (NumberFormatException ex) {
-            LOG.info("Defaulting to " + minLength + ".");
-        }
-
-        int maxLength = 0;
-        try {
-            maxLength = getIntFromUser("Max string length (default: " + maxLength + ")?");
-        } catch (NumberFormatException ex) {
-            LOG.info("Defaulting to " + maxLength + ".");
-        }
-
         String operationId = UUID.randomUUID().toString();
         int numDistributedResults = followers.size();
         if (followers.size() > 0) {
@@ -712,8 +666,6 @@ public class Commander {
             payload.addProperty(OPERATION, OP_STRONG_SCALING_READS);
             payload.addProperty(OPERATION_ID, operationId);
             payload.addProperty("n", writesPerThread);
-            payload.addProperty("minLength", minLength);
-            payload.addProperty("maxLength", maxLength);
             payload.addProperty("numberOfThreads", numberOfThreads);
 
             JsonArray directoriesJson = new JsonArray();
@@ -722,14 +674,14 @@ public class Commander {
 
             payload.add("directories", directoriesJson);
 
-            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload, true);
+            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload);
         }
 
         LOG.info("Each thread should be writing " + writesPerThread + " files...");
 
         DistributedBenchmarkResult localResult =
-                Commands.writeFilesInternal(writesPerThread, minLength, maxLength, numberOfThreads, directories,
-                        sharedHdfs, OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, false);
+                Commands.writeFilesInternal(writesPerThread, numberOfThreads, directories,
+                        OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, false);
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
@@ -742,7 +694,6 @@ public class Commander {
     }
 
     public void strongScalingReadOperation(final Configuration configuration,
-                                           final DistributedFileSystem sharedHdfs,
                                            final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         // User provides file containing HopsFS file paths.
@@ -770,11 +721,11 @@ public class Commander {
             payload.addProperty("numThreads", numThreads);
             payload.addProperty("inputPath", inputPath);
 
-            issueCommandToFollowers("Read n Files y Times with z Threads (Strong Scaling)", operationId, payload, true);
+            issueCommandToFollowers("Read n Files y Times with z Threads (Strong Scaling)", operationId, payload);
         }
 
         DistributedBenchmarkResult localResult =
-                Commands.strongScalingBenchmark(configuration, sharedHdfs, nameNodeEndpoint, filesPerThread, readsPerFile,
+                Commands.strongScalingBenchmark(configuration, nameNodeEndpoint, filesPerThread, readsPerFile,
                         numThreads, inputPath);
 
         if (localResult == null) {
@@ -793,9 +744,7 @@ public class Commander {
     /**
      * Weak scaling, writes.
      */
-    public void weakScalingWriteOperation(final Configuration configuration,
-                                          final DistributedFileSystem sharedHdfs,
-                                          final String nameNodeEndpoint)
+    public void weakScalingWriteOperation(final String nameNodeEndpoint)
             throws IOException, InterruptedException {
         int directoryChoice = getIntFromUser("Should the threads write their files to the SAME DIRECTORY [1], DIFFERENT DIRECTORIES [2], or RANDOM WRITES [3]?");
 
@@ -808,7 +757,7 @@ public class Commander {
 
         int dirInputMethodChoice = getIntFromUser("Manually input (comma-separated list) [1], or specify file containing directories [2]?");
 
-        List<String> directories = null;
+        List<String> directories;
         if (dirInputMethodChoice == 1) {
             System.out.print("Please enter the directories as a comma-separated list:\n> ");
             String listOfDirectories = scanner.nextLine();
@@ -838,12 +787,6 @@ public class Commander {
         System.out.print("Number of threads? \n> ");
         int numberOfThreads = Integer.parseInt(scanner.nextLine());
 
-        // IMPORTANT: Make directories the same size as the number of threads, so we have one directory per thread.
-        //            This allows us to directly reuse the writeFilesInternal() function, which creates a certain
-        //            number of files per directory. If number of threads is equal to number of directories, then
-        //            we are essentially creating a certain number of files per thread, which is what we want.
-        assert(directories != null);
-
         if (directoryChoice == 1) {
             Random rng = new Random();
             int idx = rng.nextInt(directories.size());
@@ -854,28 +797,11 @@ public class Commander {
         } else if (directoryChoice == 2) {
             Collections.shuffle(directories);
             directories = directories.subList(0, numberOfThreads);
-        } else {
-            // Use the entire directories list. We'll generate a bunch of random writes using the full list.
-        }
+        } // If neither of the above are true, then we use the entire directories list.
+        //   We'll generate a bunch of random writes using the full list.
 
         System.out.print("Number of writes per thread? \n> ");
         int writesPerThread = Integer.parseInt(scanner.nextLine());
-
-        int minLength = 0;
-        System.out.print("Min string length (default " + minLength + "):\n> ");
-        try {
-            minLength = Integer.parseInt(scanner.nextLine());
-        } catch (NumberFormatException ex) {
-            LOG.info("Defaulting to " + minLength + ".");
-        }
-
-        int maxLength = 0;
-        System.out.print("Max string length (default " + maxLength + "):\n> ");
-        try {
-            maxLength = Integer.parseInt(scanner.nextLine());
-        } catch (NumberFormatException ex) {
-            LOG.info("Defaulting to " + maxLength + ".");
-        }
 
         String operationId = UUID.randomUUID().toString();
         int numDistributedResults = followers.size();
@@ -884,8 +810,6 @@ public class Commander {
             payload.addProperty(OPERATION, OP_STRONG_SCALING_READS);
             payload.addProperty(OPERATION_ID, operationId);
             payload.addProperty("n", writesPerThread);
-            payload.addProperty("minLength", minLength);
-            payload.addProperty("maxLength", maxLength);
             payload.addProperty("numberOfThreads", numberOfThreads);
             payload.addProperty("randomWrites", directoryChoice == 3);
 
@@ -895,14 +819,14 @@ public class Commander {
 
             payload.add("directories", directoriesJson);
 
-            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload, true);
+            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload);
         }
 
         LOG.info("Each thread should be writing " + writesPerThread + " files...");
 
         DistributedBenchmarkResult localResult =
-                Commands.writeFilesInternal(writesPerThread, minLength, maxLength, numberOfThreads, directories,
-                        sharedHdfs, OP_STRONG_SCALING_READS, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3));
+                Commands.writeFilesInternal(writesPerThread, numberOfThreads, directories,
+                        OP_STRONG_SCALING_READS, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3));
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
@@ -932,15 +856,12 @@ public class Commander {
             String metricsString = "";
 
             try {
-                metricsString = String.format("%f %d %d %f %f %f %f", localResult.getOpsPerSecond(),
-                        localResult.cacheHits, localResult.cacheMisses,
-                        ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses)), localResult.tcpLatencyStatistics.getMean(),
-                        localResult.httpLatencyStatistics.getMean(), (localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean()) / 2.0);
+                metricsString = String.format("%f %f", localResult.getOpsPerSecond(), localResult.latencyStatistics.getMean());
             } catch (NullPointerException ex) {
                 LOG.warn("Could not generate metrics string due to NPE.");
             }
 
-            return new AggregatedResult(localResult.getOpsPerSecond(), localResult.cacheHits, localResult.cacheMisses, metricsString);
+            return new AggregatedResult(localResult.getOpsPerSecond(), metricsString);
         }
 
         LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
@@ -975,85 +896,54 @@ public class Commander {
         DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
         DescriptiveStatistics duration = new DescriptiveStatistics();
         DescriptiveStatistics throughput = new DescriptiveStatistics();
-        DescriptiveStatistics cacheHits = new DescriptiveStatistics();
-        DescriptiveStatistics cacheMisses = new DescriptiveStatistics();
 
         opsPerformed.addValue(localResult.numOpsPerformed);
         duration.addValue(localResult.durationSeconds);
         throughput.addValue(localResult.getOpsPerSecond());
-        cacheHits.addValue(localResult.cacheHits);
-        cacheMisses.addValue(localResult.cacheMisses);
 
         LOG.debug("========== LOCAL RESULT ==========");
         LOG.debug("Num Ops Performed   : " + localResult.numOpsPerformed);
         LOG.debug("Duration (sec)      : " + localResult.durationSeconds);
-        LOG.debug("Cache hits          : " + localResult.cacheHits);
-        LOG.debug("Cache misses        : " + localResult.cacheMisses);
-        if (localResult.cacheHits + localResult.cacheMisses > 0)
-            LOG.debug("Cache hit percentage: " + (localResult.cacheHits/(localResult.cacheHits + localResult.cacheMisses)));
-        else
-            LOG.debug("Cache hit percentage: N/A");
         LOG.debug("Throughput          : " + localResult.getOpsPerSecond());
 
-        double trialAvgTcpLatency = localResult.tcpLatencyStatistics.getMean();
-        double trialAvgHttpLatency = localResult.httpLatencyStatistics.getMean();
+        double trialAvgLatency = 0.0;
+        if (localResult.latencyStatistics != null)
+            trialAvgLatency = localResult.latencyStatistics.getMean();
 
         for (DistributedBenchmarkResult res : resultQueue) {
             LOG.debug("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");
             LOG.debug("Num Ops Performed   : " + res.numOpsPerformed);
             LOG.debug("Duration (sec)      : " + res.durationSeconds);
-            LOG.debug("Cache hits          : " + res.cacheHits);
-            LOG.debug("Cache misses        : " + res.cacheMisses);
-            if (res.cacheHits + res.cacheMisses > 0)
-                LOG.debug("Cache hit percentage: " + (res.cacheHits/(res.cacheHits + res.cacheMisses)));
-            else
-                LOG.debug("Cache hit percentage: N/A");
             LOG.debug("Throughput          : " + res.getOpsPerSecond());
 
             opsPerformed.addValue(res.numOpsPerformed);
             duration.addValue(res.durationSeconds);
             throughput.addValue(res.getOpsPerSecond());
-            cacheHits.addValue(res.cacheHits);
-            cacheMisses.addValue(res.cacheMisses);
 
-            if (res.tcpLatencyStatistics != null && res.httpLatencyStatistics != null) {
-                DescriptiveStatistics latencyTcp = res.tcpLatencyStatistics;
-                DescriptiveStatistics latencyHttp = res.httpLatencyStatistics;
-                primaryHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
+            if (res.latencyStatistics != null) {
+                DescriptiveStatistics latency = res.latencyStatistics;
 
-                LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
-                        ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
-                        ", N: " + latencyTcp.getN() + "]");
-                LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
-                        ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
-                        ", N: " + latencyHttp.getN() + "]");
+                LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
+                        ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
+                        ", N: " + latency.getN() + "]");
 
-                trialAvgTcpLatency += latencyTcp.getMean();
-                trialAvgHttpLatency += latencyHttp.getMean();
+                trialAvgLatency += latency.getMean();
             }
         }
 
-        trialAvgTcpLatency = trialAvgTcpLatency / (1 + numDistributedResults);   // Add 1 to account for local result.
-        trialAvgHttpLatency = trialAvgHttpLatency / (1 + numDistributedResults); // Add 1 to account for local result.
+        trialAvgLatency = trialAvgLatency / (1 + numDistributedResults);   // Add 1 to account for local result.
         double aggregateThroughput = (opsPerformed.getSum() / duration.getMean());
 
         LOG.info("==== AGGREGATED RESULTS ====");
         LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
-        LOG.info("Cache hits: " + cacheHits.getSum());
-        LOG.info("Cache misses: " + cacheMisses.getSum());
-        LOG.info("Cache hit percentage: " + (cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum())));
-        LOG.info("Average TCP latency: " + trialAvgTcpLatency + " ms");
-        LOG.info("Average HTTP latency: " + trialAvgHttpLatency + " ms");
-        LOG.info("Average combined latency: " + (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0 + " ms");
+        LOG.info("Average latency: " + trialAvgLatency + " ms");
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
 
-        String metricsString = String.format("%f %f %f %f %f %f %f", aggregateThroughput, cacheHits.getSum(), cacheMisses.getSum(),
-                (cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum())), trialAvgTcpLatency,
-                trialAvgHttpLatency, (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0);
+        String metricsString = String.format("%f %f", aggregateThroughput, trialAvgLatency);
 
         LOG.info(metricsString);
 
-        return new AggregatedResult(aggregateThroughput, (int)cacheHits.getSum(), (int)cacheMisses.getSum(), metricsString);
+        return new AggregatedResult(aggregateThroughput, metricsString);
     }
 
     /**
@@ -1065,7 +955,6 @@ public class Commander {
      *  - The number of files each thread should read.
      */
     private void weakScalingReadOperationV2(final Configuration configuration,
-                                            final DistributedFileSystem sharedHdfs,
                                             final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         System.out.print("How many threads should be used?\n> ");
@@ -1087,8 +976,6 @@ public class Commander {
         int currentTrial = 0;
         AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
         Double[] results = new Double[numTrials];
-        Integer[] cacheHits = new Integer[numTrials];
-        Integer[] cacheMisses = new Integer[numTrials];
         while (currentTrial < numTrials) {
             LOG.info("|====| TRIAL #" + currentTrial + " |====|");
             String operationId = UUID.randomUUID().toString();
@@ -1102,13 +989,13 @@ public class Commander {
                 payload.addProperty("inputPath", inputPath);
                 payload.addProperty("shuffle", shuffle);
 
-                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload, true);
+                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload);
             }
 
             // TODO: Make this return some sort of 'result' object encapsulating the result.
             //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
             DistributedBenchmarkResult localResult =
-                    Commands.weakScalingBenchmarkV2(configuration, sharedHdfs, nameNodeEndpoint, numThreads,
+                    Commands.weakScalingBenchmarkV2(configuration, nameNodeEndpoint, numThreads,
                             filesPerThread, inputPath, shuffle, OP_WEAK_SCALING_READS_V2);
 
             if (localResult == null) {
@@ -1124,8 +1011,6 @@ public class Commander {
 
             aggregatedResults[currentTrial] = aggregatedResult;
             results[currentTrial] = aggregatedResult.throughput;
-            cacheHits[currentTrial] = aggregatedResult.cacheHits;
-            cacheMisses[currentTrial] = aggregatedResult.cacheMisses;
             currentTrial++;
 
             if (!(currentTrial >= numTrials)) {
@@ -1139,11 +1024,6 @@ public class Commander {
         System.out.println("[THROUGHPUT]");
         for (double throughputResult : results) {
             System.out.println(throughputResult);
-        }
-        System.out.println("\n[CACHE HITS] [CACHE MISSES] [HIT RATE]");
-        String formatString = "%-12s %-14s %10f";
-        for (int i = 0; i < numTrials; i++) {
-            System.out.printf((formatString) + "%n", cacheHits[i], cacheMisses[i], ((double)cacheHits[i] / (cacheHits[i] + cacheMisses[i])));
         }
 
         for (AggregatedResult result : aggregatedResults)
@@ -1161,7 +1041,6 @@ public class Commander {
      * This function will use `n` threads to read those `n` files.
      */
     private void weakScalingReadOperation(final Configuration configuration,
-                                          final DistributedFileSystem sharedHdfs,
                                           final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         System.out.print("How many files should be read?\n> ");
@@ -1183,8 +1062,6 @@ public class Commander {
         int currentTrial = 0;
         AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
         Double[] results = new Double[numTrials];
-        Integer[] cacheHits = new Integer[numTrials];
-        Integer[] cacheMisses = new Integer[numTrials];
         while (currentTrial < numTrials) {
             LOG.info("|====| TRIAL #" + currentTrial + " |====|");
             String operationId = UUID.randomUUID().toString();
@@ -1198,14 +1075,14 @@ public class Commander {
                 payload.addProperty("inputPath", inputPath);
                 payload.addProperty("shuffle", shuffle);
 
-                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload, true);
+                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload);
             }
 
             // TODO: Make this return some sort of 'result' object encapsulating the result.
             //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
             DistributedBenchmarkResult localResult =
-                    Commands.weakScalingReadsV1(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile,
-                            inputPath, shuffle, OP_WEAK_SCALING_READS);
+                    Commands.weakScalingReadsV1(configuration, nameNodeEndpoint, n,
+                            readsPerFile, inputPath, shuffle, OP_WEAK_SCALING_READS);
 
             if (localResult == null) {
                 LOG.warn("Local result is null. Aborting.");
@@ -1216,19 +1093,12 @@ public class Commander {
             localResult.setOperationId(operationId);
 
             localResult.setOperationId(operationId);
-            double throughput = 0;
-            int aggregatedCacheMisses = 0;
-            int aggregatedCacheHits = 0;
             // Wait for followers' results if we had followers when we first started the operation.
             AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
-            throughput = aggregatedResult.throughput;
-            aggregatedCacheHits = aggregatedResult.cacheHits;
-            aggregatedCacheMisses = aggregatedResult.cacheMisses;
+            double throughput = aggregatedResult.throughput;
             aggregatedResults[currentTrial] = aggregatedResult;
 
             results[currentTrial] = throughput;
-            cacheHits[currentTrial] = aggregatedCacheHits;
-            cacheMisses[currentTrial] = aggregatedCacheMisses;
             currentTrial++;
 
             if (!(currentTrial >= numTrials)) {
@@ -1240,14 +1110,8 @@ public class Commander {
         }
 
         System.out.println("[THROUGHPUT]");
-        for (double throughputResult : results) {
+        for (double throughputResult : results)
             System.out.println(throughputResult);
-        }
-        System.out.println("\n[CACHE HITS] [CACHE MISSES] [HIT RATE]");
-        String formatString = "%-12s %-14s %10f";
-        for (int i = 0; i < numTrials; i++) {
-            System.out.printf((formatString) + "%n", cacheHits[i], cacheMisses[i], ((double)cacheHits[i] / (cacheHits[i] + cacheMisses[i])));
-        }
 
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString);
@@ -1363,12 +1227,10 @@ public class Commander {
 
             if (object instanceof String) {
                 try {
-                    JsonObject body = new JsonParser().parse((String)object).getAsJsonObject();
+                    JsonObject body = JsonParser.parseString((String)object).getAsJsonObject();
                     LOG.debug("Received message from follower: " + body);
-                    // LOG.debug("We now have " + followers.size() + " followers registered.");
                 } catch (Exception ex) {
                     LOG.debug("Received message from follower: " + object);
-                    // LOG.debug("We now have " + followers.size() + " followers registered.");
                 }
             }
             else if (object instanceof DistributedBenchmarkResult) {
@@ -1411,30 +1273,24 @@ public class Commander {
     }
 
     private static void printMenu() {
-        System.out.println("");
-        System.out.println("====== MENU ======");
+        System.out.println("\n====== MENU ======");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
                 "\n(15) Read n Files with n Threads (Weak Scaling - Read)\n(16) Read n Files y Times with z Threads (Strong Scaling - Read)" +
                 "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)" +
                 "\n(19) Create directories.\n(20) Weak Scaling Reads v2\n(21) File Stat Benchmark\n");
-        System.out.println("==================");
-        System.out.println("");
+        System.out.println("==================\n");
         System.out.println("What would you like to do?");
         System.out.print("> ");
     }
 
     public static class AggregatedResult {
         public double throughput;
-        public int cacheHits;
-        public int cacheMisses;
-        public String metricsString; // All the metrics I'd want formatted so I can copy and paste into Excel.
+        public String metricsString; // All the metrics I'd want formatted so that I can copy & paste into Excel.
 
-        public AggregatedResult(double throughput, int cacheHits, int cacheMisses, String metricsString) {
+        public AggregatedResult(double throughput, String metricsString) {
             this.throughput = throughput;
-            this.cacheHits = cacheHits;
-            this.cacheMisses = cacheMisses;
             this.metricsString = metricsString;
         }
     }
