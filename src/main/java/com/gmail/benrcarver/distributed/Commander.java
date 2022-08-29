@@ -9,21 +9,19 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.schmizz.sshj.SSHClient;
-import net.schmizz.sshj.common.IOUtils;
-import net.schmizz.sshj.connection.channel.direct.Session;
+import com.jcraft.jsch.*;
 import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.yaml.snakeyaml.Yaml;
 
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.*;
@@ -31,28 +29,35 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.gmail.benrcarver.distributed.Commands.hdfsClients;
 import static com.gmail.benrcarver.distributed.Constants.*;
 
 /**
  * Controls a fleet of distributed machines. Executes HopsFS benchmarks based on user input/commands.
  */
 public class Commander {
-    public static final Log LOG = LogFactory.getLog(Commander.class);
-    private static final Console con = System.console();
+    public static final Logger LOG = LoggerFactory.getLogger(Commander.class);
 
-    private final List<Connection> followers;
+    private final List<FollowerConnection> followers;
+
+    private static final int COMMANDER_TCP_BUFFER_SIZES = Follower.FOLLOWER_TCP_BUFFER_SIZES * 4;
 
     private static final String LEADER_PREFIX = "[LEADER TCP SERVER]";
 
     /**
      * Use with String.format(LAUNCH_FOLLOWER_CMD, leader_ip, leader_port)
      */
-    private static final String LAUNCH_FOLLOWER_CMD = "source ~/.bashrc & java -cp \".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/share/hadoop/hdfs/lib/*:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0-SNAPSHOT/share/hadoop/common/lib/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hops-leader-election/target/hops-leader-election-3.2.0.3-SNAPSHOT.jar:/home/ben/openwhisk-runtime-java/core/java8/libs/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hadoop-common-project/hadoop-common/target/hadoop-common-3.2.0.3-SNAPSHOT.jar\" com.gmail.benrcarver.distributed.InteractiveTest --worker --leader_ip %s --leader_port %d";
+    private static final String LAUNCH_FOLLOWER_CMD = "source ~/.bashrc; cd /home/ubuntu/repos/HopsFS-Benchmarking-Utility; java -Dlog4j.configuration=file:/home/ubuntu/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties -Dsun.io.serialization.extendedDebugInfo=true -Xmx58g -Xms58g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions -XX:ParGCCardsPerStrideChunk=32768 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 -XX:MaxNewSize=32000m -XX:+CMSClassUnloadingEnabled -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=75 -XX:+ScavengeBeforeFullGC -verbose:gc -XX:+PrintGCTimeStamps -XX:+PrintGCDetails -cp \".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:/home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/share/hadoop/hdfs/lib/*:/home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0-SNAPSHOT/share/hadoop/common/lib/*:/home/ben/repos/hops/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-3.2.0.3-SNAPSHOT.jar:/home/ben/repos/hops/hops-leader-election/target/hops-leader-election-3.2.0.3-SNAPSHOT.jar:/home/ben/openwhisk-runtime-java/core/java8/libs/*:/home/ben/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar:/home/ben/repos/hops/hadoop-common-project/hadoop-common/target/hadoop-common-3.2.0.3-SNAPSHOT.jar\" com.gmail.benrcarver.distributed.InteractiveTest --leader_ip %s --leader_port %d --yaml_path /home/ubuntu/repos/HopsFS-Benchmarking-Utility/config.yaml --worker";
+
+    private static final String BENCHMARK_JAR_PATH = "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/target/HopsFSBenchmark-1.0-jar-with-dependencies.jar";
+
+    private static final String HADOOP_HDFS_JAR_PATH = "/home/ben/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar";
 
     /**
      * Has a default value.
@@ -85,9 +90,20 @@ public class Commander {
     private List<FollowerConfig> followerConfigs;
 
     /**
+     * Time (in milliseconds) to sleep after each trial.
+     * This gives NameNodes a chance to perform any clean-up (e.g., garbage collection).
+     */
+    private int postTrialSleepInterval = 5000;
+
+    /**
      * Fully-qualified path of hdfs-site.xml configuration file.
      */
     public static String hdfsConfigFilePath;
+
+    /**
+     * Map from operation ID to the queue in which distributed results should be placed by the TCP server.
+     */
+    private final ConcurrentHashMap<String, BlockingQueue<DistributedBenchmarkResult>> resultQueues;
 
     /**
      * The hdfs-site.xml configuration file.
@@ -95,9 +111,9 @@ public class Commander {
     private Configuration hdfsConfiguration;
 
     /**
-     * Map from follower IP to the associated SSH client.
+     * The {@link Commander} class uses a singleton pattern.
      */
-    private HashMap<String, SSHClient> sshClients;
+    private static Commander instance;
 
     /**
      * The operations each follower is involved in.
@@ -105,10 +121,9 @@ public class Commander {
     private ConcurrentHashMap<String, HashSet<String>> followerIdToInvolvedOperations;
 
     /**
-     * Map from operation ID to the queue in which distributed results should be placed by the TCP server.
+     * The approximate number of collections that occurred.
      */
-    private ConcurrentHashMap<String, BlockingQueue<DistributedBenchmarkResult>> resultQueues;
-
+    private long numGarbageCollections = 0L;
     /**
      * The followers we're waiting on for each operation.
      * If a follower disconnects, this gets updated.
@@ -117,10 +132,10 @@ public class Commander {
 
     private final boolean nondistributed;
 
-    private static String serverlessLogLevel = "DEBUG";
-    private static boolean consistencyEnabled = true;
-
-    private static Commander instanace;
+    /**
+     * The approximate time, in milliseconds, that has elapsed during GCs
+     */
+    private long garbageCollectionTime = 0L;
 
     /**
      * Indicates whether the target filesystem is Serverless HopsFS or Vanilla HopsFS.
@@ -128,28 +143,76 @@ public class Commander {
      * If true, then the target filesystem is Serverless HopsFS.
      * If false, then the target filesystem is Vanilla HopsFS.
      */
-    private boolean isServerless = true;
+    private boolean isServerless = false;
+
+    /**
+     * Start the first 'numFollowersFromConfigToStart' followers listed in the config.
+     */
+    private int numFollowersFromConfigToStart;
+
+    /**
+     * If true, then we SCP the JAR files to each follower before starting them.
+     */
+    private final boolean scpJars;
+
+    /**
+     * Used by the Commander to SSH into {@link Follower} VMs.
+     *
+     * The Commander copies over configuration files and the latest .JAR file(s) before launching the followers.
+     * (This feature is toggled by command-line arguments. The Commander does not copy anything over by default.)
+     */
+    private final JSch jsch;
+
+    /**
+     * If true, then we SCP the config file to each follower before starting them.
+     */
+    private final boolean scpConfig;
+
+    /**
+     * When true, Commander does not automatically launch followers. The user is expected to do it manually.
+     * The commander will still copy over any specified files.
+     */
+    private final boolean manuallyLaunchFollowers;
+
+    /**
+     * Tracks if Followers disconnect during a benchmark, as we don't need to wait for as many results
+     * if Followers disconnect in the middle of the benchmark (i.e., one less result per disconnected Follower).
+     */
+    private final AtomicInteger numDisconnections = new AtomicInteger(0);
+
+    /**
+     * The Follower VMs whom we are still waiting on for results.
+     *
+     * This is reset at the beginning/end of each trial of a particular benchmark.
+     */
+    private final Set<String> waitingOn = ConcurrentHashMap.newKeySet();
 
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
-                                          String logLevel, boolean disableConsistency) throws IOException {
-        if (instanace == null) {
-            serverlessLogLevel = logLevel;
-            consistencyEnabled = !disableConsistency;
-            instanace = new Commander(ip, port, yamlPath, nondistributed);
+                                                 int numFollowers, boolean scpJars, boolean scpConfig,
+                                                 boolean manuallyLaunchFollowers) throws IOException, JSchException {
+        if (instance == null) {
+            instance = new Commander(ip, port, yamlPath, nondistributed,
+                    numFollowers, scpJars, scpConfig, manuallyLaunchFollowers);
         }
 
-        return instanace;
+        return instance;
     }
 
-    private Commander(String ip, int port, String yamlPath, boolean nondistributed) throws IOException {
+    private Commander(String ip, int port, String yamlPath, boolean nondistributed, int numFollowersFromConfigToStart,
+                      boolean scpJars, boolean scpConfig, boolean manuallyLaunchFollowers)
+            throws IOException, JSchException {
         this.ip = ip;
         this.port = port;
         this.nondistributed = nondistributed;
         // TODO: Maybe do book-keeping or fault-tolerance here.
         this.followers = new ArrayList<>();
         this.resultQueues = new ConcurrentHashMap<>();
+        this.numFollowersFromConfigToStart = numFollowersFromConfigToStart;
+        this.scpJars = scpJars;
+        this.scpConfig = scpConfig;
+        this.manuallyLaunchFollowers = manuallyLaunchFollowers;
 
-        tcpServer = new Server(32000, 32000) {
+        tcpServer = new Server(COMMANDER_TCP_BUFFER_SIZES, COMMANDER_TCP_BUFFER_SIZES) {
             @Override
             protected Connection newConnection() {
                 LOG.debug(LEADER_PREFIX + " Creating new FollowerConnection.");
@@ -158,6 +221,14 @@ public class Commander {
         };
 
         tcpServer.addListener(new Listener.ThreadedListener(new ServerListener()));
+
+        jsch = new JSch();
+
+        // Only bother with identity file if we're running as Commander.
+        // That keyfile isn't on any of the Follower VMs.
+        if (!nondistributed) {
+            jsch.addIdentity("/home/ubuntu/.ssh/id_rsa");
+        }
 
         processConfiguration(yamlPath);
     }
@@ -180,7 +251,7 @@ public class Commander {
             Commands.IS_SERVERLESS = isServerless;
 
             LOG.info("Loaded configuration!");
-            LOG.info(config);
+            LOG.info(String.valueOf(config));
         }
     }
 
@@ -188,55 +259,111 @@ public class Commander {
         if (!nondistributed) {
             LOG.info("Commander is operating in DISTRIBUTED mode.");
             startServer();
-            //launchFollowers();
+
+            try {
+                launchFollowers();
+            } catch (IOException ex) {
+                LOG.error("Encountered IOException while starting followers:", ex);
+            } catch (JSchException ex) {
+                LOG.error("Encountered JSchException while starting followers:", ex);
+            }
+        } else {
+            LOG.info("Commander is operating in NON-DISTRIBUTED mode.");
         }
-        LOG.info("Commander is operating in NON-DISTRIBUTED mode.");
+        Commands.TRACK_OP_PERFORMED = true;
         interactiveLoop();
+    }
+
+    private void executeCommand(String user, String host, String launchCommand) {
+        java.util.Properties sshConfig = new java.util.Properties();
+        sshConfig.put("StrictHostKeyChecking", "no");
+
+        Session session;
+        try {
+            session = jsch.getSession(user, host, 22);
+            session.setConfig(sshConfig);
+            session.connect();
+
+            Channel channel = session.openChannel("exec");
+            ((ChannelExec) channel).setCommand(launchCommand);
+            channel.setInputStream(null);
+            ((ChannelExec) channel).setErrStream(System.err);
+
+            InputStream in = channel.getInputStream();
+            channel.connect();
+            channel.disconnect();
+            session.disconnect();
+            System.out.println("DONE");
+        } catch (JSchException | IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void launchFollower(String user, String host, String launchCommand) {
+        java.util.Properties sshConfig = new java.util.Properties();
+        sshConfig.put("StrictHostKeyChecking", "no");
+
+        Session session;
+        try {
+            session = jsch.getSession(user, host, 22);
+            session.setConfig(sshConfig);
+            session.connect();
+
+            if (scpJars) {
+                LOG.debug("SFTP-ing hadoop-hdfs-3.2.0.3-SNAPSHOT.jar to Follower " + host + ".");
+                ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                sftpChannel.connect();
+                sftpChannel.put(HADOOP_HDFS_JAR_PATH, HADOOP_HDFS_JAR_PATH);
+                sftpChannel.disconnect();
+
+                LOG.debug("SFTP-ing HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + host + ".");
+                sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                sftpChannel.connect();
+                sftpChannel.put(BENCHMARK_JAR_PATH, BENCHMARK_JAR_PATH);
+                sftpChannel.disconnect();
+            }
+
+            if (scpConfig) {
+                LOG.debug("SFTP-ing hdfs-site.xml to Follower " + host + ".");
+                ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                sftpChannel.connect();
+                sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
+                sftpChannel.disconnect();
+            }
+
+            if (!manuallyLaunchFollowers)
+                executeCommand(user, host, launchCommand);
+            else
+                LOG.debug("'Manually Launch Followers' is set to TRUE. Commander will not auto-launch Follower.");
+        } catch (JSchException | SftpException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
      * Using SSH, launch the follower processes.
      */
-    private void launchFollowers() throws IOException {
-        final String fullCommand = String.format(LAUNCH_FOLLOWER_CMD, ip, port);
+    private void launchFollowers() throws IOException, JSchException {
+        final String launchCommand = String.format(LAUNCH_FOLLOWER_CMD, ip, port);
+        final String scpHadoopHdfsJarCommand = "scp " + HADOOP_HDFS_JAR_PATH + " %s@%s:" + HADOOP_HDFS_JAR_PATH;
+        final String scpBenchmarkJarCommand = "scp " + BENCHMARK_JAR_PATH + " %s@%s:" + BENCHMARK_JAR_PATH;
+        final String scpConfigCommand = "scp " + hdfsConfigFilePath + " %s@%s:" + hdfsConfigFilePath;
 
-        for (FollowerConfig config : followerConfigs) {
+        // If 'numFollowersFromConfigToStart' is negative, then use all followers.
+        if (numFollowersFromConfigToStart < 0)
+            numFollowersFromConfigToStart = followerConfigs.size();
+
+        LOG.info("Starting " + numFollowersFromConfigToStart + " follower(s) now...");
+
+        for (int i = 0; i < numFollowersFromConfigToStart; i++) {
+            FollowerConfig config = followerConfigs.get(i);
             LOG.info("Starting follower at " + config.getUser() + "@" + config.getIp() + " now.");
 
-            SSHClient ssh = new SSHClient();
-            ssh.loadKnownHosts();
-            ssh.connect(config.getIp());
+            // Don't kill Java processes if we're not auto-launching Followers. We might kill the user's process.
+            if (!manuallyLaunchFollowers)
+                executeCommand(config.getUser(), config.getIp(), "pkill -9 java");
 
-            LOG.debug("Connected to follower at " + config.getUser() + "@" + config.getIp() + " now.");
-
-            Session session = null;
-
-            try {
-                ssh.authPublickey(config.getUser());
-
-                LOG.debug("Authenticated with follower at " + config.getUser() + "@" + config.getIp() + " now.");
-
-                session = ssh.startSession();
-
-                LOG.debug("Started session with follower at " + config.getUser() + "@" + config.getIp() + " now.");
-
-                Session.Command cmd = session.exec(fullCommand);
-
-                LOG.debug("Executed command: " + fullCommand);
-
-                ByteArrayOutputStream inputStream = IOUtils.readFully(cmd.getInputStream());
-                LOG.debug("Output: " + inputStream);
-
-                con.writer().print(inputStream);
-                cmd.join(5, TimeUnit.SECONDS);
-                con.writer().print("\n** exit status: " + cmd.getExitStatus());
-                LOG.debug("Exit status: " + cmd.getExitStatus());
-            } finally {
-                if (session != null)
-                    session.close();
-
-                ssh.disconnect();
-            }
+            launchFollower(config.getUser(), config.getIp(), launchCommand);
         }
     }
 
@@ -261,6 +388,10 @@ public class Commander {
         DistributedFileSystem hdfs = initDfsClient(nameNodeEndpoint);
 
         while (true) {
+            updateGCMetrics();
+            long startingGCs = numGarbageCollections;
+            long startingGCTime = garbageCollectionTime;
+
             try {
                 Thread.sleep(50);
                 printMenu();
@@ -365,6 +496,33 @@ public class Commander {
             } catch (Exception ex) {
                 LOG.error("Exception encountered:", ex);
             }
+
+            updateGCMetrics();
+            long numGCsPerformedDuringLastOp = numGarbageCollections - startingGCs;
+            long timeSpentInGCDuringLastOp = garbageCollectionTime - startingGCTime;
+
+            LOG.debug("Performed " + numGCsPerformedDuringLastOp + " garbage collection(s) during last operation.");
+            if (numGCsPerformedDuringLastOp > 0)
+                LOG.debug("Spent " + timeSpentInGCDuringLastOp + " ms garbage collecting during the last operation.");
+        }
+    }
+
+    /**
+     * Update the running totals for number of GCs performed and time spent GC-ing.
+     */
+    private void updateGCMetrics() {
+        List<GarbageCollectorMXBean> mxBeans = ManagementFactory.getGarbageCollectorMXBeans();
+        this.numGarbageCollections = 0;
+        this.garbageCollectionTime = 0;
+        for (GarbageCollectorMXBean mxBean : mxBeans) {
+            long count = mxBean.getCollectionCount();
+            long time  = mxBean.getCollectionTime();
+
+            if (count > 0)
+                this.numGarbageCollections += count;
+
+            if (time > 0)
+                this.garbageCollectionTime += time;
         }
     }
 
@@ -374,30 +532,28 @@ public class Commander {
      * @param operationId Unique ID of this operation.
      * @param payload Contains the command and necessary arguments.
      */
-    private void issueCommandToFollowers(String opName, String operationId, JsonObject payload) {
-        LOG.debug("Issuing '" + opName + "' (id=" + operationId + ") command to " +
-                followers.size() + " follower(s).");
-
-        HashSet<String> waitingOn = new HashSet<String>();
-        for (Connection conn : followers) {
-            FollowerConnection followerConnection = (FollowerConnection)conn;
-            waitingOn.add(followerConnection.name);
-
-            HashSet<String> involvedOps = followerIdToInvolvedOperations.computeIfAbsent(
-                    followerConnection.name, n -> new HashSet<>());
-            involvedOps.add(operationId);
+    private void issueCommandToFollowers(String opName, String operationId, JsonObject payload, boolean addToWaiting) {
+        int numFollowers = followers.size();
+        if (numFollowers == 0) {
+            LOG.warn("We have no followers (though we are in distributed mode).");
+            return;
         }
-        waitingOnPerOperation.put(operationId, waitingOn);
+
+        LOG.debug("Issuing '" + opName + "' (id=" + operationId + ") command to " +
+                numFollowers + " follower(s).");
 
         BlockingQueue<DistributedBenchmarkResult> resultQueue = new
-                ArrayBlockingQueue<>(followers.size());
+                ArrayBlockingQueue<>(numFollowers);
         resultQueues.put(operationId, resultQueue);
 
         String payloadStr = new Gson().toJson(payload);
-        for (Connection followerConnection : followers) {
+        for (FollowerConnection followerConnection : followers) {
             LOG.debug("Sending '" + opName + "' operation to follower at " +
                     followerConnection.getRemoteAddressTCP());
             followerConnection.sendTCP(payloadStr);
+
+            if (addToWaiting)
+                waitingOn.add(followerConnection.name);
         }
     }
 
@@ -420,14 +576,29 @@ public class Commander {
         System.out.print(prompt + " [y/n]\n> ");
         String input = scanner.nextLine().trim();
 
+        checkForExit(input);
+
         return input.equalsIgnoreCase("y") || input.equalsIgnoreCase("yes") ||
                 input.equalsIgnoreCase("t") || input.equalsIgnoreCase("true") ||
                 input.equalsIgnoreCase("1");
     }
 
+    /**
+     * Check if the user is trying to cancel the current operation.
+     *
+     * @param input The user's input.
+     */
+    private static void checkForExit(String input) {
+        if (input.equalsIgnoreCase("abort") || input.equalsIgnoreCase("cancel") ||
+                input.equalsIgnoreCase("exit"))
+            throw new IllegalArgumentException("User specified '" + input + "'. Aborting operation.");
+    }
+
     private int getIntFromUser(String prompt) {
         System.out.print(prompt + "\n> ");
-        return Integer.parseInt(scanner.nextLine());
+        String input = scanner.nextLine();
+        checkForExit(input);
+        return Integer.parseInt(input);
     }
 
     /**
@@ -551,14 +722,14 @@ public class Commander {
 
             payload.add("directories", directoriesJson);
 
-            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload);
+            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload, true);
         }
 
         LOG.info("Each thread should be writing " + writesPerThread + " files...");
 
         DistributedBenchmarkResult localResult =
                 Commands.writeFilesInternal(writesPerThread, minLength, maxLength, numberOfThreads, directories,
-                        sharedHdfs, hdfsConfiguration, nameNodeEndpoint);
+                        sharedHdfs, OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, false);
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
@@ -578,14 +749,14 @@ public class Commander {
         // Specifies how many files each thread should read.
         // Specifies number of threads.
         // Specifies how many times each file should be read.
-        int n = getIntFromUser("How many files should be read by each thread?");
+        int filesPerThread = getIntFromUser("How many files should be read by each thread?");
 
         int readsPerFile = getIntFromUser("How many times should each file be read?");
 
         int numThreads = getIntFromUser("Number of threads");
 
-        System.out.print("Please provide a path to a local file containing at least " + n + " HopsFS file " +
-                (n == 1 ? "path.\n> " : "paths.\n> "));
+        System.out.print("Please provide a path to a local file containing at least " + filesPerThread + " HopsFS file " +
+                (filesPerThread == 1 ? "path.\n> " : "paths.\n> "));
         String inputPath = scanner.nextLine();
 
         String operationId = UUID.randomUUID().toString();
@@ -594,16 +765,16 @@ public class Commander {
             JsonObject payload = new JsonObject();
             payload.addProperty(OPERATION, OP_STRONG_SCALING_READS);
             payload.addProperty(OPERATION_ID, operationId);
-            payload.addProperty("n", n);
+            payload.addProperty("n", filesPerThread);
             payload.addProperty("readsPerFile", readsPerFile);
             payload.addProperty("numThreads", numThreads);
             payload.addProperty("inputPath", inputPath);
 
-            issueCommandToFollowers("Read n Files y Times with z Threads (Strong Scaling)", operationId, payload);
+            issueCommandToFollowers("Read n Files y Times with z Threads (Strong Scaling)", operationId, payload, true);
         }
 
         DistributedBenchmarkResult localResult =
-                Commands.strongScalingBenchmark(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile,
+                Commands.strongScalingBenchmark(configuration, sharedHdfs, nameNodeEndpoint, filesPerThread, readsPerFile,
                         numThreads, inputPath);
 
         if (localResult == null) {
@@ -626,18 +797,16 @@ public class Commander {
                                           final DistributedFileSystem sharedHdfs,
                                           final String nameNodeEndpoint)
             throws IOException, InterruptedException {
-        System.out.print("Should the threads write their files to the SAME DIRECTORY [1] or DIFFERENT DIRECTORIES [2]?\n> ");
-        int directoryChoice = Integer.parseInt(scanner.nextLine());
+        int directoryChoice = getIntFromUser("Should the threads write their files to the SAME DIRECTORY [1], DIFFERENT DIRECTORIES [2], or RANDOM WRITES [3]?");
 
         // Validate input.
-        if (directoryChoice < 1 || directoryChoice > 2) {
-            LOG.error("Invalid argument specified. Should be \"1\" for same directory or \"2\" for different directories. " +
-                    "Instead, got \"" + directoryChoice + "\"");
+        if (directoryChoice < 1 || directoryChoice > 3) {
+            LOG.error("Invalid argument specified. Should be \"1\" for same directory, \"2\" for different directories. " +
+                    "Or \"3\" for random writes. Instead, got \"" + directoryChoice + "\"");
             return;
         }
 
-        System.out.print("Manually input (comma-separated list) [1], or specify file containing directories [2]? \n> ");
-        int dirInputMethodChoice = Integer.parseInt(scanner.nextLine());
+        int dirInputMethodChoice = getIntFromUser("Manually input (comma-separated list) [1], or specify file containing directories [2]?");
 
         List<String> directories = null;
         if (dirInputMethodChoice == 1) {
@@ -682,9 +851,11 @@ public class Commander {
             directories = new ArrayList<>(numberOfThreads);
             for (int i = 0; i < numberOfThreads; i++)
                 directories.add(dir); // This way, they'll all write to the same directory. We can reuse old code.
-        } else {
+        } else if (directoryChoice == 2) {
             Collections.shuffle(directories);
             directories = directories.subList(0, numberOfThreads);
+        } else {
+            // Use the entire directories list. We'll generate a bunch of random writes using the full list.
         }
 
         System.out.print("Number of writes per thread? \n> ");
@@ -716,6 +887,7 @@ public class Commander {
             payload.addProperty("minLength", minLength);
             payload.addProperty("maxLength", maxLength);
             payload.addProperty("numberOfThreads", numberOfThreads);
+            payload.addProperty("randomWrites", directoryChoice == 3);
 
             JsonArray directoriesJson = new JsonArray();
             for (String dir : directories)
@@ -723,14 +895,14 @@ public class Commander {
 
             payload.add("directories", directoriesJson);
 
-            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload);
+            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload, true);
         }
 
         LOG.info("Each thread should be writing " + writesPerThread + " files...");
 
         DistributedBenchmarkResult localResult =
                 Commands.writeFilesInternal(writesPerThread, minLength, maxLength, numberOfThreads, directories,
-                        sharedHdfs, hdfsConfiguration, nameNodeEndpoint);
+                        sharedHdfs, OP_STRONG_SCALING_READS, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3));
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
@@ -751,23 +923,53 @@ public class Commander {
      *
      * @return The aggregated throughput.
      */
-    private double waitForDistributedResult(
+    private AggregatedResult waitForDistributedResult(
             int numDistributedResults,
             String operationId,
             DistributedBenchmarkResult localResult) throws InterruptedException {
         if (numDistributedResults < 1) {
             // LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
-            return localResult.getOpsPerSecond();
+            String metricsString = "";
+
+            try {
+                metricsString = String.format("%f %d %d %f %f %f %f", localResult.getOpsPerSecond(),
+                        localResult.cacheHits, localResult.cacheMisses,
+                        ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses)), localResult.tcpLatencyStatistics.getMean(),
+                        localResult.httpLatencyStatistics.getMean(), (localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean()) / 2.0);
+            } catch (NullPointerException ex) {
+                LOG.warn("Could not generate metrics string due to NPE.");
+            }
+
+            return new AggregatedResult(localResult.getOpsPerSecond(), localResult.cacheHits, localResult.cacheMisses, metricsString);
         }
 
         LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
         BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
         assert(resultQueue != null);
 
-        HashSet<String> waitingOnForThisOp = waitingOnPerOperation.get(operationId);
-        // Once waitingOnForThisOp has size zero, we're done.
-        while (resultQueue.size() < numDistributedResults && waitingOnForThisOp.size() > 0) {
-            Thread.sleep(50);
+        int counter = 0;
+        long time = System.currentTimeMillis();
+
+        while (waitingOn.size() > 0) {
+            LOG.debug("Still waiting on the following Followers: " + StringUtils.join(waitingOn, ", "));
+            Thread.sleep(1000);
+
+            int numDisconnects = numDisconnections.getAndSet(0);
+
+            if (numDisconnects > 0) {
+                LOG.warn("There has been at least one disconnection.");
+            }
+
+            counter += (System.currentTimeMillis() - time);
+            time = System.currentTimeMillis();
+            if (counter >= 60000) {
+                boolean decision = getBooleanFromUser("Stop waiting early?");
+
+                if (decision)
+                    break;
+
+                counter = 0;
+            }
         }
 
         DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
@@ -782,27 +984,76 @@ public class Commander {
         cacheHits.addValue(localResult.cacheHits);
         cacheMisses.addValue(localResult.cacheMisses);
 
+        LOG.debug("========== LOCAL RESULT ==========");
+        LOG.debug("Num Ops Performed   : " + localResult.numOpsPerformed);
+        LOG.debug("Duration (sec)      : " + localResult.durationSeconds);
+        LOG.debug("Cache hits          : " + localResult.cacheHits);
+        LOG.debug("Cache misses        : " + localResult.cacheMisses);
+        if (localResult.cacheHits + localResult.cacheMisses > 0)
+            LOG.debug("Cache hit percentage: " + (localResult.cacheHits/(localResult.cacheHits + localResult.cacheMisses)));
+        else
+            LOG.debug("Cache hit percentage: N/A");
+        LOG.debug("Throughput          : " + localResult.getOpsPerSecond());
+
+        double trialAvgTcpLatency = localResult.tcpLatencyStatistics.getMean();
+        double trialAvgHttpLatency = localResult.httpLatencyStatistics.getMean();
+
         for (DistributedBenchmarkResult res : resultQueue) {
-            LOG.debug("Received result: " + res);
+            LOG.debug("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");
+            LOG.debug("Num Ops Performed   : " + res.numOpsPerformed);
+            LOG.debug("Duration (sec)      : " + res.durationSeconds);
+            LOG.debug("Cache hits          : " + res.cacheHits);
+            LOG.debug("Cache misses        : " + res.cacheMisses);
+            if (res.cacheHits + res.cacheMisses > 0)
+                LOG.debug("Cache hit percentage: " + (res.cacheHits/(res.cacheHits + res.cacheMisses)));
+            else
+                LOG.debug("Cache hit percentage: N/A");
+            LOG.debug("Throughput          : " + res.getOpsPerSecond());
 
             opsPerformed.addValue(res.numOpsPerformed);
             duration.addValue(res.durationSeconds);
             throughput.addValue(res.getOpsPerSecond());
             cacheHits.addValue(res.cacheHits);
             cacheMisses.addValue(res.cacheMisses);
+
+            if (res.tcpLatencyStatistics != null && res.httpLatencyStatistics != null) {
+                DescriptiveStatistics latencyTcp = res.tcpLatencyStatistics;
+                DescriptiveStatistics latencyHttp = res.httpLatencyStatistics;
+                primaryHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
+
+                LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
+                        ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
+                        ", N: " + latencyTcp.getN() + "]");
+                LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
+                        ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
+                        ", N: " + latencyHttp.getN() + "]");
+
+                trialAvgTcpLatency += latencyTcp.getMean();
+                trialAvgHttpLatency += latencyHttp.getMean();
+            }
         }
 
+        trialAvgTcpLatency = trialAvgTcpLatency / (1 + numDistributedResults);   // Add 1 to account for local result.
+        trialAvgHttpLatency = trialAvgHttpLatency / (1 + numDistributedResults); // Add 1 to account for local result.
         double aggregateThroughput = (opsPerformed.getSum() / duration.getMean());
 
-        LOG.info("==== RESULTS ====");
+        LOG.info("==== AGGREGATED RESULTS ====");
         LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
-        LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
-        LOG.info("Average Non-Aggregate Throughput (op/sec): " + throughput.getMean());
-//        LOG.info("Cache hits: " + cacheHits);
-//        LOG.info("Cache misses: " + cacheMisses);
+        LOG.info("Cache hits: " + cacheHits.getSum());
+        LOG.info("Cache misses: " + cacheMisses.getSum());
         LOG.info("Cache hit percentage: " + (cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum())));
+        LOG.info("Average TCP latency: " + trialAvgTcpLatency + " ms");
+        LOG.info("Average HTTP latency: " + trialAvgHttpLatency + " ms");
+        LOG.info("Average combined latency: " + (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0 + " ms");
+        LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
 
-        return aggregateThroughput;
+        String metricsString = String.format("%f %f %f %f %f %f %f", aggregateThroughput, cacheHits.getSum(), cacheMisses.getSum(),
+                (cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum())), trialAvgTcpLatency,
+                trialAvgHttpLatency, (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0);
+
+        LOG.info(metricsString);
+
+        return new AggregatedResult(aggregateThroughput, (int)cacheHits.getSum(), (int)cacheMisses.getSum(), metricsString);
     }
 
     /**
@@ -814,19 +1065,19 @@ public class Commander {
      *  - The number of files each thread should read.
      */
     private void weakScalingReadOperationV2(final Configuration configuration,
-                                          final DistributedFileSystem sharedHdfs,
-                                          final String nameNodeEndpoint)
+                                            final DistributedFileSystem sharedHdfs,
+                                            final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
         System.out.print("How many threads should be used?\n> ");
         String inputN = scanner.nextLine();
-        int n = Integer.parseInt(inputN);
+        int numThreads = Integer.parseInt(inputN);
 
         System.out.print("How many files should each thread read?\n> ");
         String inputFilesPerThread = scanner.nextLine();
         int filesPerThread = Integer.parseInt(inputFilesPerThread);
 
         System.out.print("Please provide a path to a local file containing at least " + inputN + " HopsFS file " +
-                (n == 1 ? "path.\n> " : "paths.\n> "));
+                (numThreads == 1 ? "path.\n> " : "paths.\n> "));
         String inputPath = scanner.nextLine();
 
         boolean shuffle = getBooleanFromUser("Shuffle file paths around?");
@@ -834,6 +1085,7 @@ public class Commander {
         int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
 
         int currentTrial = 0;
+        AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
         Double[] results = new Double[numTrials];
         Integer[] cacheHits = new Integer[numTrials];
         Integer[] cacheMisses = new Integer[numTrials];
@@ -845,18 +1097,19 @@ public class Commander {
                 JsonObject payload = new JsonObject();
                 payload.addProperty(OPERATION, OP_WEAK_SCALING_READS_V2);
                 payload.addProperty(OPERATION_ID, operationId);
-                payload.addProperty("n", n);
+                payload.addProperty("numThreads", numThreads);
                 payload.addProperty("filesPerThread", filesPerThread);
                 payload.addProperty("inputPath", inputPath);
                 payload.addProperty("shuffle", shuffle);
 
-                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload);
+                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload, true);
             }
 
             // TODO: Make this return some sort of 'result' object encapsulating the result.
             //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
             DistributedBenchmarkResult localResult =
-                    Commands.weakScalingBenchmarkV2(configuration, sharedHdfs, nameNodeEndpoint, n, filesPerThread, inputPath, shuffle);
+                    Commands.weakScalingBenchmarkV2(configuration, sharedHdfs, nameNodeEndpoint, numThreads,
+                            filesPerThread, inputPath, shuffle, OP_WEAK_SCALING_READS_V2);
 
             if (localResult == null) {
                 LOG.warn("Local result is null. Aborting.");
@@ -866,24 +1119,20 @@ public class Commander {
             //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
             localResult.setOperationId(operationId);
 
-            double throughput;
-            // Wait for followers' results if we had followers when we first started the operation.
-            if (numDistributedResults > 0) {
-                throughput = waitForDistributedResult(numDistributedResults, operationId, localResult);
-            } else {
-                throughput = localResult.getOpsPerSecond();
-            }
+            // If we have no followers, this will just use the local result.
+            AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
 
-            results[currentTrial] = throughput;
-            cacheHits[currentTrial] = localResult.cacheHits;
-            cacheMisses[currentTrial] = localResult.cacheMisses;
+            aggregatedResults[currentTrial] = aggregatedResult;
+            results[currentTrial] = aggregatedResult.throughput;
+            cacheHits[currentTrial] = aggregatedResult.cacheHits;
+            cacheMisses[currentTrial] = aggregatedResult.cacheMisses;
             currentTrial++;
 
             if (!(currentTrial >= numTrials)) {
                 LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
-                        2500 + " ms.");
+                        postTrialSleepInterval + " ms.");
                 performClientVMGarbageCollection();
-                Thread.sleep(2500);
+                Thread.sleep(postTrialSleepInterval);
             }
         }
 
@@ -896,6 +1145,9 @@ public class Commander {
         for (int i = 0; i < numTrials; i++) {
             System.out.printf((formatString) + "%n", cacheHits[i], cacheMisses[i], ((double)cacheHits[i] / (cacheHits[i] + cacheMisses[i])));
         }
+
+        for (AggregatedResult result : aggregatedResults)
+            System.out.println(result.metricsString);
     }
 
     /**
@@ -929,6 +1181,7 @@ public class Commander {
         int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
 
         int currentTrial = 0;
+        AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
         Double[] results = new Double[numTrials];
         Integer[] cacheHits = new Integer[numTrials];
         Integer[] cacheMisses = new Integer[numTrials];
@@ -945,13 +1198,14 @@ public class Commander {
                 payload.addProperty("inputPath", inputPath);
                 payload.addProperty("shuffle", shuffle);
 
-                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload);
+                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload, true);
             }
 
             // TODO: Make this return some sort of 'result' object encapsulating the result.
             //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
             DistributedBenchmarkResult localResult =
-                    Commands.readNFiles(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile, inputPath, shuffle);
+                    Commands.weakScalingReadsV1(configuration, sharedHdfs, nameNodeEndpoint, n, readsPerFile,
+                            inputPath, shuffle, OP_WEAK_SCALING_READS);
 
             if (localResult == null) {
                 LOG.warn("Local result is null. Aborting.");
@@ -961,20 +1215,28 @@ public class Commander {
             //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
             localResult.setOperationId(operationId);
 
-            double throughput;
+            localResult.setOperationId(operationId);
+            double throughput = 0;
+            int aggregatedCacheMisses = 0;
+            int aggregatedCacheHits = 0;
             // Wait for followers' results if we had followers when we first started the operation.
-            if (numDistributedResults > 0) {
-                throughput = waitForDistributedResult(numDistributedResults, operationId, localResult);
-            } else {
-                throughput = localResult.getOpsPerSecond();
-            }
+            AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
+            throughput = aggregatedResult.throughput;
+            aggregatedCacheHits = aggregatedResult.cacheHits;
+            aggregatedCacheMisses = aggregatedResult.cacheMisses;
+            aggregatedResults[currentTrial] = aggregatedResult;
 
             results[currentTrial] = throughput;
-            cacheHits[currentTrial] = localResult.cacheHits;
-            cacheMisses[currentTrial] = localResult.cacheMisses;
+            cacheHits[currentTrial] = aggregatedCacheHits;
+            cacheMisses[currentTrial] = aggregatedCacheMisses;
             currentTrial++;
 
-            Thread.sleep(500);
+            if (!(currentTrial >= numTrials)) {
+                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
+                        postTrialSleepInterval + " ms.");
+                performClientVMGarbageCollection();
+                Thread.sleep(postTrialSleepInterval);
+            }
         }
 
         System.out.println("[THROUGHPUT]");
@@ -986,6 +1248,9 @@ public class Commander {
         for (int i = 0; i < numTrials; i++) {
             System.out.printf((formatString) + "%n", cacheHits[i], cacheMisses[i], ((double)cacheHits[i] / (cacheHits[i] + cacheMisses[i])));
         }
+
+        for (AggregatedResult result : aggregatedResults)
+            System.out.println(result.metricsString);
     }
 
     private int getNextOperation() {
@@ -1002,6 +1267,10 @@ public class Commander {
         }
     }
 
+    /**
+     * Create an HDFS client.
+     * @param nameNodeEndpoint Where HTTP requests are directed.
+     */
     public static DistributedFileSystem initDfsClient(String nameNodeEndpoint) {
         LOG.debug("Creating HDFS client now...");
         Configuration hdfsConfiguration = Utils.getConfiguration(hdfsConfigFilePath);
@@ -1024,7 +1293,6 @@ public class Commander {
             ex.printStackTrace();
             System.exit(1);
         }
-
         return hdfs;
     }
 
@@ -1037,13 +1305,18 @@ public class Commander {
          * Name of the connection. It's just the unique ID of the NameNode to which we are connected.
          * NameNode IDs are longs, so that's why this is of type long.
          */
-        public String name; // Hides super type.
+        public String name = null; // Hides super type.
 
         /**
          * Default constructor.
          */
         public FollowerConnection() {
 
+        }
+
+        @Override
+        public String toString() {
+            return "FollowerConnection[" + name + "]";
         }
     }
 
@@ -1055,13 +1328,11 @@ public class Commander {
         public void connected(Connection conn) {
             LOG.debug(LEADER_PREFIX + " Connection established with remote NameNode at "
                     + conn.getRemoteAddressTCP());
-            conn.setKeepAliveTCP(6000);
-            conn.setTimeout(12000);
+            conn.setKeepAliveTCP(5000);
+            conn.setTimeout(30000);
+            followers.add((FollowerConnection) conn);
 
-            FollowerConnection followerConnection = (FollowerConnection)conn;
-            followerConnection.name = UUID.randomUUID().toString();
-
-            followers.add(conn);
+            LOG.debug("We now have " + followers.size() + " Followers connected.");
 
             JsonObject registrationPayload = new JsonObject();
             registrationPayload.addProperty(OPERATION, OP_REGISTRATION);
@@ -1081,43 +1352,60 @@ public class Commander {
          */
         @Override
         public void received(Connection conn, Object object) {
+            FollowerConnection connection = (FollowerConnection) conn;
+            String followerName;
+            if (connection.name == null) {
+                followerName = conn.getRemoteAddressTCP().getHostName();
+                connection.name = followerName;
+            } else {
+                followerName = connection.name;
+            }
+
             if (object instanceof String) {
-                JsonObject body = new JsonParser().parse((String)object).getAsJsonObject();
-                LOG.debug("Received message from follower: " + body);
+                try {
+                    JsonObject body = new JsonParser().parse((String)object).getAsJsonObject();
+                    LOG.debug("Received message from follower: " + body);
+                    // LOG.debug("We now have " + followers.size() + " followers registered.");
+                } catch (Exception ex) {
+                    LOG.debug("Received message from follower: " + object);
+                    // LOG.debug("We now have " + followers.size() + " followers registered.");
+                }
             }
             else if (object instanceof DistributedBenchmarkResult) {
                 DistributedBenchmarkResult result = (DistributedBenchmarkResult)object;
 
-                LOG.info("Received result from follower: " + result);
+                LOG.info("Received result from Follower " + followerName + ": " + result);
 
                 String opId = result.opId;
 
                 BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(opId);
                 resultQueue.add(result);
 
-                FollowerConnection followerConnection = (FollowerConnection)conn;
-                HashSet<String> waitingOn = waitingOnPerOperation.get(opId);
-                waitingOn.remove(followerConnection.name);
-                HashSet<String> involved = followerIdToInvolvedOperations.get(followerConnection.name);
-                involved.remove(followerConnection.name);
+                waitingOn.remove(followerName);
             }
             else if (object instanceof FrameworkMessage.KeepAlive) {
                 // Do nothing...
             }
             else {
-                LOG.error("Received object of unexpected/unsupported type " + object.getClass().getSimpleName());
+                LOG.error("Received object of unexpected/unsupported type from Follower " + followerName + ": " +
+                        object.getClass().getSimpleName());
             }
         }
 
         public void disconnected(Connection conn) {
-            FollowerConnection followerConnection = (FollowerConnection)conn;
-            LOG.info("Lost connection to follower " + followerConnection.name);
-
-            // Any operations for which we were waiting on a result for this follower, update
-            // so that we are no longer waiting on them, seeing as they've disconnected.
-            HashSet<String> involvedOps = followerIdToInvolvedOperations.get(followerConnection.name);
-            for (String involvedOp : involvedOps) {
-                waitingOnPerOperation.get(involvedOp).remove(followerConnection.name);
+            FollowerConnection connection = (FollowerConnection)conn;
+            followers.remove(connection);
+            numDisconnections.incrementAndGet();
+            waitingOn.remove(connection.name);
+            if (connection.name != null) {
+                LOG.warn("Lost connection to follower at " + connection.name);
+                LOG.debug("We now have " + followers.size() + " followers registered.");
+                LOG.info("Trying to re-launch Follower " + connection.name + " now...");
+                launchFollower("ben", connection.name, String.format(LAUNCH_FOLLOWER_CMD, ip, port));
+            } else {
+                LOG.warn("Lost connection to follower.");
+                LOG.debug("We now have " + followers.size() + " followers registered.");
+                LOG.error("Follower connection did not have a name. Cannot attempt to re-launch follower.");
             }
         }
     }
@@ -1130,10 +1418,24 @@ public class Commander {
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
                 "\n(15) Read n Files with n Threads (Weak Scaling - Read)\n(16) Read n Files y Times with z Threads (Strong Scaling - Read)" +
                 "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)" +
-                "\n(19) Create directories.\n(20) Weak Scaling Reads v2");
+                "\n(19) Create directories.\n(20) Weak Scaling Reads v2\n(21) File Stat Benchmark\n");
         System.out.println("==================");
         System.out.println("");
         System.out.println("What would you like to do?");
         System.out.print("> ");
+    }
+
+    public static class AggregatedResult {
+        public double throughput;
+        public int cacheHits;
+        public int cacheMisses;
+        public String metricsString; // All the metrics I'd want formatted so I can copy and paste into Excel.
+
+        public AggregatedResult(double throughput, int cacheHits, int cacheMisses, String metricsString) {
+            this.throughput = throughput;
+            this.cacheHits = cacheHits;
+            this.cacheMisses = cacheMisses;
+            this.metricsString = metricsString;
+        }
     }
 }

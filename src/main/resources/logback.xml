@@ -1,0 +1,31 @@
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="CLOUD" class="com.google.cloud.logging.logback.LoggingAppender">
+        <redirectToStdout>false</redirectToStdout>
+    </appender>
+
+    <logger name="io.grpc.netty.shaded" level="off">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="CLOUD" />
+    </logger>
+
+<!--    <logger name="io.grpc.netty.shaded.io.grpc.netty" level="off">-->
+<!--        <appender-ref ref="STDOUT" />-->
+<!--        <appender-ref ref="CLOUD" />-->
+<!--    </logger>-->
+
+<!--    <logger name="io.grpc.netty.shaded.io.netty.handler.ssl.CipherSuiteConverter" level="off">-->
+<!--        <appender-ref ref="STDOUT" />-->
+<!--        <appender-ref ref="CLOUD" />-->
+<!--    </logger>-->
+
+    <root level="debug">
+        <appender-ref ref="CLOUD" />
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>

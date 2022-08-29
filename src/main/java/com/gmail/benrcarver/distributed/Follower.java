@@ -5,21 +5,17 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.gmail.benrcarver.distributed.util.Utils;
 import com.google.gson.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.fs.FileStatus;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,7 +25,7 @@ import static com.gmail.benrcarver.distributed.Constants.*;
  * Runs HopsFS benchmarks as directed by a {@link Commander}.
  */
 public class Follower {
-    public static final Log LOG = LogFactory.getLog(Follower.class);
+    public static final Logger LOG = LoggerFactory.getLogger(Follower.class);
 
     private static final int CONN_TIMEOUT_MILLISECONDS = 5000;
 
@@ -44,12 +40,24 @@ public class Follower {
     private Configuration hdfsConfiguration;
     private DistributedFileSystem hdfs;
 
+    /**
+     * The approximate number of collections that occurred.
+     */
+    private long numGarbageCollections = 0L;
+
+    /**
+     * The approximate time, in milliseconds, that has elapsed during GCs
+     */
+    private long garbageCollectionTime = 0L;
+
+    public static final int FOLLOWER_TCP_BUFFER_SIZES = (int)128e6;
+
     public synchronized void waitUntilDone() throws InterruptedException {
         this.wait();
     }
 
     public Follower(String masterIp, int masterPort) {
-        client = new Client(16000, 16000);
+        client = new Client(FOLLOWER_TCP_BUFFER_SIZES, FOLLOWER_TCP_BUFFER_SIZES);
         this.masterIp = masterIp;
         this.masterPort = masterPort;
 
@@ -119,22 +127,72 @@ public class Follower {
         return hdfs;
     }
 
+    /**
+     * Update the running totals for number of GCs performed and time spent GC-ing.
+     */
+    private void updateGCMetrics() {
+        List<GarbageCollectorMXBean> mxBeans = ManagementFactory.getGarbageCollectorMXBeans();
+        this.numGarbageCollections = 0;
+        this.garbageCollectionTime = 0;
+        for (GarbageCollectorMXBean mxBean : mxBeans) {
+            long count = mxBean.getCollectionCount();
+            long time  = mxBean.getCollectionTime();
+
+            if (count > 0)
+                this.numGarbageCollections += count;
+
+            if (time > 0)
+                this.garbageCollectionTime += time;
+        }
+    }
+
     private void handleMessageFromLeader(JsonObject message, DistributedFileSystem hdfs) throws IOException, InterruptedException {
         int operation = message.getAsJsonPrimitive(OPERATION).getAsInt();
+
+        updateGCMetrics();
+        long currentGCs = numGarbageCollections;
+        long currentGCTime = garbageCollectionTime;
 
         String operationId = "N/A";
         if (message.has(OPERATION_ID)) {
             operationId = message.getAsJsonPrimitive(OPERATION_ID).getAsString();
             LOG.info("Received operation " + operationId + " from Leader.");
+            LOG.debug("Current Number of GCs: " + numGarbageCollections);
+            LOG.debug("Time spent GC-ing: " + garbageCollectionTime + " ms");
         }
 
         switch(operation) {
-            case OP_REGISTRATION:
-                handleRegistration(message);
+            case OP_TOGGLE_BENCHMARK_MODE:
+                boolean benchmarkModeEnabled = message.getAsJsonPrimitive(BENCHMARK_MODE).getAsBoolean();
+
+                if (benchmarkModeEnabled)
+                    LOG.debug("ENABLING Benchmark Mode (and thus disabling OperationPerformed tracking).");
+                else
+                    LOG.debug("DISABLING Benchmark Mode.");
+
+                Commands.BENCHMARKING_MODE = benchmarkModeEnabled;
+                hdfs.setBenchmarkModeEnabled(benchmarkModeEnabled);
+
+                if (benchmarkModeEnabled)
+                    Commands.TRACK_OP_PERFORMED = false;
+
+                break;
+            case OP_TOGGLE_OPS_PERFORMED_FOLLOWERS:
+                boolean toggle = message.getAsJsonPrimitive(TRACK_OP_PERFORMED).getAsBoolean();
+
+                if (toggle)
+                    LOG.debug("ENABLING OperationPerformed tracking.");
+                else
+                    LOG.debug("DISABLING OperationPerformed tracking.");
+
+                Commands.TRACK_OP_PERFORMED = toggle;
                 break;
             case OP_TRIGGER_CLIENT_GC:
-                LOG.debug("We've been instructed to perform a garbage collection!");
+                LOG.debug("We've been instructed to perform a garbage collection. Calling System.gc() now!");
                 System.gc();
+                break;
+            case OP_REGISTRATION:
+                handleRegistration(message);
                 break;
             case OP_EXIT:
                 LOG.info("Received 'STOP' operation from Leader. Shutting down primary HDFS connection now.");
@@ -192,7 +250,7 @@ public class Follower {
                 break;
             case OP_READ_FILES:
                 LOG.info("READ FILES selected!");
-                Commands.readFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                Commands.readFilesOperation(hdfsConfiguration, hdfs, nameNodeEndpoint, OP_READ_FILES);
                 break;
             case OP_DELETE_FILES:
                 LOG.info("DELETE FILES selected!");
@@ -204,12 +262,13 @@ public class Follower {
                 break;
             case OP_WEAK_SCALING_READS:
                 LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
-                DistributedBenchmarkResult result = Commands.readNFiles(hdfsConfiguration,
+                DistributedBenchmarkResult result = Commands.weakScalingReadsV1(hdfsConfiguration,
                         hdfs, nameNodeEndpoint,
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
-                        message.getAsJsonPrimitive("shuffle").getAsBoolean());
+                        message.getAsJsonPrimitive("shuffle").getAsBoolean(),
+                        OP_WEAK_SCALING_READS);
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for WEAK SCALING (READ) benchmark: " + result);
                 sendResultToLeader(result);
@@ -238,8 +297,8 @@ public class Follower {
                         message.getAsJsonPrimitive("minLength").getAsInt(),
                         message.getAsJsonPrimitive("maxLength").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
-                        directories,
-                        hdfs, hdfsConfiguration, nameNodeEndpoint);
+                        directories, hdfs, OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint,
+                        message.getAsJsonPrimitive("randomWrites").getAsBoolean());
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for WEAK SCALING (WRITE) benchmark: " + result);
                 sendResultToLeader(result);
@@ -257,8 +316,8 @@ public class Follower {
                         message.getAsJsonPrimitive("minLength").getAsInt(),
                         message.getAsJsonPrimitive("maxLength").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
-                        directories,
-                        hdfs, hdfsConfiguration, nameNodeEndpoint);
+                        directories, hdfs, OP_STRONG_SCALING_WRITES, hdfsConfiguration,
+                        nameNodeEndpoint, false);
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for STRONG SCALING (WRITE) benchmark: " + result);
                 sendResultToLeader(result);
@@ -267,18 +326,33 @@ public class Follower {
                 LOG.info("OP_WEAK_SCALING_READS_V2 selected!");
                 result = Commands.weakScalingBenchmarkV2(hdfsConfiguration,
                         hdfs, nameNodeEndpoint,
-                        message.getAsJsonPrimitive("n").getAsInt(),
+                        message.getAsJsonPrimitive("numThreads").getAsInt(),
                         message.getAsJsonPrimitive("filesPerThread").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
-                        message.getAsJsonPrimitive("shuffle").getAsBoolean());
+                        message.getAsJsonPrimitive("shuffle").getAsBoolean(), OP_WEAK_SCALING_READS_V2);
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for OP_WEAK_SCALING_READS_V2 benchmark: " + result);
+                sendResultToLeader(result);
+                break;
+            case OP_GET_FILE_STATUS:
+                LOG.info("OP_GET_FILE_STATUS selected!");
+                result = Commands.getFileStatusOperation(hdfsConfiguration, hdfs, nameNodeEndpoint);
+                result.setOperationId(operationId);
+                LOG.info("Obtained local result for OP_GET_FILE_DIR_INFO benchmark: " + result);
                 sendResultToLeader(result);
                 break;
             default:
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
                 break;
         }
+
+        updateGCMetrics();
+        long numGCsPerformedDuringLastOp = numGarbageCollections - currentGCs;
+        long timeSpentInGCDuringLastOp = garbageCollectionTime - currentGCTime;
+
+        LOG.debug("Performed " + numGCsPerformedDuringLastOp + " garbage collection(s) during last operation.");
+        if (numGCsPerformedDuringLastOp > 0)
+            LOG.debug("Spent " + timeSpentInGCDuringLastOp + " ms garbage collecting during the last operation.");
     }
 
     private void sendResultToLeader(DistributedBenchmarkResult result) {
@@ -299,6 +373,13 @@ public class Follower {
         LOG.debug("Received REGISTRATION message from Leader.");
         nameNodeEndpoint = message.getAsJsonPrimitive(NAMENODE_ENDPOINT).getAsString();
         hdfsConfigFilePath = message.getAsJsonPrimitive(HDFS_CONFIG_PATH).getAsString();
+        Commands.TRACK_OP_PERFORMED = message.getAsJsonPrimitive(TRACK_OP_PERFORMED).getAsBoolean();
+
+        if (Commands.TRACK_OP_PERFORMED)
+            LOG.debug("ENABLING OperationPerformed tracking.");
+        else
+            LOG.debug("DISABLING OperationPerformed tracking.");
+
         // The initDfsClient() function in the Commander file uses the Commander's static 'hdfsConfigFilePath'
         // variable. This is basically a hack, pretty gross.
         Commander.hdfsConfigFilePath = hdfsConfigFilePath;
@@ -324,6 +405,10 @@ public class Follower {
         });
         connectThread.start();
 
+        client.setKeepAliveTCP(5000);
+        client.setTimeout(30000);
+        // client.setKeepAliveUDP(7500);
+
         try {
             connectThread.join();
         } catch (InterruptedException ex) {
@@ -336,5 +421,16 @@ public class Follower {
             LOG.error("Failed to connect to master at " + masterIp + ":" + masterPort + ".");
             System.exit(1);
         }
+
+        String message;
+
+        try {
+            message = "Hello Commander. I am Follower " + InetAddress.getLocalHost().getHostAddress() + ".";
+        } catch (UnknownHostException e) {
+            message = "Hello Commander. I am one of your followers.";
+        }
+
+        // Basically serves as a registration.
+        client.sendTCP(message);
     }
 }

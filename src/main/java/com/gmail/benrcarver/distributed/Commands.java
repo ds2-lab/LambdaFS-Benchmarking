@@ -4,23 +4,24 @@ import com.gmail.benrcarver.distributed.util.TreeNode;
 import com.gmail.benrcarver.distributed.util.Utils;
 
 import java.io.*;
-import java.net.URI;
-import java.net.URISyntaxException;
+
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import io.hops.metrics.OperationPerformed;
+import io.hops.metrics.TransactionEvent;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
 import io.hops.leader_election.node.SortedActiveNodeList;
 import io.hops.leader_election.node.ActiveNode;
+import org.apache.commons.math3.util.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -28,12 +29,25 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 
-import static com.gmail.benrcarver.distributed.Constants.OP_DELETE_FILES;
-import static com.gmail.benrcarver.distributed.Constants.OP_STRONG_SCALING_READS;
+import static com.gmail.benrcarver.distributed.Constants.*;
 
+// TODO: Condense the various functions and build some generic framework for executing benchmarks.
+//       Like, many of the function calls here have a lot of boilerplate code to create the infrastructure
+//       to temporarily store metrics info and print the results. The only difference is the FS operation
+//       being called. So, at some point I can generify everything.
 public class Commands {
-    public static final Log LOG = LogFactory.getLog(Commands.class);
-    private static Scanner scanner = new Scanner(System.in);
+    public static final Logger LOG = LoggerFactory.getLogger(Commands.class);
+    private static final Scanner scanner = new Scanner(System.in);
+
+    private static final String EMPTY_STRING = "";
+
+    public static volatile boolean TRACK_OP_PERFORMED = false;
+
+    /**
+     * When true, we do not store OperationsPerformed, and we clear them after each trial,
+     * in addition to performing GCs.
+     */
+    public static boolean BENCHMARKING_MODE = false;
 
     /**
      * Indicates whether the JVM is running a follower process.
@@ -50,7 +64,183 @@ public class Commands {
      */
     public static volatile boolean IS_SERVERLESS = true;
 
-    public static void writeFilesToDirectories(DistributedFileSystem hdfs,
+    /**
+     * Used to cache clients for reuse.
+     */
+    public static BlockingQueue<DistributedFileSystem> hdfsClients
+            = new ArrayBlockingQueue<>(1024);
+
+    /**
+     * Retrieve an HDFS client to use during a benchmark. This will attempt to reuse an existing client.
+     * If none are available, then a new client is created.
+     *
+     * @return An HDFS client instance.
+     */
+    private static synchronized DistributedFileSystem getHdfsClient(String nameNodeEndpoint) {
+        DistributedFileSystem hdfs;
+        hdfs = hdfsClients.poll();
+
+        if (hdfs == null) {
+            LOG.warn("No HDFS client instances available (size = " +
+                    hdfsClients.size() + "). Creating a new client now...");
+            hdfs = Commander.initDfsClient(nameNodeEndpoint);
+        }
+        return hdfs;
+    }
+
+    private static void returnHdfsClient(DistributedFileSystem hdfs) throws InterruptedException {
+        hdfsClients.add(hdfs);
+    }
+
+    /**
+     * Generic driver used to execute all/most benchmarks.
+     *
+     * @param nameNodeEndpoint Direct HTTP requests here.
+     * @param numThreads Number of HopsFS clients to use (one per thread).
+     * @param fileBatches Batches of files for each client. One batch per thread.
+     * @param operationsPerFile The number of times each client should perform the given operation on a file.
+     * @param opCode Identifies the benchmark being performed. Stored with the metric results of the benchmark.
+     * @param operation This is what the threads call. We basically specify the FS operation here. Like, we provide
+     *                  the code that executes the FS operation one time, and we execute it however many times
+     *                  we're supposed to based on the {@code } parameter.
+     * @return A result containing all the metric information and whatnot.
+     */
+    public static DistributedBenchmarkResult executeBenchmark(
+            String nameNodeEndpoint,
+            int numThreads,
+            String[][] fileBatches,
+            int operationsPerFile,
+            int opCode,
+            FSOperation operation) throws InterruptedException {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("At start of benchmark, the HDFS Clients Cache has " + hdfsClients.size() + " clients.");
+        }
+
+        Thread[] threads = new Thread[numThreads];
+
+        // Used to synchronize threads; they each connect to HopsFS and then
+        // count down. So, they all cannot start until they are all connected.
+        final CountDownLatch startLatch = new CountDownLatch(numThreads + 1);
+
+        // Used to synchronize threads; they block when they finish executing to avoid using CPU cycles
+        // by aggregating their results. Once all the threads have finished, they aggregate their results.
+        final CountDownLatch endLatch = new CountDownLatch(numThreads);
+        final Semaphore readySemaphore = new Semaphore((numThreads * -1) + 1);
+        final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
+
+        // Keep track of number of successful operations.
+        AtomicInteger numSuccessfulOps = new AtomicInteger(0);
+        AtomicInteger numOps = new AtomicInteger(0);
+
+        for (int i = 0; i < numThreads; i++) {
+            final String[] filesForCurrentThread = fileBatches[i];
+            final int threadId = i;
+            Thread thread = new Thread(() -> {
+                DistributedFileSystem hdfs = getHdfsClient(nameNodeEndpoint);
+
+                readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
+
+                startLatch.countDown(); // Wait for the main thread's signal to actually begin.
+
+                try {
+                    startLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                int numSuccessfulOpsCurrentThread = 0;
+                int numOpsCurrentThread = 0;
+
+                for (String filePath : filesForCurrentThread) {
+                    for (int j = 0; j < operationsPerFile; j++) {
+                        if (operation.call(hdfs, filePath, EMPTY_STRING))
+                            numSuccessfulOpsCurrentThread++;
+                        numOpsCurrentThread++;
+                    }
+                }
+
+                // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+                // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+                // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+                // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+                endSemaphore.release();
+
+                if (LOG.isDebugEnabled()) LOG.debug("Thread " + threadId + " has finished executing.");
+
+                endLatch.countDown();
+
+                try {
+                    endLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                numSuccessfulOps.addAndGet(numSuccessfulOpsCurrentThread);
+                numOps.addAndGet(numOpsCurrentThread);
+
+                try {
+                    // Now return the client to the pool so that it can be used again in the future.
+                    returnHdfsClient(hdfs);
+                } catch (InterruptedException e) {
+                    LOG.error("Encountered error when trying to return HDFS client. Closing it instead.");
+                    e.printStackTrace();
+
+                    LOG.warn("[THREAD " + threadId + "] Terminating HDFS connection.");
+                    try {
+                        hdfs.close();
+
+                        LOG.warn("[THREAD " + threadId + "] Terminated HDFS connection.");
+                    } catch (IOException ex) {
+                        LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+                    }
+                }
+            });
+            threads[i] = thread;
+        }
+
+        LOG.info("Starting threads.");
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
+        readySemaphore.acquire();                   // Will block until all client threads are ready to go.
+        long start = System.currentTimeMillis();    // Start the clock.
+        startLatch.countDown();                     // Let the threads start.
+
+        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+        endSemaphore.acquire();
+        long end = System.currentTimeMillis();
+
+        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining the " + threads.length + " threads now...");
+        for (Thread thread : threads) {
+            thread.join();
+        }
+
+        double durationSeconds = (end - start) / 1.0e3;
+
+        // TODO: Verify that I've calculated the total number of operations correctly.
+        int numSuccess = numSuccessfulOps.get();
+        double totalOperations = numOps.get();
+        LOG.info("Finished performing all " + totalOperations + " operations in " + durationSeconds + " sec.");
+        double totalThroughput = totalOperations / durationSeconds;
+        double successThroughput = numSuccess / durationSeconds;
+        LOG.info("Number of successful operations: " + numSuccess);
+        LOG.info("Number of failed operations: " + (totalOperations - numSuccess));
+
+        LOG.info("Total Throughput: " + totalThroughput + " ops/sec.");
+        LOG.info("Successful Throughput: " + successThroughput + " ops/sec.");
+
+        if (LOG.isDebugEnabled())
+            LOG.debug("At end of benchmark, the HDFS Clients Cache has " + hdfsClients.size() + " clients.");
+
+        return new DistributedBenchmarkResult(null, opCode, numSuccess,
+                durationSeconds, start, end);
+    }
+
+    public static DistributedBenchmarkResult writeFilesToDirectories(
                                                final Configuration configuration,
                                                String nameNodeEndpoint)
             throws IOException, InterruptedException {
@@ -85,114 +275,96 @@ public class Commands {
         System.out.print("Number of threads? \n>");
         int numberOfThreads = Integer.parseInt(scanner.nextLine());
 
-        int n = 10;
-        System.out.print("Number of files per directory (default " + n + "):\n> ");
+        int filesPerDirectory = 10;
+        System.out.print("Number of files per directory (default " + filesPerDirectory + "):\n> ");
         try {
-            n = Integer.parseInt(scanner.nextLine());
+            filesPerDirectory = Integer.parseInt(scanner.nextLine());
         } catch (NumberFormatException ex) {
-            LOG.info("Defaulting to " + n + ".");
+            LOG.info("Defaulting to " + filesPerDirectory + ".");
         }
 
-        int minLength = 0;
-        System.out.print("Min string length (default " + minLength + "):\n> ");
-        try {
-            minLength = Integer.parseInt(scanner.nextLine());
-        } catch (NumberFormatException ex) {
-            LOG.info("Defaulting to " + minLength + ".");
+        if (directories == null)
+            throw new IllegalArgumentException("No directories provided for Write-Files-to-Directories operation.");
+
+        // Generate the file contents and file names. targetDirectories has length equal to numThreads
+        // except when randomWrites is true (in which case, in may vary). But either way, each thread
+        // will be reading n files, so this works.
+        int totalNumberOfFiles = filesPerDirectory * directories.size();
+        LOG.info("Generating " + filesPerDirectory + " files for each directory (total of " + totalNumberOfFiles + " files).");
+        final String[] targetPaths = new String[totalNumberOfFiles];
+
+        int counter = 0;
+        // Generate file names and subsequently the full file paths.
+        for (String targetDirectory : directories) {
+            // File names.
+            String[] targetFiles = Utils.getFixedLengthRandomStrings(filesPerDirectory, 15);
+
+            // Create the full paths.
+            for (String targetFile : targetFiles) {
+                targetPaths[counter++] = targetDirectory + "/" + targetFile;
+            }
         }
 
-        int maxLength = 0;
-        System.out.print("Max string length (default " + maxLength + "):\n> ");
-        try {
-            maxLength = Integer.parseInt(scanner.nextLine());
-        } catch (NumberFormatException ex) {
-            LOG.info("Defaulting to " + maxLength + ".");
-        }
+        LOG.info("Generated a total of " + totalNumberOfFiles + " file(s).");
 
-        assert directories != null;
-        writeFilesInternal(n, minLength, maxLength, numberOfThreads, directories, hdfs, configuration, nameNodeEndpoint);
+        Utils.write("./output/writeToDirectoryPaths-" + Instant.now().toEpochMilli()+ ".txt", targetPaths);
+
+        int numWritesPerThread = targetPaths.length / numberOfThreads;
+        final String[][] targetPathsPerThread = Utils.splitArray(targetPaths, numWritesPerThread);
+        assert(targetPathsPerThread != null);
+        assert(targetPathsPerThread.length == numberOfThreads);
+
+        return executeBenchmark(nameNodeEndpoint, numberOfThreads, targetPathsPerThread,
+                1, OP_WRITE_FILES_TO_DIRS, new FSOperation(nameNodeEndpoint, configuration) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return createFile(path, content, hdfs, nameNodeEndpoint);
+                    }
+                });
     }
 
     /**
      * Gets the user inputs for this benchmark, then calls the actual benchmark itself.
      */
     public static DistributedBenchmarkResult strongScalingBenchmark(final Configuration configuration,
-                                                final DistributedFileSystem sharedHdfs,
-                                                final String nameNodeEndpoint,
-                                                int n, int readsPerFile, int numThreads, String inputPath)
+                                                                    final String endpoint,
+                                                                    int numFilesPerThread, int readsPerFile,
+                                                                    int numThreads, String inputPath)
             throws FileNotFoundException, InterruptedException {
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
 
-        if (paths.size() < n) {
-            LOG.error("ERROR: The file should contain at least " + n +
+        if (paths.size() < numFilesPerThread) {
+            LOG.error("ERROR: The file should contain at least " + numFilesPerThread +
                     " HopsFS file path(s); however, it contains just " + paths.size() + " HopsFS file path(s).");
             LOG.error("Aborting operation.");
             return null;
         }
 
-        // Select a random subset of size n, where n is the number of files each thread should rea.d
+        // Select a random subset of size n, where n is the number of files each thread should read.
         Collections.shuffle(paths);
-        List<String> selectedPaths = paths.subList(0, n);
 
-        Thread[] threads = new Thread[numThreads];
-
-        // Used to synchronize threads; they each connect to HopsFS and then
-        // count down. So, they all cannot start until they are all connected.
-        final CountDownLatch startLatch = new CountDownLatch(numThreads);
-        final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
-
+        String[][] filesPerThread = new String[numThreads][numFilesPerThread];
+        int counter = 0;
         for (int i = 0; i < numThreads; i++) {
-            Thread thread = new Thread(() -> {
-                DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
+            for (int j = 0; j < numFilesPerThread; j++) {
+                // Select the first j files for thread i.
+                filesPerThread[i][j] = paths.get(counter);
+            }
 
-                startLatch.countDown();
-
-                for (String filePath : selectedPaths) {
-                    for (int j = 0; j < readsPerFile; j++)
-                        readFile(filePath, hdfs, nameNodeEndpoint);
-                }
-
-                // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
-                // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
-                // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
-                // so that all the statistics are placed into the appropriate collections where we can aggregate them.
-                endSemaphore.release();
-
-                try {
-                    hdfs.close();
-                } catch (IOException ex) {
-                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
-                }
-            });
-            threads[i] = thread;
+            // Each thread receives a random subset of files.
+            // So, we shuffle the paths each time to ensure each thread gets a random subset.
+            Collections.shuffle(paths);
         }
 
-        LOG.info("Starting threads.");
-        long start = System.currentTimeMillis();
-        for (Thread thread : threads) {
-            thread.start();
-        }
+        LOG.debug("Each of the " + numThreads + " thread(s) will read " + numFilesPerThread + " random file(s).");
 
-        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
-        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
-        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
-        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
-        endSemaphore.acquire();
-        long end = System.currentTimeMillis();
-
-        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
-        for (Thread thread : threads) {
-            thread.join();
-        }
-
-        double durationSeconds = (end - start) / 1000.0;
-        double totalReads = (double)n * (double)readsPerFile * (double)numThreads;
-        double throughput = (totalReads / durationSeconds);
-
-        LOG.info("Throughput: " + throughput + " ops/sec.");
-
-        return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
-                start, end);
+        return executeBenchmark(endpoint, numThreads, filesPerThread, readsPerFile, OP_STRONG_SCALING_READS,
+                new FSOperation(endpoint, configuration) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return readFile(path, hdfs, endpoint);
+                    }
+                });
     }
 
     /**
@@ -201,15 +373,15 @@ public class Commands {
      *
      * This is the WEAK SCALING (read) benchmark.
      *
-     * @param n Number of files to read.
-     * @param numFilesToRead How many files should be read.
+     * @param numThreads Number of threads.
+     * @param filesPerThread How many files should be read by each thread.
      * @param inputPath Path to local file containing HopsFS file paths (of the files to read).
      */
     public static DistributedBenchmarkResult weakScalingBenchmarkV2(final Configuration configuration,
-                                                        final DistributedFileSystem sharedHdfs,
-                                                        final String nameNodeEndpoint, int n,
-                                                        final int numFilesToRead, String inputPath,
-                                                        boolean shuffle)
+                                                        
+                                                        final String nameNodeEndpoint, int numThreads,
+                                                        final int filesPerThread, String inputPath,
+                                                        boolean shuffle, int opCode)
             throws InterruptedException, FileNotFoundException {
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
 
@@ -218,87 +390,39 @@ public class Commands {
             Collections.shuffle(paths);
         }
 
-        if (paths.size() < n) {
-            LOG.error("ERROR: The file should contain at least " + n +
+        if (paths.size() < numThreads) {
+            LOG.error("ERROR: The file should contain at least " + numThreads +
                     " HopsFS file path(s); however, it contains just " + paths.size() + " HopsFS file path(s).");
             LOG.error("Aborting operation.");
             return null;
         }
 
-        Thread[] threads = new Thread[n];
-
-        // Used to synchronize threads; they each connect to HopsFS and then
-        // count down. So, they all cannot start until they are all connected.
-        final CountDownLatch latch = new CountDownLatch(n);
-        final Semaphore endSemaphore = new Semaphore((n * -1) + 1);
-
         Random rng = new Random(); // TODO: Optionally seed this?
 
-        final String[][] fileBatches = new String[n][numFilesToRead];
-        for (int i = 0; i < n; i++) {
-            fileBatches[i] = new String[numFilesToRead]; // Prolly don't need to do this but oh well.
-            for (int j = 0; j < numFilesToRead; j++) {
-                int filePathIndex = rng.nextInt(paths.size());
+        final String[][] fileBatches = new String[numThreads][filesPerThread];
+        int counter = 0;
+        for (int i = 0; i < numThreads; i++) {
+            for (int j = 0; j < filesPerThread; j++) {
+                int filePathIndex;
+                if (shuffle)
+                    filePathIndex = rng.nextInt(paths.size());
+                else
+                    filePathIndex = counter++;
                 fileBatches[i][j] = paths.get(filePathIndex);
             }
+            counter = 0;
+
+            if (shuffle)
+                Collections.shuffle(paths);
         }
 
-        for (int i = 0; i < n; i++) {
-            final String[] filesToRead = fileBatches[i];
-
-            Thread thread = new Thread(() -> {
-                DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
-
-                latch.countDown();
-
-                for (String s : filesToRead) readFile(s, hdfs, nameNodeEndpoint);
-
-                // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
-                // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
-                // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
-                // so that all the statistics are placed into the appropriate collections where we can aggregate them.
-                endSemaphore.release();
-
-                try {
-                    hdfs.close();
-                } catch (IOException ex) {
-                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
-                }
-            });
-            threads[i] = thread;
-        }
-
-        LOG.info("Starting threads.");
-        long start = System.currentTimeMillis();
-        for (Thread thread : threads) {
-            thread.start();
-        }
-
-        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
-        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
-        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
-        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
-        endSemaphore.acquire();
-        long end = System.currentTimeMillis();
-
-        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
-        for (Thread thread : threads) {
-            thread.join();
-        }
-
-        int totalCacheHits = 0;
-        int totalCacheMisses = 0;
-
-        // double durationSeconds = duration.getSeconds() + (duration.getNano() / 1e9);
-        double durationSeconds = (end - start) / 1000.0;
-        double totalReads = (double)n * (double)numFilesToRead;
-        double throughput = (totalReads / durationSeconds);
-        LOG.info("Finished performing all " + totalReads + " file reads in " + durationSeconds);
-        LOG.info("Throughput: " + throughput + " ops/sec.");
-
-
-        return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
-                start, end, totalCacheHits, totalCacheMisses);
+        return executeBenchmark(nameNodeEndpoint, numThreads, fileBatches, 1, opCode,
+                new FSOperation(nameNodeEndpoint, configuration) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return readFile(path, hdfs, nameNodeEndpoint);
+                    }
+                });
     }
 
     /**
@@ -306,14 +430,15 @@ public class Commands {
      *
      * This is the WEAK SCALING (read) benchmark.
      *
-     * @param n Number of files to read.
+     * @param numThreads Number of threads & number of files to read, as each thread reads one file.
      * @param readsPerFile How many times each file should be read.
      * @param inputPath Path to local file containing HopsFS filepaths (of the files to read).
      */
-    public static DistributedBenchmarkResult readNFiles(final Configuration configuration,
-                                                        final DistributedFileSystem sharedHdfs,
-                                                        final String nameNodeEndpoint, int n,int readsPerFile,
-                                                        String inputPath, boolean shuffle)
+    public static DistributedBenchmarkResult weakScalingReadsV1(final Configuration configuration,
+                                                                
+                                                                final String nameNodeEndpoint, int numThreads,
+                                                                int readsPerFile, String inputPath, boolean shuffle,
+                                                                int opCode)
             throws InterruptedException, FileNotFoundException {
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
 
@@ -322,78 +447,74 @@ public class Commands {
             Collections.shuffle(paths);
         }
 
-        if (paths.size() < n) {
-            LOG.error("ERROR: The file should contain at least " + n +
+        if (paths.size() < numThreads) {
+            LOG.error("ERROR: The file should contain at least " + numThreads +
                     " HopsFS file path(s); however, it contains just " + paths.size() + " HopsFS file path(s).");
             LOG.error("Aborting operation.");
             return null;
         }
 
-        Thread[] threads = new Thread[n];
-
-        // Used to synchronize threads; they each connect to HopsFS and then
-        // count down. So, they all cannot start until they are all connected.
-        final CountDownLatch latch = new CountDownLatch(n);
-        final Semaphore endSemaphore = new Semaphore((n * -1) + 1);
-
-        for (int i = 0; i < n; i++) {
-            final String filePath = paths.get(i);
-            Thread thread = new Thread(() -> {
-                DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
-
-                latch.countDown();
-
-                for (int j = 0; j < readsPerFile; j++)
-                    readFile(filePath, hdfs, nameNodeEndpoint);
-
-                // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
-                // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
-                // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
-                // so that all the statistics are placed into the appropriate collections where we can aggregate them.
-                endSemaphore.release();
-
-                try {
-                    hdfs.close();
-                } catch (IOException ex) {
-                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
-                }
-            });
-            threads[i] = thread;
+        String[][] pathsPerThread = new String[numThreads][1];
+        for (int i = 0; i < numThreads; i++) {
+            pathsPerThread[i][0] = paths.get(i);
         }
 
-        LOG.info("Starting threads.");
-        long start = System.currentTimeMillis();
-        for (Thread thread : threads) {
-            thread.start();
+        return executeBenchmark(nameNodeEndpoint, numThreads, pathsPerThread, readsPerFile, opCode,
+                new FSOperation(nameNodeEndpoint, configuration) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return readFile(path, hdfs, nameNodeEndpoint);
+                    }
+                });
+    }
+
+    public static DistributedBenchmarkResult getFileStatusOperation(final Configuration configuration,
+                                                                    final String endpoint) throws InterruptedException {
+        System.out.print("Path to local file containing HopsFS/HDFS paths:\n> ");
+        String localFilePath = scanner.nextLine();
+
+        System.out.print("Stat calls per file/directory:\n> ");
+        int opsPerFile = Integer.parseInt(scanner.nextLine());
+
+        System.out.print("Number of threads:\n> ");
+        int numThreads = Integer.parseInt(scanner.nextLine());
+
+        List<String> paths;
+        try {
+            paths = Utils.getFilePathsFromFile(localFilePath);
+        } catch (FileNotFoundException ex) {
+            LOG.error("Could not find file: '" + localFilePath + "'");
+            return null;
+        }
+        int numPaths = paths.size();
+
+        int filesPerArray = (int)Math.floor((double)numPaths/numThreads);
+        int remainder = numPaths % numThreads;
+
+        if (remainder != 0) {
+            LOG.info("Assigning all but last thread " + filesPerArray +
+                    " files. The last thread will be assigned " + remainder + " files.");
+        } else {
+            LOG.info("Assigning each thread " + filesPerArray + " files.");
         }
 
-        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
-        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
-        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
-        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
-        endSemaphore.acquire();
-        long end = System.currentTimeMillis();
+        String[][] pathsPerThread = Utils.splitArray(paths.toArray(new String[0]), filesPerArray);
 
-        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
-        for (Thread thread : threads) {
-            thread.join();
-        }
+        assert pathsPerThread != null;
+        LOG.info("pathsPerThread.length: " + pathsPerThread.length);
 
-        double durationSeconds = (end - start) / 1000.0;
-
-        LOG.info("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + durationSeconds);
-        double totalReads = (double)n * (double)readsPerFile;
-        double throughput = (totalReads / durationSeconds);
-        LOG.info("Throughput: " + throughput + " ops/sec.");
-
-
-        return new DistributedBenchmarkResult(null, OP_STRONG_SCALING_READS, (int)totalReads, durationSeconds,
-                start, end, 0, 0);
+        return executeBenchmark(endpoint, numThreads, pathsPerThread, opsPerFile, OP_GET_FILE_STATUS,
+                new FSOperation(endpoint, configuration) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return getFileStatus(path, hdfs, endpoint);
+                    }
+                });
     }
 
     public static void readFilesOperation(final Configuration configuration,
-                                          DistributedFileSystem sharedHdfs,
-                                          final String nameNodeEndpoint)
+                                          final String nameNodeEndpoint,
+                                          int opCode)
             throws InterruptedException {
         System.out.print("Path to local file containing HopsFS/HDFS paths:\n> ");
         String localFilePath = scanner.nextLine();
@@ -404,7 +525,7 @@ public class Commands {
         System.out.print("Number of threads:\n> ");
         int numThreads = Integer.parseInt(scanner.nextLine());
 
-        readFiles(localFilePath, readsPerFile, numThreads, configuration, sharedHdfs, nameNodeEndpoint);
+        readFiles(localFilePath, readsPerFile, numThreads, configuration, nameNodeEndpoint, opCode);
     }
 
     public static DistributedBenchmarkResult deleteFilesOperation(DistributedFileSystem sharedHdfs, final String nameNodeEndpoint) {
@@ -473,15 +594,16 @@ public class Commands {
      * @param readsPerFile Number of times each file should be read.
      * @param numThreads Number of threads to use when performing the reads concurrently.
      */
-    public static void readFiles(String path, int readsPerFile, int numThreads,
-                                 final Configuration configuration, DistributedFileSystem sharedHdfs,
-                                 final String nameNodeEndpoint) throws InterruptedException {
+    public static DistributedBenchmarkResult readFiles(String path, int readsPerFile, int numThreads,
+                                                       final Configuration configuration, final String nameNodeEndpoint,
+                                                       int opCode)
+            throws InterruptedException {
         List<String> paths;
         try {
             paths = Utils.getFilePathsFromFile(path);
         } catch (FileNotFoundException ex) {
             LOG.error("Could not find file: '" + path + "'");
-            return;
+            return null;
         }
         int n = paths.size();
 
@@ -500,86 +622,26 @@ public class Commands {
         assert pathsPerThread != null;
         LOG.info("pathsPerThread.length: " + pathsPerThread.length);
 
-        Thread[] threads = new Thread[numThreads];
-
-        // Used to synchronize threads; they each connect to HopsFS and then
-        // count down. So, they all cannot start until they are all connected.
-        final CountDownLatch latch = new CountDownLatch(numThreads);
-        final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
-
-        for (int i = 0; i < numThreads; i++) {
-            final String[] pathsForThread = pathsPerThread[i];
-            Thread thread = new Thread(() -> {
-                DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
-
-                latch.countDown();
-
-                for (String filePath : pathsForThread) {
-                    for (int j = 0; j < readsPerFile; j++)
-                        readFile(filePath, hdfs, nameNodeEndpoint);
-                }
-
-                // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
-                // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
-                // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
-                // so that all the statistics are placed into the appropriate collections where we can aggregate them.
-                endSemaphore.release();
-
-                try {
-                    hdfs.close();
-                } catch (IOException ex) {
-                    LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
-                }
-            });
-            threads[i] = thread;
-        }
-
-        LOG.info("Starting threads.");
-        long start = System.currentTimeMillis();
-        for (Thread thread : threads) {
-            thread.start();
-        }
-
-        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
-        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
-        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
-        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
-        endSemaphore.acquire();
-        long end = System.currentTimeMillis();
-
-        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
-        for (Thread thread : threads) {
-            thread.join();
-        }
-
-        double durationSeconds = (end - start) / 1000.0;
-
-        LOG.info("Finished performing all " + (readsPerFile * paths.size()) + " file reads in " + durationSeconds);
-        double totalReads = (double)n * (double)readsPerFile;
-        double throughput = (totalReads / durationSeconds);
-        LOG.info("Throughput: " + throughput + " ops/sec.");
+        return executeBenchmark(nameNodeEndpoint, numThreads, pathsPerThread, readsPerFile, opCode,
+                new FSOperation(nameNodeEndpoint, configuration) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return readFile(path, hdfs, nameNodeEndpoint);
+                    }
+                });
     }
 
     /**
      * Write a bunch of files to a target directory.
-     *
-     * @param sharedHdfs Passed by main thread. We only use this if we're doing single-threaded.
      */
-    public static void writeFilesToDirectory(DistributedFileSystem sharedHdfs,
-                                             final Configuration configuration,
+    public static void writeFilesToDirectory(final Configuration configuration,
                                              final String nameNodeEndpoint)
             throws InterruptedException, IOException {
         System.out.print("Target directory:\n> ");
         String targetDirectory = scanner.nextLine();
 
         System.out.print("Number of files:\n> ");
-        int n = Integer.parseInt(scanner.nextLine());
-
-        System.out.print("Min string length:\n> ");
-        int minLength = Integer.parseInt(scanner.nextLine());
-
-        System.out.print("Max string length:\n> ");
-        int maxLength = Integer.parseInt(scanner.nextLine());
+        int numFiles = Integer.parseInt(scanner.nextLine());
 
         // If 'y', create the files one-by-one. If 'n', we'll use a configurable number of threads.
         System.out.print("Sequentially create files? [Y/n]\n>");
@@ -592,39 +654,66 @@ public class Commands {
             numThreads = Integer.parseInt(scanner.nextLine());
         }
 
-        writeFilesInternal(n, minLength, maxLength, numThreads, Collections.singletonList(targetDirectory),
-                sharedHdfs, configuration, nameNodeEndpoint);
+        writeFilesInternal(numFiles, numThreads, Collections.singletonList(targetDirectory),
+                OP_WEAK_SCALING_WRITES, configuration, nameNodeEndpoint, false);
     }
 
     /**
      * Write a bunch of files to a bunch of directories.
      *
-     * @param n Number of files per directory.
-     * @param minLength Minimum length of randomly-generated file contents.
-     * @param maxLength Maximum length of randomly-generated file contents.
+     * The {@code targetDirectories} list is expected to have size equal to {@code numThreads}, unless
+     * {@code randomWrites} is true. When {@code randomWrites} is true, we just generate a bunch of random writes
+     * using all provided directories as part of the sample space.
+     *
+     * @param filesPerDirectory Number of files per directory (or per thread for random writes).
      * @param numThreads The number of threads to use when performing the operation.
      * @param targetDirectories The target directories.
-     * @param sharedHdfs Shared/master DistributedFileSystem instance.
      * @param configuration Configuration for per-thread DistributedFileSystem objects.
+     * @param randomWrites Generate a bunch of random writes across all directories,
+     *                     rather than doing the writes per-directory.
      */
-    public static DistributedBenchmarkResult writeFilesInternal(int n, int minLength, int maxLength, int numThreads,
-                                    List<String> targetDirectories, DistributedFileSystem sharedHdfs,
-                                    Configuration configuration, final String nameNodeEndpoint)
+    public static DistributedBenchmarkResult writeFilesInternal(int filesPerDirectory, int numThreads,
+                                                                List<String> targetDirectories, int opCode,
+                                                                Configuration configuration,
+                                                                final String nameNodeEndpoint, boolean randomWrites)
             throws IOException, InterruptedException {
-        // Generate the file contents and file names.
-        int totalNumberOfFiles = n * targetDirectories.size();
-        LOG.info("Generating " + n + " files for each directory (total of " + totalNumberOfFiles + " files.");
+        // Generate the file contents and file names. targetDirectories has length equal to numThreads
+        // except when randomWrites is true (in which case, in may vary). But either way, each thread
+        // will be reading n files, so this works.
+        int totalNumberOfFiles = filesPerDirectory * numThreads;
+        LOG.info("Generating " + filesPerDirectory + " files for each directory (total of " + totalNumberOfFiles + " files).");
         final String[] targetPaths = new String[totalNumberOfFiles];
-        int counter = 0;
-        double filesPerSec = 0.0;
 
-        String[] content = Utils.getVariableLengthRandomStrings(totalNumberOfFiles, minLength, maxLength);
+        // The standard way of generating files. Just generate a bunch of files for each provided directory.
+        if (!randomWrites) {
+            int counter = 0;
+            // Generate file names and subsequently the full file paths.
+            for (String targetDirectory : targetDirectories) {
+                // File names.
+                String[] targetFiles = Utils.getFixedLengthRandomStrings(filesPerDirectory, 15);
 
-        for (String targetDirectory : targetDirectories) {
-            String[] targetFiles = Utils.getFixedLengthRandomStrings(n, 15);
+                // Create the full paths.
+                for (String targetFile : targetFiles) {
+                    targetPaths[counter++] = targetDirectory + "/" + targetFile;
+                }
+            }
+        } else {
+            // Generate truly random reads using the `targetDirectories` list as the sample space from which
+            // we draw random directories to write to. We generate random writes with replacement from the
+            // targetDirectories list.
+            Random rng = new Random();
 
-            for (String targetFile : targetFiles) {
-                targetPaths[counter++] = targetDirectory + "/" + targetFile;
+            // Generate the filenames. These will be appended to the end of the directories.
+            Utils.getFixedLengthRandomStrings(totalNumberOfFiles, 20, targetPaths);
+
+            for (int i = 0; i < totalNumberOfFiles; i++) {
+                // Randomly select a directory from the list of all target directories.
+                String directory = targetDirectories.get(rng.nextInt(targetDirectories.size()));
+
+                // We initially put all the randomly-generated filenames in 'targetPaths'. Now, we prepend each
+                // randomly-generated filename with the randomly-selected directory. We used targetPaths to store
+                // the filenames first just to avoid allocating too many arrays for large read tests.
+                targetPaths[i] = directory + "/" + targetPaths[i];
             }
         }
 
@@ -632,90 +721,46 @@ public class Commands {
 
         Utils.write("./output/writeToDirectoryPaths-" + Instant.now().toEpochMilli()+ ".txt", targetPaths);
 
-        long start, end;
-        int numSuccess = 0;
-        if (numThreads == 1) {
-            start = System.currentTimeMillis();
+        // TODO: Are we splitting this correctly?
+        int numWritesPerThread = targetPaths.length / numThreads;
+        final String[][] targetPathsPerThread = Utils.splitArray(targetPaths, numWritesPerThread);
+        assert(targetPathsPerThread != null);
+        assert(targetPathsPerThread.length == numThreads);
 
-            numSuccess = createFiles(targetPaths, content, sharedHdfs, nameNodeEndpoint);
-
-            end = System.currentTimeMillis();
-            LOG.info("");
-            LOG.info("");
-            LOG.info("===============================");
-        } else {
-            int filesPerArray = (int)Math.floor((double)totalNumberOfFiles / numThreads);
-            int remainder = totalNumberOfFiles % numThreads;
-
-            if (remainder != 0) {
-                LOG.info("Assigning all but last thread " + filesPerArray +
-                        " files. The last thread will be assigned " + remainder + " files.");
-            } else {
-                LOG.info("Assigning each thread " + filesPerArray + " files.");
-            }
-
-            final String[][] contentPerArray = Utils.splitArray(content, filesPerArray);
-            final String[][] targetPathsPerArray = Utils.splitArray(targetPaths, filesPerArray);
-
-            assert targetPathsPerArray != null;
-            assert contentPerArray != null;
-
-            final CountDownLatch latch = new CountDownLatch(numThreads);
-            final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
-
-            Thread[] threads = new Thread[numThreads];
-
-            for (int i = 0; i < numThreads; i++) {
-                final int idx = i;
-                Thread thread = new Thread(() -> {
-                    DistributedFileSystem hdfs = Commander.initDfsClient(nameNodeEndpoint);
-
-                    latch.countDown();
-                    int localNumSuccess = createFiles(targetPathsPerArray[idx], contentPerArray[idx], hdfs, nameNodeEndpoint);
-
-                    endSemaphore.release();
-
-                    try {
-                        hdfs.close();
-                    } catch (IOException ex) {
-                        LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+        return executeBenchmark(nameNodeEndpoint, numThreads, targetPathsPerThread, 1, opCode,
+                new FSOperation(nameNodeEndpoint, configuration) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return createFile(path, content, hdfs, nameNodeEndpoint);
                     }
                 });
-                threads[i] = thread;
-            }
+    }
 
-            LOG.info("Starting threads.");
-            start = System.currentTimeMillis();
-            for (Thread thread : threads) {
-                thread.start();
-            }
+    /**
+     * Check if the user is trying to cancel the current operation.
+     *
+     * @param input The user's input.
+     */
+    private static void checkForCancel(String input) {
+        if (input.equalsIgnoreCase("abort") || input.equalsIgnoreCase("cancel") ||
+                input.equalsIgnoreCase("exit"))
+            throw new IllegalArgumentException("User specified '" + input + "'. Aborting operation.");
+    }
 
-            // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
-            // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
-            // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
-            // so that all the statistics are placed into the appropriate collections where we can aggregate them.
-            endSemaphore.acquire();
-            end = System.currentTimeMillis();
-
-            LOG.info("Benchmark completed in " + (end - start) + "ms. Joining threads now...");
-            for (Thread thread : threads) {
-                thread.join();
+    public static boolean getFileStatus(String path, DistributedFileSystem hdfs, String nameNodeEndpoint) {
+        Path filePath = new Path(nameNodeEndpoint + path);
+        try {
+            FileStatus status = hdfs.getFileStatus(filePath);
+            if (status == null) {
+                LOG.warn("Received null result from getFileInfo('" + filePath + "')...");
+                return false;
             }
+            return true;
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
 
-        double durationSeconds = (end - start) / 1000.0;
-        filesPerSec = numSuccess / durationSeconds;
-        LOG.info("Number of successful write operations: " + numSuccess);
-        LOG.info("Number of failed write operations: " + (totalNumberOfFiles - numSuccess));
-        LOG.info("Time elapsed: " + durationSeconds);
-        LOG.info("Aggregate throughput: " + filesPerSec + " ops/sec.");
-
-        // Print the throughput including failed ops if there was at least one failed op.
-        if (totalNumberOfFiles != numSuccess)
-            LOG.info("Aggregate throughput including failures: " + (totalNumberOfFiles / durationSeconds) + " ops/sec.");
-
-        return new DistributedBenchmarkResult(null, 0, numSuccess,
-                durationSeconds, start, end);
+        return false;
     }
 
     public static void createDirectories(DistributedFileSystem hdfs, String nameNodeEndpoint) {
@@ -770,9 +815,9 @@ public class Commands {
         mkdir(subtreeRootPath, hdfs, nameNodeEndpoint);
         numDirectoriesCreated++;
 
-        List<String> directoriesCreated = new ArrayList<String>();
-        Stack<TreeNode> directoryStack = new Stack<TreeNode>();
-        TreeNode subtreeRoot = new TreeNode(subtreeRootPath, new ArrayList<TreeNode>());
+        Set<String> directoriesCreated = new HashSet<>();
+        Stack<TreeNode> directoryStack = new Stack<>();
+        TreeNode subtreeRoot = new TreeNode(subtreeRootPath, new ArrayList<>());
         directoryStack.push(subtreeRoot);
 
         while (currentDepth <= subtreeDepth) {
@@ -783,11 +828,11 @@ public class Commands {
             List<Stack<TreeNode>> currentDepthStacks = new ArrayList<>();
             while (!directoryStack.empty()) {
                 TreeNode directory = directoryStack.pop();
-                directoriesCreated.add(directory.getPath());
+                //directoriesCreated.add(directory.getPath());
 
                 String basePath = directory.getPath() + "/dir";
 
-                Stack<TreeNode> stack = createChildDirectories(basePath, maxSubDirs, hdfs, nameNodeEndpoint);
+                Stack<TreeNode> stack = createChildDirectories(basePath, maxSubDirs, hdfs, nameNodeEndpoint, directoriesCreated);
                 directory.addChildren(stack);
                 numDirectoriesCreated += stack.size();
                 currentDepthStacks.add(stack);
@@ -809,6 +854,7 @@ public class Commands {
         LOG.info("Files created: " + filesCreated + "\n");
 
         LOG.info("subtreeRoot children: " + subtreeRoot.getChildren().size());
+        LOG.info("directoriesCreated.size(): " + directoriesCreated.size());
         LOG.info(subtreeRoot.toString());
 
 //        for (String path : directoriesCreated) {
@@ -821,12 +867,15 @@ public class Commands {
     }
 
     public static Stack<TreeNode> createChildDirectories(String basePath, int subDirs,
-                                                         DistributedFileSystem hdfs, String nameNodeEndpoint) {
-        Stack<TreeNode> directoryStack = new Stack<TreeNode>();
+                                                         DistributedFileSystem hdfs,
+                                                         String nameNodeEndpoint,
+                                                         Collection<String> directoriesCreated) {
+        Stack<TreeNode> directoryStack = new Stack<>();
         for (int i = 0; i < subDirs; i++) {
             String path = basePath + i;
             mkdir(path, hdfs, nameNodeEndpoint);
-            TreeNode node = new TreeNode(path, new ArrayList<TreeNode>());
+            directoriesCreated.add(path);
+            TreeNode node = new TreeNode(path, new ArrayList<>());
             directoryStack.push(node);
         }
 
@@ -836,37 +885,15 @@ public class Commands {
     public static void createFileOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
+
+        checkForCancel(fileName);
+
         System.out.print("File contents:\n> ");
         String fileContents = scanner.nextLine().trim();
 
+        checkForCancel(fileName);
+
         createFile(fileName, fileContents, hdfs, nameNodeEndpoint);
-    }
-
-    /**
-     * Create files using the names and contents provide by the two parameters.
-     *
-     * The two argument lists must have the same length.
-     *
-     * @param names File names.
-     * @param content File contents.
-     *
-     * @return The number of successful create operations.
-     */
-    public static int createFiles(String[] names, String[] content, DistributedFileSystem hdfs, String nameNodeEndpoint) {
-        assert(names.length == content.length);
-
-        int numSuccess = 0;
-
-        for (int i = 0; i < names.length; i++) {
-            LOG.info("Writing file " + i + "/" + names.length);
-            long s = System.currentTimeMillis();
-            boolean success = createFile(names[i], content[i], hdfs, nameNodeEndpoint);
-            if (success) numSuccess++;
-            long t = System.currentTimeMillis();
-            LOG.info("Wrote file " + (i+1) + "/" + names.length + " in " + (t - s) + " ms.");
-        }
-
-        return numSuccess;
     }
 
     /**
@@ -876,16 +903,17 @@ public class Commands {
      *
      * @return True if the create operation succeeds, otherwise false.
      */
-    public static boolean createFile(String name, String contents,
-                                  DistributedFileSystem hdfs,
-                                  String nameNodeEndpoint) {
+    public static boolean createFile(String name,
+                                     String contents,
+                                     DistributedFileSystem hdfs,
+                                     String nameNodeEndpoint) {
         Path filePath = new Path(nameNodeEndpoint + name);
 
         try {
             FSDataOutputStream outputStream = hdfs.create(filePath);
 
             if (!contents.isEmpty()) {
-                BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
+                BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
                 br.write(contents);
                 br.close();
                 LOG.info("\t Successfully created non-empty file '" + filePath + "'");
@@ -902,11 +930,25 @@ public class Commands {
         return false;
     }
 
+    /**
+     * Check if the user is trying to cancel the current operation.
+     *
+     * @param input The user's input.
+     */
+    private static void checkForExit(String input) {
+        if (input.equalsIgnoreCase("abort") || input.equalsIgnoreCase("cancel") ||
+                input.equalsIgnoreCase("exit"))
+            throw new IllegalArgumentException("User specified '" + input + "'. Aborting operation.");
+    }
+
     public static void renameOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
         System.out.print("Original file path:\n> ");
         String originalFileName = scanner.nextLine();
+        checkForExit(originalFileName);
+
         System.out.print("Renamed file path:\n> ");
         String renamedFileName = scanner.nextLine();
+        checkForExit(renamedFileName);
 
         Path filePath = new Path(nameNodeEndpoint + originalFileName);
         Path filePathRename = new Path(nameNodeEndpoint + renamedFileName);
@@ -927,7 +969,6 @@ public class Commands {
 
         try {
             FileStatus[] fileStatus = hdfs.listStatus(new Path(nameNodeEndpoint + targetDirectory));
-            LOG.info("Directory '" + targetDirectory + "' contains " + fileStatus.length + " files.");
             for(FileStatus status : fileStatus)
                 LOG.info(status.getPath().toString());
             LOG.info("Directory '" + targetDirectory + "' contains " + fileStatus.length + " files.");
@@ -970,7 +1011,7 @@ public class Commands {
         try {
             FSDataOutputStream outputStream = hdfs.append(filePath);
             LOG.info("\t Called append() successfully.");
-            BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
+            BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
             LOG.info("\t Created BufferedWriter object.");
             br.write(fileContents);
             LOG.info("\t Appended \"" + fileContents + "\" to file using BufferedWriter.");
@@ -988,31 +1029,35 @@ public class Commands {
     }
 
     /**
-     *
-     *
      * Read the HopsFS/HDFS file at the given path.
      * @param fileName The path to the file to read.
+     * @return The latency of the operation in nanoseconds.
      */
-    public static void readFile(String fileName, DistributedFileSystem hdfs, String nameNodeEndpoint) {
+    public static boolean readFile(String fileName, DistributedFileSystem hdfs, String nameNodeEndpoint) {
         Path filePath = new Path(nameNodeEndpoint + fileName);
 
         try {
             FSDataInputStream inputStream = hdfs.open(filePath);
+
             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
-            String line = null;
+            String line;
 
             while ((line = br.readLine()) != null)
                 LOG.info(line);
             inputStream.close();
             br.close();
+            return true;
         } catch (IOException ex) {
             ex.printStackTrace();
+            return false;
         }
     }
 
     private static int getIntFromUser(String prompt) {
         System.out.print(prompt + "\n> ");
-        return Integer.parseInt(scanner.nextLine());
+        String input = scanner.nextLine();
+        checkForCancel(input);
+        return Integer.parseInt(input);
     }
 
     public static void deleteOperation(DistributedFileSystem hdfs, final String nameNodeEndpoint) {

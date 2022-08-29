@@ -1,6 +1,9 @@
 package com.gmail.benrcarver.distributed;
 
+import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
+
 import java.io.Serializable;
+import java.lang.management.ManagementFactory;
 
 /**
  * Encapsulates the result of running a particular benchmark. This class holds onto various metrics that
@@ -9,6 +12,7 @@ import java.io.Serializable;
  */
 public class DistributedBenchmarkResult implements Serializable {
     public String opId;
+    public String jvmId;
     public int operation;
     public int numOpsPerformed;
 
@@ -27,10 +31,6 @@ public class DistributedBenchmarkResult implements Serializable {
      */
     public long stopTime;
 
-    public int cacheHits;
-
-    public int cacheMisses;
-
     public DistributedBenchmarkResult() { }
 
     /**
@@ -47,20 +47,13 @@ public class DistributedBenchmarkResult implements Serializable {
      */
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed,
                                       double duration, long startTime, long stopTime) {
-        this(opId, operation, numOpsPerformed, duration, startTime, stopTime, 0, 0);
-    }
-
-    public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed,
-                                      double duration, long startTime, long stopTime,
-                                      int cacheHits, int cacheMisses) {
         this.opId = opId;
         this.operation = operation;
         this.numOpsPerformed = numOpsPerformed;
         this.durationSeconds = duration;
         this.startTime = startTime;
         this.stopTime = stopTime;
-        this.cacheHits = cacheHits;
-        this.cacheMisses = cacheMisses;
+        this.jvmId = ManagementFactory.getRuntimeMXBean().getName();
     }
 
     public void setOperationId(String operationId) {
@@ -80,6 +73,6 @@ public class DistributedBenchmarkResult implements Serializable {
     public String toString() {
         return "DistributedBenchmarkResult(opId=" + opId + ", operation=" + operation + ", numOpsPerformed=" +
                 numOpsPerformed + ", duration=" + durationSeconds + "sec, startTime=" + startTime + ", stopTime=" +
-                stopTime + ", cacheHits=" + cacheHits + ", cacheMisses=" + cacheMisses + ")";
+                stopTime + ")";
     }
 }
