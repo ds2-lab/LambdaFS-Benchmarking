@@ -1671,7 +1671,7 @@ public class Commander {
         public double throughput;
         public int cacheHits;
         public int cacheMisses;
-        public String metricsString; // All the metrics I'd want formatted so I can copy and paste into Excel.
+        public String metricsString; // All the metrics I'd want formatted so that I can copy and paste into Excel.
 
         public AggregatedResult(double throughput, int cacheHits, int cacheMisses, String metricsString) {
             this.throughput = throughput;
