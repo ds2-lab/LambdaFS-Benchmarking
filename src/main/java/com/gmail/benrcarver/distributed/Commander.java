@@ -228,6 +228,8 @@ public class Commander {
             hdfsConfigFilePath = config.getHdfsConfigFile();
 
             LOG.info("Loaded configuration!");
+            LOG.debug("NameNode endpoint: " + nameNodeEndpoint);
+            LOG.debug("HDFS configuration file path: " + hdfsConfigFilePath);
             LOG.info(String.valueOf(config));
         }
     }
