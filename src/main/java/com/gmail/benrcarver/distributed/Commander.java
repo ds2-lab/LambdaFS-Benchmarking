@@ -313,6 +313,13 @@ public class Commander {
                 LOG.debug("SFTP'd hdfs-site.xml to Follower " + host + ".");
             }
 
+            LOG.debug("SFTP-ing '109200' file to Follower " + host + " now.");
+            ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+            sftpChannel.connect();
+            sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/109200", "/home/ben/repos/HopsFS-Benchmarking-Utility/109200");
+            sftpChannel.disconnect();
+            LOG.debug("SFTP'd '109200' file to Follower " + host + ".");
+
             if (!manuallyLaunchFollowers)
                 executeCommand(user, host, launchCommand);
             else
