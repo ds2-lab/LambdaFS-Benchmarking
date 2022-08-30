@@ -313,12 +313,12 @@ public class Commander {
                 LOG.debug("SFTP'd hdfs-site.xml to Follower " + host + ".");
             }
 
-            LOG.debug("SFTP-ing '109200' file to Follower " + host + " now.");
-            ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
-            sftpChannel.connect();
-            sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/109200", "/home/ben/repos/HopsFS-Benchmarking-Utility/109200");
-            sftpChannel.disconnect();
-            LOG.debug("SFTP'd '109200' file to Follower " + host + ".");
+//            LOG.debug("SFTP-ing '109200' file to Follower " + host + " now.");
+//            ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+//            sftpChannel.connect();
+//            sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/109200", "/home/ben/repos/HopsFS-Benchmarking-Utility/109200");
+//            sftpChannel.disconnect();
+//            LOG.debug("SFTP'd '109200' file to Follower " + host + ".");
 
             if (!manuallyLaunchFollowers)
                 executeCommand(user, host, launchCommand);
@@ -922,20 +922,20 @@ public class Commander {
         duration.addValue(localResult.durationSeconds);
         throughput.addValue(localResult.getOpsPerSecond());
 
-        LOG.debug("========== LOCAL RESULT ==========");
-        LOG.debug("Num Ops Performed   : " + localResult.numOpsPerformed);
-        LOG.debug("Duration (sec)      : " + localResult.durationSeconds);
-        LOG.debug("Throughput          : " + localResult.getOpsPerSecond());
+        LOG.info("========== LOCAL RESULT ==========");
+        LOG.info("Num Ops Performed   : " + localResult.numOpsPerformed);
+        LOG.info("Duration (sec)      : " + localResult.durationSeconds);
+        LOG.info("Throughput          : " + localResult.getOpsPerSecond());
 
         double trialAvgLatency = 0.0;
         if (localResult.latencyStatistics != null)
             trialAvgLatency = localResult.latencyStatistics.getMean();
 
         for (DistributedBenchmarkResult res : resultQueue) {
-            LOG.debug("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");
-            LOG.debug("Num Ops Performed   : " + res.numOpsPerformed);
-            LOG.debug("Duration (sec)      : " + res.durationSeconds);
-            LOG.debug("Throughput          : " + res.getOpsPerSecond());
+            LOG.info("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");
+            LOG.info("Num Ops Performed   : " + res.numOpsPerformed);
+            LOG.info("Duration (sec)      : " + res.durationSeconds);
+            LOG.info("Throughput          : " + res.getOpsPerSecond());
 
             opsPerformed.addValue(res.numOpsPerformed);
             duration.addValue(res.durationSeconds);
