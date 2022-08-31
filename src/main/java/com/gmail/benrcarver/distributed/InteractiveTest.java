@@ -26,7 +26,7 @@ public class InteractiveTest {
         Option leaderPort = new Option("p", "leader_port", true, "The port of the Leader. Only used when this process is designated as a worker.");
         Option localOption = new Option("n", "nondistributed", false, "Run in non-distributed mode, meaning we don't launch any followers.");
 
-        Option constructBenchmarkFS = new Option("b", "benchmark", false, "Run a hard-coded script to create a bunch of files and directories for benchmarking.");
+        Option constructBenchmarkFS = new Option("s", "setup_filesystem", false, "Run a hard-coded script to create a bunch of files and directories for benchmarking.");
 
         //Option logLevelOption = new Option("ll", "loglevel", true, "The log4j log level to pass to the NameNodes.");
         Option numFollowersOpt = new Option("f", "num_followers", true, "Start only the first 'f' followers listed in the config.");
@@ -59,7 +59,7 @@ public class InteractiveTest {
             System.exit(1);
         }
 
-        if (cmd.hasOption("constructBenchmarkFS")) {
+        if (cmd.hasOption("setup_filesystem")) {
             LOG.info("Will create benchmark-ready file system state...");
 
             // TODO: Using the tree10920 file, create all of the required directories.
