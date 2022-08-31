@@ -73,8 +73,8 @@ public class InteractiveTest {
                     true, /* If it has this option, then it is true */
                     0, false, false,false);
             commander.startNoLoop();
-            commander.createDirectoriesFromFile("./fs_data/dirs.txt", 16);
-            commander.createEmptyFilesFromFile("./fs_data/files.txt", 16);
+            commander.createDirectoriesFromFile("./fs_data/dirs_alt.txt", 16);
+            commander.createEmptyFilesFromFile("./fs_data/files_alt.txt", 16);
         }
 
         // If the user specified the worker argument, then we launch as a Follower.
