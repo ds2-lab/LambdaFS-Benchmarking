@@ -220,7 +220,7 @@ public class Commander {
      *
      * @throws FileNotFoundException If there is no file located at the path specified by {@code filePath}.
      */
-    protected void createDirectoriesFromFile(String filePath, int numThreads)
+    protected DistributedBenchmarkResult createDirectoriesFromFile(String filePath, int numThreads)
             throws FileNotFoundException, InterruptedException {
         String[] directories = Utils.getFilePathsFromFile(filePath).toArray(new String[0]);
 
@@ -251,7 +251,7 @@ public class Commander {
         else
             LOG.info("Created " + directories.length + " directory in " + duration + " ms.");
 
-        LOG.info("========== LOCAL RESULT ==========");
+        LOG.info("========== DIRS RESULT ==========");
         LOG.info("Num Ops Performed   : " + res.numOpsPerformed);
         LOG.info("Duration (sec)      : " + res.durationSeconds);
         LOG.info("Throughput          : " + res.getOpsPerSecond());
@@ -263,6 +263,8 @@ public class Commander {
                     ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
                     ", N: " + latency.getN() + "]");
         }
+
+        return res;
     }
 
     /**
@@ -272,7 +274,7 @@ public class Commander {
      *
      * @throws FileNotFoundException If there is no file located at the path specified by {@code filePath}.
      */
-    protected void createEmptyFilesFromFile(String filePath, int numThreads)
+    protected DistributedBenchmarkResult createEmptyFilesFromFile(String filePath, int numThreads)
             throws FileNotFoundException, InterruptedException {
         String[] files = Utils.getFilePathsFromFile(filePath).toArray(new String[0]);
 
@@ -304,7 +306,7 @@ public class Commander {
         else
             LOG.info("Created " + files.length + " file in " + duration + " ms.");
 
-        LOG.info("========== LOCAL RESULT ==========");
+        LOG.info("========== FILES RESULT ==========");
         LOG.info("Num Ops Performed   : " + res.numOpsPerformed);
         LOG.info("Duration (sec)      : " + res.durationSeconds);
         LOG.info("Throughput          : " + res.getOpsPerSecond());
@@ -316,6 +318,8 @@ public class Commander {
                     ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
                     ", N: " + latency.getN() + "]");
         }
+
+        return res;
     }
 
     /**
