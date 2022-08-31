@@ -39,4 +39,5 @@ public class Constants {
     public static final int OP_CREATE_DIRECTORIES = 19;
     public static final int OP_WEAK_SCALING_READS_V2 = 20;
     public static final int OP_GET_FILE_STATUS = 21;
+    public static final int OP_CREATE_DIRECTORIES_FROM_FILE = 22;
 }

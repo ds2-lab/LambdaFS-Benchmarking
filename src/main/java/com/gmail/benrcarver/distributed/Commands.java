@@ -788,6 +788,10 @@ public class Commands {
         LOG.info("Throughput: " + throughput + " ops/sec.");
     }
 
+    public static void createDirectoriesFromFile(DistributedFileSystem hdfs, String nameNodeEndpoint) {
+
+    }
+
     public static void createSubtree(DistributedFileSystem hdfs, String nameNodeEndpoint) throws IOException {
         System.out.print("Subtree root directory:\n> ");
         String subtreeRootPath = scanner.nextLine();
@@ -987,16 +991,20 @@ public class Commands {
      * Create a new directory with the given path.
      * @param path The path of the new directory.
      */
-    public static void mkdir(String path, DistributedFileSystem hdfs, String nameNodeEndpoint) {
+    public static boolean mkdir(String path, DistributedFileSystem hdfs, String nameNodeEndpoint) {
         Path filePath = new Path(nameNodeEndpoint + path);
 
         try {
             LOG.info("\t Attempting to create new directory: \"" + path + "\"");
             boolean directoryCreated = hdfs.mkdirs(filePath);
             LOG.info("\t Directory created successfully: " + directoryCreated);
+
+            return directoryCreated;
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+
+        return false;
     }
 
     public static void mkdirOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {

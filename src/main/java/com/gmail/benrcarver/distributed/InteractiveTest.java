@@ -1,5 +1,6 @@
 package com.gmail.benrcarver.distributed;
 
+import com.gmail.benrcarver.distributed.util.Utils;
 import com.jcraft.jsch.JSchException;
 import io.grpc.LoadBalancerRegistry;
 import io.grpc.internal.PickFirstLoadBalancerProvider;
@@ -25,6 +26,8 @@ public class InteractiveTest {
         Option leaderPort = new Option("p", "leader_port", true, "The port of the Leader. Only used when this process is designated as a worker.");
         Option localOption = new Option("n", "nondistributed", false, "Run in non-distributed mode, meaning we don't launch any followers.");
 
+        Option constructBenchmarkFS = new Option("b", "benchmark", false, "Run a hard-coded script to create a bunch of files and directories for benchmarking.");
+
         //Option logLevelOption = new Option("ll", "loglevel", true, "The log4j log level to pass to the NameNodes.");
         Option numFollowersOpt = new Option("f", "num_followers", true, "Start only the first 'f' followers listed in the config.");
         Option scpJarsOpt = new Option("j", "scp_jars", false, "The commander should SCP the JAR files to each follower.");
@@ -41,6 +44,7 @@ public class InteractiveTest {
         cmdLineOpts.addOption(scpJarsOpt);
         cmdLineOpts.addOption(scpConfigOpt);
         cmdLineOpts.addOption(manualLaunchFollowersOpt);
+        cmdLineOpts.addOption(constructBenchmarkFS);
 
         CommandLineParser parser = new GnuParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -53,6 +57,24 @@ public class InteractiveTest {
             formatter.printHelp("utility-name", cmdLineOpts);
 
             System.exit(1);
+        }
+
+        if (cmd.hasOption("constructBenchmarkFS")) {
+            LOG.info("Will create benchmark-ready file system state...");
+
+            // TODO: Using the tree10920 file, create all of the required directories.
+            // TODO: Also create a directory for the 50 and 186 files.
+            // TODO: Using the 109200, 50, and 186 files, create all of the files.
+
+            Commander commander = Commander.getOrCreateCommander(
+                    cmd.getOptionValue("leader_ip"),
+                    Integer.parseInt(cmd.getOptionValue("leader_port")),
+                    cmd.getOptionValue("yaml_path"),
+                    true, /* If it has this option, then it is true */
+                    0, false, false,false);
+            commander.startNoLoop();
+            commander.createDirectoriesFromFile("./fs_data/dirs.txt", 16);
+            commander.createEmptyFilesFromFile("./fs_data/files.txt", 16);
         }
 
         // If the user specified the worker argument, then we launch as a Follower.

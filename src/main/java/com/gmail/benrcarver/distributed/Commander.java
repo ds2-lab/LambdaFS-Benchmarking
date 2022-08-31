@@ -214,6 +214,111 @@ public class Commander {
     }
 
     /**
+     * Create all the directories listed in the file located at {@code filePath}.
+     * @param filePath Path to the file containing HopsFS paths of directories to be created.
+     * @param numThreads Number of threads to use when creating the directories.
+     *
+     * @throws FileNotFoundException If there is no file located at the path specified by {@code filePath}.
+     */
+    protected void createDirectoriesFromFile(String filePath, int numThreads)
+            throws FileNotFoundException, InterruptedException {
+        String[] directories = Utils.getFilePathsFromFile(filePath).toArray(new String[0]);
+
+        int numWritesPerThread = directories.length / numThreads;
+        final String[][] directoriesPerThread = Utils.splitArray(directories, numWritesPerThread);
+
+        assert(directoriesPerThread != null);
+        assert(directoriesPerThread.length == numThreads);
+
+        if (directories.length > 1)
+            LOG.info("Creating " + directories.length + " directories now...");
+        else
+            LOG.info("Creating " + directories.length + " directory now...");
+
+        long start = System.currentTimeMillis();
+        DistributedBenchmarkResult res = Commands.executeBenchmark(nameNodeEndpoint, numThreads, directoriesPerThread,
+                1, OP_WRITE_FILES_TO_DIRS, new FSOperation(nameNodeEndpoint, hdfsConfiguration) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return Commands.mkdir(path, hdfs, nameNodeEndpoint);
+                    }
+                });
+        long end = System.currentTimeMillis();
+        long duration = end - start;
+
+        if (directories.length > 1)
+            LOG.info("Created all " + directories.length + " directories in " + duration + " ms.");
+        else
+            LOG.info("Created " + directories.length + " directory in " + duration + " ms.");
+
+        LOG.info("========== LOCAL RESULT ==========");
+        LOG.info("Num Ops Performed   : " + res.numOpsPerformed);
+        LOG.info("Duration (sec)      : " + res.durationSeconds);
+        LOG.info("Throughput          : " + res.getOpsPerSecond());
+
+        if (res.latencyStatistics != null) {
+            DescriptiveStatistics latency = res.latencyStatistics;
+
+            LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
+                    ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
+                    ", N: " + latency.getN() + "]");
+        }
+    }
+
+    /**
+     * Create all the files listed in the file located at {@code filePath}.
+     * @param filePath Path to the file containing HopsFS paths of files to be created.
+     * @param numThreads Number of threads to use when creating the directories.
+     *
+     * @throws FileNotFoundException If there is no file located at the path specified by {@code filePath}.
+     */
+    protected void createEmptyFilesFromFile(String filePath, int numThreads)
+            throws FileNotFoundException, InterruptedException {
+        String[] files = Utils.getFilePathsFromFile(filePath).toArray(new String[0]);
+
+        int numWritesPerThread = files.length / numThreads;
+        final String[][] directoriesPerThread = Utils.splitArray(files, numWritesPerThread);
+
+        assert(directoriesPerThread != null);
+        assert(directoriesPerThread.length == numThreads);
+
+        if (files.length > 1)
+            LOG.info("Creating " + files.length + " directories now...");
+        else
+            LOG.info("Creating " + files.length + " directory now...");
+
+        long start = System.currentTimeMillis();
+        DistributedBenchmarkResult res = Commands.executeBenchmark(nameNodeEndpoint, numThreads, directoriesPerThread,
+                1, OP_WRITE_FILES_TO_DIRS, new FSOperation(nameNodeEndpoint, hdfsConfiguration) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        // We're hard-coding the empty string here to ensure the file is empty.
+                        return Commands.createFile(path, "", hdfs, nameNodeEndpoint);
+                    }
+                });
+        long end = System.currentTimeMillis();
+        long duration = end - start;
+
+        if (files.length > 1)
+            LOG.info("Created all " + files.length + " files in " + duration + " ms.");
+        else
+            LOG.info("Created " + files.length + " file in " + duration + " ms.");
+
+        LOG.info("========== LOCAL RESULT ==========");
+        LOG.info("Num Ops Performed   : " + res.numOpsPerformed);
+        LOG.info("Duration (sec)      : " + res.durationSeconds);
+        LOG.info("Throughput          : " + res.getOpsPerSecond());
+
+        if (res.latencyStatistics != null) {
+            DescriptiveStatistics latency = res.latencyStatistics;
+
+            LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
+                    ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
+                    ", N: " + latency.getN() + "]");
+        }
+    }
+
+    /**
      * Process the configuration file for the benchmarking utility.
      */
     private void processConfiguration(String yamlPath) throws IOException {
@@ -234,7 +339,7 @@ public class Commander {
         }
     }
 
-    public void start() throws IOException, InterruptedException {
+    public void startNoLoop() throws IOException {
         if (!nondistributed) {
             LOG.info("Commander is operating in DISTRIBUTED mode.");
             startServer();
@@ -250,6 +355,10 @@ public class Commander {
             LOG.info("Commander is operating in NON-DISTRIBUTED mode.");
         }
         Commands.TRACK_OP_PERFORMED = true;
+    }
+
+    public void start() throws IOException, InterruptedException {
+        startNoLoop();
         interactiveLoop();
     }
 
@@ -475,6 +584,10 @@ public class Commander {
                     case OP_WEAK_SCALING_READS_V2:
                         LOG.info("WeakScalingReadsV2 Selected!");
                         weakScalingReadOperationV2(hdfsConfiguration, nameNodeEndpoint);
+                        break;
+                    case OP_CREATE_DIRECTORIES_FROM_FILE:
+                        LOG.info("CREATE DIRECTORIES FROM FILE selected!");
+                        Commands.createDirectoriesFromFile(hdfs, nameNodeEndpoint);
                         break;
                     default:
                         LOG.info("ERROR: Unknown or invalid operation specified: " + op);
@@ -928,8 +1041,15 @@ public class Commander {
         LOG.info("Throughput          : " + localResult.getOpsPerSecond());
 
         double trialAvgLatency = 0.0;
-        if (localResult.latencyStatistics != null)
-            trialAvgLatency = localResult.latencyStatistics.getMean();
+        if (localResult.latencyStatistics != null) {
+            DescriptiveStatistics latency = localResult.latencyStatistics;
+
+            LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
+                    ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
+                    ", N: " + latency.getN() + "]");
+
+            trialAvgLatency += latency.getMean();
+        }
 
         for (DistributedBenchmarkResult res : resultQueue) {
             LOG.info("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");

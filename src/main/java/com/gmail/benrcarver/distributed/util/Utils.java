@@ -103,6 +103,36 @@ public class Utils {
     }
 
     /**
+     * https://stackoverflow.com/a/39788851/5937661
+     */
+    public static List<List<String>> splitList(List<String> listToSplit, int chunkSize){
+        if(chunkSize<=0){
+            return null;  // just in case :)
+        }
+        // first we have to check if the array can be split in multiple
+        // arrays of equal 'chunk' size
+        int rest = listToSplit.size() % chunkSize;  // if rest>0 then our last array will have less elements than the others
+        // then we check in how many arrays we can split our input array
+        int chunks = listToSplit.size() / chunkSize + (rest > 0 ? 1 : 0); // we may have to add an additional array for the 'rest'
+        // now we know how many arrays we need and create our result array
+        List<List<String>> lists = new ArrayList<>(chunks);
+        // we create our resulting arrays by copying the corresponding
+        // part from the input array. If we have a rest (rest>0), then
+        // the last array will have less elements than the others. This
+        // needs to be handled separately, so we iterate 1 times less.
+        for(int i = 0; i < (rest > 0 ? chunks - 1 : chunks); i++) {
+            ArrayList<String> list = new ArrayList<>();
+            // this copies 'chunk' times 'chunkSize' elements into a new array
+            lists.set(i, listToSplit.subList(i * chunkSize, i * chunkSize + chunkSize));
+        }
+        if(rest > 0){ // only when we have a rest
+            // we copy the remaining elements into the last chunk
+            lists.set(chunks - 1, listToSplit.subList((chunks - 1) * chunkSize, (chunks - 1) * chunkSize + rest));
+        }
+        return lists; // that's it
+    }
+
+    /**
      * Randomly generate n strings of length l to be used as file contents during a write operation.
      *
      * @param n The number of files to be written. We'll generate this many strings.
