@@ -400,6 +400,119 @@ public class Commands {
         }
     }
 
+    public static boolean listDirectory(DistributedFileSystem hdfs, String targetDirectory, String nameNodeEndpoint) {
+        try {
+            FileStatus[] fileStatus = hdfs.listStatus(new Path(nameNodeEndpoint + targetDirectory));
+            if (LOG.isDebugEnabled()) {
+                for (FileStatus status : fileStatus)
+                    LOG.debug(status.getPath().toString());
+                LOG.debug("Directory '" + targetDirectory + "' contains " + fileStatus.length + " files.");
+            }
+            return true;
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        return false;
+    }
+
+    public static boolean listOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
+        System.out.print("Target directory:\n> ");
+        String targetDirectory = scanner.nextLine();
+
+        return listDirectory(hdfs, targetDirectory, nameNodeEndpoint);
+    }
+
+    public static DistributedBenchmarkResult listDirectoryWeakScaling(final DistributedFileSystem sharedHdfs,
+                                                                      final String nameNodeEndpoint, int numThreads,
+                                                                      int readsPerFile, String inputPath, boolean shuffle,
+                                                                      int opCode)
+            throws InterruptedException, FileNotFoundException {
+        List<String> paths = Utils.getFilePathsFromFile(inputPath);
+
+        if (shuffle) {
+            LOG.debug("Shuffling paths.");
+            Collections.shuffle(paths);
+        }
+
+        if (paths.size() < numThreads) {
+            LOG.error("ERROR: The file should contain at least " + numThreads +
+                    " HopsFS directory path(s); however, it contains just " + paths.size() +
+                    " HopsFS directory path(s).");
+            LOG.error("Aborting operation.");
+            return null;
+        }
+
+        String[][] pathsPerThread = new String[numThreads][1];
+        for (int i = 0; i < numThreads; i++) {
+            pathsPerThread[i][0] = paths.get(i);
+        }
+
+        return executeBenchmark(sharedHdfs, nameNodeEndpoint, numThreads, pathsPerThread, readsPerFile, opCode,
+                new FSOperation(nameNodeEndpoint) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return listDirectory(hdfs, path, nameNodeEndpoint);
+                    }
+                });
+    }
+
+    /**
+     * Each thread reads N files. There may be duplicates. We randomly select N files (with replacement) from
+     * the source set of files.
+     *
+     * This is the WEAK SCALING (read) benchmark.
+     *
+     * @param numThreads Number of threads.
+     * @param filesPerThread How many files should be read by each thread.
+     * @param inputPath Path to local file containing HopsFS file paths (of the files to read).
+     */
+    public static DistributedBenchmarkResult statFilesWeakScaling(final DistributedFileSystem sharedHdfs,
+                                                                  final String nameNodeEndpoint, int numThreads,
+                                                                  final int filesPerThread, String inputPath,
+                                                                  boolean shuffle, int opCode)
+            throws InterruptedException, FileNotFoundException {
+        List<String> paths = Utils.getFilePathsFromFile(inputPath);
+
+        if (shuffle) {
+            LOG.debug("Shuffling paths.");
+            Collections.shuffle(paths);
+        }
+
+        if (paths.size() < numThreads) {
+            LOG.error("ERROR: The file should contain at least " + numThreads +
+                    " HopsFS file path(s); however, it contains just " + paths.size() + " HopsFS file path(s).");
+            LOG.error("Aborting operation.");
+            return null;
+        }
+
+        Random rng = new Random(); // TODO: Optionally seed this?
+
+        final String[][] fileBatches = new String[numThreads][filesPerThread];
+        int counter = 0;
+        for (int i = 0; i < numThreads; i++) {
+            for (int j = 0; j < filesPerThread; j++) {
+                int filePathIndex;
+                if (shuffle)
+                    filePathIndex = rng.nextInt(paths.size());
+                else
+                    filePathIndex = counter++;
+                fileBatches[i][j] = paths.get(filePathIndex);
+            }
+            counter = 0;
+
+            if (shuffle)
+                Collections.shuffle(paths);
+        }
+
+        return executeBenchmark(sharedHdfs, nameNodeEndpoint, numThreads, fileBatches, 1, opCode,
+                new FSOperation(nameNodeEndpoint) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return getFileStatus(path, hdfs, nameNodeEndpoint);
+                    }
+                });
+    }
+
     /**
      * Clear the statistics packages, transaction events, and operations performed metrics objects
      * on the given DistributedFileSystem instance.
@@ -1189,19 +1302,19 @@ public class Commands {
         }
     }
 
-    public static void listOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
-        System.out.print("Target directory:\n> ");
-        String targetDirectory = scanner.nextLine();
-
-        try {
-            FileStatus[] fileStatus = hdfs.listStatus(new Path(nameNodeEndpoint + targetDirectory));
-            for(FileStatus status : fileStatus)
-                LOG.info(status.getPath().toString());
-            LOG.info("Directory '" + targetDirectory + "' contains " + fileStatus.length + " files.");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
+//    public static void listOperation(DistributedFileSystem hdfs, String nameNodeEndpoint) {
+//        System.out.print("Target directory:\n> ");
+//        String targetDirectory = scanner.nextLine();
+//
+//        try {
+//            FileStatus[] fileStatus = hdfs.listStatus(new Path(nameNodeEndpoint + targetDirectory));
+//            for(FileStatus status : fileStatus)
+//                LOG.info(status.getPath().toString());
+//            LOG.info("Directory '" + targetDirectory + "' contains " + fileStatus.length + " files.");
+//        } catch (IOException ex) {
+//            ex.printStackTrace();
+//        }
+//    }
 
     /**
      * Create a new directory with the given path.
