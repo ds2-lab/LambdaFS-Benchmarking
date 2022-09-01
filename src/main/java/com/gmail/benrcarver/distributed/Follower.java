@@ -335,6 +335,29 @@ public class Follower {
                 LOG.info("Obtained local result for OP_GET_FILE_DIR_INFO benchmark: " + result);
                 sendResultToLeader(result);
                 break;
+            case OP_LIST_DIRECTORIES_FROM_FILE:
+                LOG.info("LIST DIRECTORIES FROM FILE selected!");
+                result = Commands.listDirectoryWeakScaling(hdfsConfiguration, nameNodeEndpoint,
+                        message.getAsJsonPrimitive("n").getAsInt(),
+                        message.getAsJsonPrimitive("listsPerFile").getAsInt(),
+                        message.getAsJsonPrimitive("inputPath").getAsString(),
+                        message.getAsJsonPrimitive("shuffle").getAsBoolean(), OP_LIST_DIRECTORIES_FROM_FILE);
+
+                result.setOperationId(operationId);
+                LOG.info("Obtained local result for LIST DIRECTORIES FROM FILE benchmark: " + result);
+                sendResultToLeader(result);
+                break;
+            case OP_STAT_FILES_WEAK_SCALING:
+                LOG.info("STAT FILES WEAK SCALING selected!");
+                result = Commands.statFilesWeakScaling(hdfsConfiguration, nameNodeEndpoint,
+                        message.getAsJsonPrimitive("numThreads").getAsInt(),
+                        message.getAsJsonPrimitive("filesPerThread").getAsInt(),
+                        message.getAsJsonPrimitive("inputPath").getAsString(),
+                        message.getAsJsonPrimitive("shuffle").getAsBoolean(), OP_STAT_FILES_WEAK_SCALING);
+                result.setOperationId(operationId);
+                LOG.info("Obtained local result for STAT FILES WEAK SCALING benchmark: " + result);
+                sendResultToLeader(result);
+                break;
             default:
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
                 break;

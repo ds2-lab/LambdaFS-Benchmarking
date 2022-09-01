@@ -40,4 +40,6 @@ public class Constants {
     public static final int OP_WEAK_SCALING_READS_V2 = 20;
     public static final int OP_GET_FILE_STATUS = 21;
     public static final int OP_CREATE_DIRECTORIES_FROM_FILE = 22;
+    public static final int OP_LIST_DIRECTORIES_FROM_FILE = 23;
+    public static final int OP_STAT_FILES_WEAK_SCALING = 24;
 }
