@@ -342,6 +342,7 @@ public class Commander {
                 sftpChannel = (ChannelSftp) session.openChannel("sftp");
                 sftpChannel.connect();
                 sftpChannel.put("/home/ubuntu/repos/HopsFS-Benchmarking-Utility/109200alt", "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/109200alt");
+                sftpChannel.put("/home/ubuntu/repos/HopsFS-Benchmarking-Utility/dirs_alt.txt", "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/dirs_alt.txt");
                 sftpChannel.disconnect();
             }
 
