@@ -337,6 +337,12 @@ public class Commander {
                 sftpChannel.connect();
                 sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
                 sftpChannel.disconnect();
+
+                LOG.debug("SFTP-ing 109200alt to Follower " + host + ".");
+                sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                sftpChannel.connect();
+                sftpChannel.put("/home/ubuntu/repos/HopsFS-Benchmarking-Utility/109200alt", "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/109200alt");
+                sftpChannel.disconnect();
             }
 
             if (!manuallyLaunchFollowers)
