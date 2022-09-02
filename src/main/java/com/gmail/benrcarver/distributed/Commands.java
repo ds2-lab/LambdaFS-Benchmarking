@@ -12,6 +12,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.gson.JsonObject;
 import io.hops.metrics.TransactionEvent;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;

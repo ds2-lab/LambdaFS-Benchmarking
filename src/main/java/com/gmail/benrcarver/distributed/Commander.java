@@ -413,6 +413,9 @@ public class Commander {
                 int op = getNextOperation();
 
                 switch (op) {
+                    case OP_SAVE_LATENCIES_TO_FILE:
+                        saveLatenciesToFile();
+                        break;
                     case OP_TOGGLE_BENCHMARK_MODE:
                         toggleBenchmarkMode();
                         break;
@@ -437,6 +440,16 @@ public class Commander {
                     case OP_CLEAR_METRIC_DATA:
                         LOG.info("Clearing metric data (including latencies) now...");
                         Commands.clearMetricData(primaryHdfs);
+
+                        if (!nonDistributed) {
+                            JsonObject payload = new JsonObject();
+                            String operationId = UUID.randomUUID().toString();
+                            payload.addProperty(OPERATION, OP_CLEAR_METRIC_DATA);
+                            payload.addProperty(OPERATION_ID, operationId);
+
+                            issueCommandToFollowers("Clear Metric Data", operationId, payload, false);
+                        }
+
                         break;
                     case OP_WRITE_STATISTICS:
                         if (!isServerless) {
@@ -751,6 +764,72 @@ public class Commander {
 
             if (time > 0)
                 this.garbageCollectionTime += time;
+        }
+    }
+
+    private void saveLatenciesToFile() {
+        LOG.info("Saving latency data to file.");
+
+        System.out.print("Please enter a filename (without an extension):\n>");
+        String fileName = scanner.nextLine().trim();
+
+        System.out.println("Writing TCP latencies to file: ./latencies/" + fileName + "-tcp.dat");
+        System.out.println("Writing HTTP latencies to file: ./latencies/" + fileName + "-http.dat");
+        System.out.println("Writing merged latencies to file: ./latencies/" + fileName + "-merged.dat");
+
+        String directoryPath = "./latencies";
+        File dir = new File(directoryPath);
+
+        if (!dir.exists())
+            dir.mkdir();
+
+        File fileTcp = new File(directoryPath + "/" + fileName + "-tcp.dat");
+        File fileHttp = new File(directoryPath + "/" + fileName + "-http.dat");
+        File fileMerged = new File(directoryPath + "/" + fileName + "-merged.dat");
+        DescriptiveStatistics tcpStatistics = primaryHdfs.getLatencyTcpStatistics();
+        DescriptiveStatistics httpStatistics = primaryHdfs.getLatencyHttpStatistics();
+        DescriptiveStatistics mergedStatistics = primaryHdfs.getLatencyStatistics();
+
+        try {
+            FileWriter fw = new FileWriter(fileTcp.getAbsoluteFile());
+            BufferedWriter bw = new BufferedWriter(fw);
+
+            for (double tcpLatency : tcpStatistics.getValues()) {
+                bw.write(String.valueOf(tcpLatency));
+                bw.write("\n");
+            }
+
+            bw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            FileWriter fw = new FileWriter(fileHttp.getAbsoluteFile());
+            BufferedWriter bw = new BufferedWriter(fw);
+
+            for (double httpLatency : httpStatistics.getValues()) {
+                bw.write(String.valueOf(httpLatency));
+                bw.write("\n");
+            }
+
+            bw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            FileWriter fw = new FileWriter(fileMerged.getAbsoluteFile());
+            BufferedWriter bw = new BufferedWriter(fw);
+
+            for (double mergedLatency : mergedStatistics.getValues()) {
+                bw.write(String.valueOf(mergedLatency));
+                bw.write("\n");
+            }
+
+            bw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
