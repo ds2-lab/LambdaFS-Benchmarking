@@ -345,6 +345,12 @@ public class Commander {
                 sftpChannel.disconnect();
             }
 
+            ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+            sftpChannel.connect();
+            sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties", "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties");
+            sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml", "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml");
+            sftpChannel.disconnect();
+
             if (!manuallyLaunchFollowers)
                 executeCommand(user, host, launchCommand);
             else
