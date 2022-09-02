@@ -1895,6 +1895,7 @@ public class Commander {
         System.out.println("\n====== MENU ======");
         System.out.println("Debug Operations:");
         System.out.println(
+                "(-12) Print latency statistics to a file\n" +
                 "(-11) Toggle 'Benchmarking Mode' in self and followers\n" +
                 "(-10) Toggle 'OperationPerformed' tracking in followers\n" +
                 "(-9)  Perform client VM garbage collection\n" +
