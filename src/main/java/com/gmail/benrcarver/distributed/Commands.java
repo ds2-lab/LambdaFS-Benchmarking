@@ -186,8 +186,8 @@ public class Commands {
 
                 DescriptiveStatistics latencyStatistics = hdfs.getLatencyStatistics();
                 Commander.PRIMARY_HDFS.addLatencyValues(latencyStatistics.getValues());
-//                for (double latency : latencyStatistics.getValues())
-//                    totalLatencyStatistics.addValue(latency);
+                for (double latency : latencyStatistics.getValues())
+                    totalLatencyStatistics.addValue(latency);
 
                 try {
                     // Now return the client to the pool so that it can be used again in the future.
