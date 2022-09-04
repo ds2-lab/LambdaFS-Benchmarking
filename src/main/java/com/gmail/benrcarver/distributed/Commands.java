@@ -185,7 +185,10 @@ public class Commands {
                 numOps.addAndGet(numOpsCurrentThread);
 
                 DescriptiveStatistics latencyStatistics = hdfs.getLatencyStatistics();
-                Commander.PRIMARY_HDFS.addLatencyValues(latencyStatistics.getValues());
+
+                if (Commander.PRIMARY_HDFS != null)
+                    Commander.PRIMARY_HDFS.addLatencyValues(latencyStatistics.getValues());
+
                 for (double latency : latencyStatistics.getValues())
                     totalLatencyStatistics.addValue(latency);
 
