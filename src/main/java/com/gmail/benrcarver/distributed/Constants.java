@@ -14,9 +14,11 @@ public class Constants {
     ////////////////
     public static final int OP_RESULT = -101;
     public static final int OP_REGISTRATION = -100;
+    public static final int OP_SAVE_LATENCIES_TO_FILE = -12;
     public static final int OP_TOGGLE_BENCHMARK_MODE = -11;
     public static final int OP_TOGGLE_OPS_PERFORMED_FOLLOWERS = -10;
     public static final int OP_TRIGGER_CLIENT_GC = -9;
+    public static final int OP_CLEAR_METRIC_DATA = -4;
     public static final int OP_EXIT = 0;
     public static final int OP_CREATE_FILE = 1;
     public static final int OP_MKDIR = 2;

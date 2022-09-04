@@ -138,7 +138,7 @@ public class Commands {
             final String[] filesForCurrentThread = fileBatches[i];
             final int threadId = i;
             Thread thread = new Thread(() -> {
-                DescriptiveStatistics latencyStatistics = new DescriptiveStatistics();
+                // DescriptiveStatistics latencyStatistics = new DescriptiveStatistics();
                 DistributedFileSystem hdfs = getHdfsClient(nameNodeEndpoint);
 
                 readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
@@ -159,7 +159,7 @@ public class Commands {
                         long start = System.currentTimeMillis();
                         if (operation.call(hdfs, filePath, EMPTY_STRING)) {
                             numSuccessfulOpsCurrentThread++;
-                            latencyStatistics.addValue(System.currentTimeMillis() - start);
+                            // latencyStatistics.addValue(System.currentTimeMillis() - start);
                         }
                         numOpsCurrentThread++;
                     }
@@ -184,8 +184,10 @@ public class Commands {
                 numSuccessfulOps.addAndGet(numSuccessfulOpsCurrentThread);
                 numOps.addAndGet(numOpsCurrentThread);
 
-                for (double latency : latencyStatistics.getValues())
-                totalLatencyStatistics.addValue(latency);
+                DescriptiveStatistics latencyStatistics = hdfs.getLatencyStatistics();
+                Commander.PRIMARY_HDFS.addLatencyValues(latencyStatistics.getValues());
+//                for (double latency : latencyStatistics.getValues())
+//                    totalLatencyStatistics.addValue(latency);
 
                 try {
                     // Now return the client to the pool so that it can be used again in the future.
@@ -373,6 +375,40 @@ public class Commands {
                         return readFile(path, hdfs, endpoint);
                     }
                 });
+    }
+
+    public static void clearMetricData(DistributedFileSystem hdfs) {
+        if (!IS_SERVERLESS) {
+            LOG.error("Clearing statistics packages is not supported by Vanilla HopsFS!");
+            return;
+        }
+
+        System.out.print("Are you sure? (y/N)\n> ");
+        String input = scanner.nextLine();
+
+        if (input.equalsIgnoreCase("y")) {
+            clearMetricDataNoPrompt(hdfs);
+
+            for (DistributedFileSystem otherHdfs : hdfsClients) {
+                clearMetricDataNoPrompt(otherHdfs);
+            }
+
+            LOG.debug("Cleared both statistics and latency values.");
+        } else {
+            LOG.info("NOT clearing statistics packages.");
+        }
+    }
+
+    /**
+     * Clear the statistics packages, transaction events, and operations performed metrics objects
+     * on the given DistributedFileSystem instance.
+     *
+     * This also clears the latency values.
+     *
+     * @param hdfs The instance for which the aforementioned metrics objects should be cleared.
+     */
+    public static void clearMetricDataNoPrompt(DistributedFileSystem hdfs) {
+        hdfs.clearLatencyStatistics();
     }
 
     /**

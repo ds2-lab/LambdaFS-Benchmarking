@@ -178,6 +178,10 @@ public class Follower {
                     Commands.TRACK_OP_PERFORMED = false;
 
                 break;
+            case OP_CLEAR_METRIC_DATA:
+                LOG.info("Clearing statistics packages...");
+                Commands.clearMetricData(hdfs);
+                break;
             case OP_TOGGLE_OPS_PERFORMED_FOLLOWERS:
                 boolean toggle = message.getAsJsonPrimitive(TRACK_OP_PERFORMED).getAsBoolean();
 

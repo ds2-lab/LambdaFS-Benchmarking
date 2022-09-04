@@ -113,6 +113,8 @@ public class Commander {
      */
     private static Commander instance;
 
+    public static DistributedFileSystem PRIMARY_HDFS;
+
     /**
      * The approximate number of collections that occurred.
      */
@@ -486,7 +488,7 @@ public class Commander {
     private void interactiveLoop() {
         LOG.info("Beginning execution as LEADER now.");
 
-        DistributedFileSystem hdfs = initDfsClient(nameNodeEndpoint);
+        PRIMARY_HDFS = initDfsClient(nameNodeEndpoint);
 
         while (true) {
             updateGCMetrics();
@@ -498,13 +500,30 @@ public class Commander {
                 int op = getNextOperation();
 
                 switch (op) {
+                    case OP_SAVE_LATENCIES_TO_FILE:
+                        saveLatenciesToFile();
+                        break;
                     case OP_TRIGGER_CLIENT_GC:
                         performClientVMGarbageCollection();
+                        break;
+                    case OP_CLEAR_METRIC_DATA:
+                        LOG.info("Clearing metric data (including latencies) now...");
+                        Commands.clearMetricData(PRIMARY_HDFS);
+
+                        if (!nondistributed) {
+                            JsonObject payload = new JsonObject();
+                            String operationId = UUID.randomUUID().toString();
+                            payload.addProperty(OPERATION, OP_CLEAR_METRIC_DATA);
+                            payload.addProperty(OPERATION_ID, operationId);
+
+                            issueCommandToFollowers("Clear Metric Data", operationId, payload);
+                        }
+
                         break;
                     case OP_EXIT:
                         LOG.info("Exiting now... goodbye!");
                         try {
-                            hdfs.close();
+                            PRIMARY_HDFS.close();
                         } catch (IOException ex) {
                             LOG.info("Encountered exception while closing file system...");
                             ex.printStackTrace();
@@ -513,35 +532,35 @@ public class Commander {
                         System.exit(0);
                     case OP_CREATE_FILE:
                         LOG.info("CREATE FILE selected!");
-                        Commands.createFileOperation(hdfs, nameNodeEndpoint);
+                        Commands.createFileOperation(PRIMARY_HDFS, nameNodeEndpoint);
                         break;
                     case OP_MKDIR:
                         LOG.info("MAKE DIRECTORY selected!");
-                        Commands.mkdirOperation(hdfs, nameNodeEndpoint);
+                        Commands.mkdirOperation(PRIMARY_HDFS, nameNodeEndpoint);
                         break;
                     case OP_READ_FILE:
                         LOG.info("READ FILE selected!");
-                        Commands.readOperation(hdfs, nameNodeEndpoint);
+                        Commands.readOperation(PRIMARY_HDFS, nameNodeEndpoint);
                         break;
                     case OP_RENAME:
                         LOG.info("RENAME selected!");
-                        Commands.renameOperation(hdfs, nameNodeEndpoint);
+                        Commands.renameOperation(PRIMARY_HDFS, nameNodeEndpoint);
                         break;
                     case OP_DELETE:
                         LOG.info("DELETE selected!");
-                        Commands.deleteOperation(hdfs, nameNodeEndpoint);
+                        Commands.deleteOperation(PRIMARY_HDFS, nameNodeEndpoint);
                         break;
                     case OP_LIST:
                         LOG.info("LIST selected!");
-                        Commands.listOperation(hdfs, nameNodeEndpoint);
+                        Commands.listOperation(PRIMARY_HDFS, nameNodeEndpoint);
                         break;
                     case OP_APPEND:
                         LOG.info("APPEND selected!");
-                        Commands.appendOperation(hdfs, nameNodeEndpoint);
+                        Commands.appendOperation(PRIMARY_HDFS, nameNodeEndpoint);
                         break;
                     case OP_CREATE_SUBTREE:
                         LOG.info("CREATE SUBTREE selected!");
-                        Commands.createSubtree(hdfs, nameNodeEndpoint);
+                        Commands.createSubtree(PRIMARY_HDFS, nameNodeEndpoint);
                         break;
                     case OP_PING:
                         LOG.warn("PING operation is not supported for Vanilla HopsFS.");
@@ -559,7 +578,7 @@ public class Commander {
                         break;
                     case OP_DELETE_FILES:
                         LOG.info("DELETE FILES selected!");
-                        Commands.deleteFilesOperation(hdfs, nameNodeEndpoint);
+                        Commands.deleteFilesOperation(PRIMARY_HDFS, nameNodeEndpoint);
                         break;
                     case OP_WRITE_FILES_TO_DIRS:
                         LOG.info("WRITE FILES TO DIRECTORIES selected!");
@@ -583,7 +602,7 @@ public class Commander {
                         break;
                     case OP_CREATE_DIRECTORIES:
                         LOG.info("CREATE DIRECTORIES selected!");
-                        Commands.createDirectories(hdfs, nameNodeEndpoint);
+                        Commands.createDirectories(PRIMARY_HDFS, nameNodeEndpoint);
                         break;
                     case OP_WEAK_SCALING_READS_V2:
                         LOG.info("WeakScalingReadsV2 Selected!");
@@ -612,6 +631,40 @@ public class Commander {
             LOG.debug("Performed " + numGCsPerformedDuringLastOp + " garbage collection(s) during last operation.");
             if (numGCsPerformedDuringLastOp > 0)
                 LOG.debug("Spent " + timeSpentInGCDuringLastOp + " ms garbage collecting during the last operation.");
+        }
+    }
+
+    private void saveLatenciesToFile() {
+        LOG.info("Saving latency data to file.");
+
+        System.out.print("Please enter a filename (without an extension):\n>");
+        String fileName = scanner.nextLine().trim();
+
+        System.out.println("Writing TCP latencies to file: ./latencies/" + fileName + "-tcp.dat");
+        System.out.println("Writing HTTP latencies to file: ./latencies/" + fileName + "-http.dat");
+        System.out.println("Writing merged latencies to file: ./latencies/" + fileName + "-merged.dat");
+
+        String directoryPath = "./latencies";
+        File dir = new File(directoryPath);
+
+        if (!dir.exists())
+            dir.mkdir();
+
+        File fileMerged = new File(directoryPath + "/" + fileName + ".dat");
+        DescriptiveStatistics latencyStatistics = PRIMARY_HDFS.getLatencyStatistics();
+
+        try {
+            FileWriter fw = new FileWriter(fileMerged.getAbsoluteFile());
+            BufferedWriter bw = new BufferedWriter(fw);
+
+            for (double mergedLatency : latencyStatistics.getValues()) {
+                bw.write(String.valueOf(mergedLatency));
+                bw.write("\n");
+            }
+
+            bw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -1226,6 +1279,8 @@ public class Commander {
                         ", N: " + latency.getN() + "]");
 
                 trialAvgLatency += latency.getMean();
+
+                PRIMARY_HDFS.addLatencyValues(latency.getValues());
             }
         }
 
