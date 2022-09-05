@@ -175,12 +175,18 @@ public class Commands {
                 int numSuccessfulOpsCurrentThread = 0;
                 int numOpsCurrentThread = 0;
 
-                for (String filePath : filesForCurrentThread) {
-                    for (int j = 0; j < operationsPerFile; j++) {
+                //for (String filePath : filesForCurrentThread) {
+                for (int j = 0; j < filesForCurrentThread.length; j++) {
+                    String filePath = filesForCurrentThread[j];
+
+                    for (int k = 0; k < operationsPerFile; k++) {
                         if (operation.call(hdfs, filePath, EMPTY_STRING))
                             numSuccessfulOpsCurrentThread++;
                         numOpsCurrentThread++;
                     }
+
+                    if (j % 256 == 0)
+                        LOG.info("Thread " + threadId + " has finished reading " + (j+1) + "/" + filesForCurrentThread.length + " files.");
                 }
 
                 // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
