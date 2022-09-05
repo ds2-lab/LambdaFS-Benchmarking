@@ -185,7 +185,7 @@ public class Commands {
                         numOpsCurrentThread++;
                     }
 
-                    if (j % 512 == 0)
+                    if (j >= 512 && j % 512 == 0)
                         LOG.info("Thread " + threadId + " has finished reading " + (j+1) + "/" + filesForCurrentThread.length + " files.");
                 }
 
