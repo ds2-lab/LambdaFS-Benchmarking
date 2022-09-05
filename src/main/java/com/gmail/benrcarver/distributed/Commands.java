@@ -151,6 +151,7 @@ public class Commands {
         // Keep track of number of successful operations.
         AtomicInteger numSuccessfulOps = new AtomicInteger(0);
         AtomicInteger numOps = new AtomicInteger(0);
+        AtomicInteger numThreadsFinished = new AtomicInteger(0);
 
         final SynchronizedDescriptiveStatistics latencyHttp = new SynchronizedDescriptiveStatistics();
         final SynchronizedDescriptiveStatistics latencyTcp = new SynchronizedDescriptiveStatistics();
@@ -176,17 +177,12 @@ public class Commands {
                 int numOpsCurrentThread = 0;
 
                 //for (String filePath : filesForCurrentThread) {
-                for (int j = 0; j < filesForCurrentThread.length; j++) {
-                    String filePath = filesForCurrentThread[j];
-
+                for (String filePath : filesForCurrentThread) {
                     for (int k = 0; k < operationsPerFile; k++) {
                         if (operation.call(hdfs, filePath, EMPTY_STRING))
                             numSuccessfulOpsCurrentThread++;
                         numOpsCurrentThread++;
                     }
-
-                    if (j >= 512 && j % 512 == 0)
-                        LOG.info("Thread " + threadId + " has finished reading " + (j+1) + "/" + filesForCurrentThread.length + " files.");
                 }
 
                 // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
@@ -195,7 +191,11 @@ public class Commands {
                 // so that all the statistics are placed into the appropriate collections where we can aggregate them.
                 endSemaphore.release();
 
-                if (LOG.isDebugEnabled()) LOG.debug("Thread " + threadId + " has finished executing.");
+                int completed = numThreadsFinished.incrementAndGet();
+
+                if (LOG.isDebugEnabled())
+                    LOG.debug("Thread " + threadId + " has finished executing. " + completed + "/" + numThreads +
+                            " have finished executing.");
 
                 endLatch.countDown();
 
