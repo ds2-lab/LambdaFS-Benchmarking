@@ -580,7 +580,7 @@ public class Commander {
                         break;
                     case OP_LIST_DIRECTORIES_FROM_FILE:
                         LOG.info("LIST DIRECTORIES FROM FILE selected!");
-                        listDirectoriesFromFile(primaryHdfs, nameNodeEndpoint);
+                        listDirectoriesFromFile(primaryHdfs);
                         break;
                     case OP_STAT_FILES_WEAK_SCALING:
                         LOG.info("STAT FILES WEAK SCALING selected!");
@@ -604,8 +604,8 @@ public class Commander {
         }
     }
 
-    private void statFilesWeakScaling(final DistributedFileSystem hdfs,
-                                      final String nameNodeEndpoint) throws InterruptedException, FileNotFoundException {
+    private void statFilesWeakScaling(final DistributedFileSystem sharedHdfs,
+                                      final String nameNodeEndpoint) throws InterruptedException, IOException {
         System.out.print("How many threads should be used?\n> ");
         String inputN = scanner.nextLine();
         int numThreads = Integer.parseInt(inputN);
@@ -622,135 +622,63 @@ public class Commander {
 
         int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
 
-        int currentTrial = 0;
-        AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
-        Double[] results = new Double[numTrials];
-        while (currentTrial < numTrials) {
-            LOG.info("|====| TRIAL #" + currentTrial + " |====|");
-            String operationId = UUID.randomUUID().toString();
-            int numDistributedResults = followers.size();
-            if (followers.size() > 0) {
-                JsonObject payload = new JsonObject();
-                payload.addProperty(OPERATION, OP_STAT_FILES_WEAK_SCALING);
-                payload.addProperty(OPERATION_ID, operationId);
-                payload.addProperty("numThreads", numThreads);
-                payload.addProperty("filesPerThread", filesPerThread);
-                payload.addProperty("inputPath", inputPath);
-                payload.addProperty("shuffle", shuffle);
+        JsonObject payload = new JsonObject();
+        payload.addProperty(OPERATION, OP_STAT_FILES_WEAK_SCALING);
+        payload.addProperty("numThreads", numThreads);
+        payload.addProperty("filesPerThread", filesPerThread);
+        payload.addProperty("inputPath", inputPath);
+        payload.addProperty("shuffle", shuffle);
 
-                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload, true);
-            }
-
-            // TODO: Make this return some sort of 'result' object encapsulating the result.
-            //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
-            DistributedBenchmarkResult localResult =
-                    Commands.statFilesWeakScaling(hdfs, nameNodeEndpoint, numThreads,
-                            filesPerThread, inputPath, shuffle, OP_STAT_FILES_WEAK_SCALING);
-
-            if (localResult == null) {
-                LOG.warn("Local result is null. Aborting.");
-                return;
-            }
-
-            localResult.setOperationId(operationId);
-
-            AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
-
-            aggregatedResults[currentTrial] = aggregatedResult;
-            results[currentTrial] = aggregatedResult.throughput;
-            currentTrial++;
-
-            if (!(currentTrial >= numTrials)) {
-                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
-                        postTrialSleepInterval + " ms.");
-                performClientVMGarbageCollection();
-                Thread.sleep(postTrialSleepInterval);
-            }
-        }
-
-        System.out.println("[THROUGHPUT]");
-        for (double throughputResult : results) {
-            System.out.println(throughputResult);
-        }
-
-        for (AggregatedResult result : aggregatedResults)
-            System.out.println(result.metricsString);
+        performDistributedBenchmark(sharedHdfs, numTrials, payload, numThreads,
+                filesPerThread, inputPath, shuffle, OP_STAT_FILES_WEAK_SCALING, null,
+                "Stat n Files with n Threads (Weak Scaling - Stat File)", new DistributedBenchmarkOperation() {
+                    @Override
+                    public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
+                                                           int numThreads, int opsPerFile, String inputPath,
+                                                           boolean shuffle, int opCode, List<String> directories)
+                            throws FileNotFoundException, InterruptedException {
+                        return Commands.statFilesWeakScaling(sharedHdfs, nameNodeEndpoint, numThreads,
+                                opsPerFile, inputPath, shuffle, OP_STAT_FILES_WEAK_SCALING);
+                    }
+                });
     }
 
-    private void listDirectoriesFromFile(final DistributedFileSystem hdfs,
-                                         final String nameNodeEndpoint) throws InterruptedException, FileNotFoundException {
+    private void listDirectoriesFromFile(final DistributedFileSystem sharedHdfs) throws InterruptedException, IOException {
         System.out.print("How many clients (i.e., threads) should be used?\n> ");
         String inputN = scanner.nextLine();
-        int n = Integer.parseInt(inputN);
+        int numberOfThreads = Integer.parseInt(inputN);
 
         System.out.print("How many times should each client list their assigned directory?\n> ");
         String inputReadsPerFile = scanner.nextLine();
         int readsPerFile = Integer.parseInt(inputReadsPerFile);
 
         System.out.print("Please provide a path to a local file containing at least " + inputN + " HopsFS directory " +
-                (n == 1 ? "path.\n> " : "paths.\n> "));
+                (numberOfThreads == 1 ? "path.\n> " : "paths.\n> "));
         String inputPath = scanner.nextLine();
 
         boolean shuffle = getBooleanFromUser("Shuffle file paths around?");
 
         int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
 
-        int currentTrial = 0;
-        AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
-        Double[] results = new Double[numTrials];
-        while (currentTrial < numTrials) {
-            LOG.info("|====| TRIAL #" + currentTrial + " |====|");
-            String operationId = UUID.randomUUID().toString();
-            int numDistributedResults = followers.size();
-            if (followers.size() > 0) {
-                JsonObject payload = new JsonObject();
-                payload.addProperty(OPERATION, OP_LIST_DIRECTORIES_FROM_FILE);
-                payload.addProperty(OPERATION_ID, operationId);
-                payload.addProperty("n", n);
-                payload.addProperty("listsPerFile", readsPerFile);
-                payload.addProperty("inputPath", inputPath);
-                payload.addProperty("shuffle", shuffle);
+        JsonObject payload = new JsonObject();
+        payload.addProperty(OPERATION, OP_LIST_DIRECTORIES_FROM_FILE);
+        payload.addProperty("n", readsPerFile);
+        payload.addProperty("listsPerFile", readsPerFile);
+        payload.addProperty("inputPath", inputPath);
+        payload.addProperty("shuffle", shuffle);
 
-                issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload, true);
-            }
-
-            // TODO: Make this return some sort of 'result' object encapsulating the result.
-            //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
-            DistributedBenchmarkResult localResult =
-                    Commands.listDirectoryWeakScaling(hdfs, nameNodeEndpoint, n,
-                            readsPerFile, inputPath, shuffle, OP_STAT_FILES_WEAK_SCALING);
-
-            if (localResult == null) {
-                LOG.warn("Local result is null. Aborting.");
-                return;
-            }
-
-            //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
-            localResult.setOperationId(operationId);
-
-            localResult.setOperationId(operationId);
-            // Wait for followers' results if we had followers when we first started the operation.
-            AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
-            double throughput = aggregatedResult.throughput;
-            aggregatedResults[currentTrial] = aggregatedResult;
-
-            results[currentTrial] = throughput;
-            currentTrial++;
-
-            if (!(currentTrial >= numTrials)) {
-                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
-                        postTrialSleepInterval + " ms.");
-                performClientVMGarbageCollection();
-                Thread.sleep(postTrialSleepInterval);
-            }
-        }
-
-        System.out.println("[THROUGHPUT]");
-        for (double throughputResult : results)
-            System.out.println(throughputResult);
-
-        for (AggregatedResult result : aggregatedResults)
-            System.out.println(result.metricsString);
+        performDistributedBenchmark(sharedHdfs, numTrials, payload, numberOfThreads,
+                readsPerFile, inputPath, shuffle, OP_LIST_DIRECTORIES_FROM_FILE, null,
+                "List n Directories with n Threads (Weak Scaling - List Dir)", new DistributedBenchmarkOperation() {
+                    @Override
+                    public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
+                                                           int numThreads, int opsPerFile, String inputPath,
+                                                           boolean shuffle, int opCode, List<String> directories)
+                            throws FileNotFoundException, InterruptedException {
+                        return Commands.listDirectoryWeakScaling(sharedHdfs, nameNodeEndpoint, numThreads,
+                                opsPerFile, inputPath, shuffle, OP_LIST_DIRECTORIES_FROM_FILE);
+                    }
+                });
     }
 
     /**
@@ -1174,7 +1102,7 @@ public class Commander {
         }
 
         JsonObject payload = new JsonObject();
-        payload.addProperty(OPERATION, OP_STRONG_SCALING_READS);
+        payload.addProperty(OPERATION, OP_STRONG_SCALING_WRITES);
         payload.addProperty("n", writesPerThread);
         payload.addProperty("minLength", minLength);
         payload.addProperty("maxLength", maxLength);
@@ -1185,15 +1113,15 @@ public class Commander {
         payload.add("directories", directoriesJson);
 
         performDistributedBenchmark(sharedHdfs, 1, payload, numberOfThreads, writesPerThread, null,
-                false, OP_WEAK_SCALING_WRITES, directories, "Write n Files with n Threads (Strong Scaling - Write)",
+                false, OP_STRONG_SCALING_WRITES, directories, "Write n Files with n Threads (Strong Scaling - Write)",
                 new DistributedBenchmarkOperation() {
                     @Override
                     public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
                                                            int numThreads, int opsPerFile, String inputPath,
                                                            boolean shuffle, int opCode, List<String> directories)
                             throws InterruptedException, IOException {
-                        return Commands.writeFilesInternal(writesPerThread, numberOfThreads, directories,
-                                sharedHdfs, OP_WEAK_SCALING_WRITES, nameNodeEndpoint, false);
+                        return Commands.writeFilesInternal(opsPerFile, numThreads, directories,
+                                sharedHdfs, OP_STRONG_SCALING_WRITES, nameNodeEndpoint, false);
                     }
                 });
     }
@@ -1324,7 +1252,7 @@ public class Commander {
         }
 
         JsonObject payload = new JsonObject();
-        payload.addProperty(OPERATION, OP_STRONG_SCALING_READS);
+        payload.addProperty(OPERATION, OP_WEAK_SCALING_WRITES);
         payload.addProperty("n", writesPerThread);
         payload.addProperty("minLength", minLength);
         payload.addProperty("maxLength", maxLength);
@@ -1345,7 +1273,7 @@ public class Commander {
                                                            int numThreads, int opsPerFile, String inputPath,
                                                            boolean shuffle, int opCode, List<String> directories)
                             throws IOException, InterruptedException {
-                        return Commands.writeFilesInternal(writesPerThread, numberOfThreads, directories,
+                        return Commands.writeFilesInternal(opsPerFile, numThreads, directories,
                                 sharedHdfs, OP_WEAK_SCALING_WRITES, nameNodeEndpoint, (directoryChoice == 3));
                     }
                 });
@@ -1544,7 +1472,7 @@ public class Commander {
                                                            boolean shuffle, int opCode, List<String> directories)
                             throws FileNotFoundException, InterruptedException {
                         return Commands.weakScalingBenchmarkV2(sharedHdfs, nameNodeEndpoint, numThreads,
-                                filesPerThread, inputPath, shuffle, OP_WEAK_SCALING_READS_V2);
+                                opsPerFile, inputPath, shuffle, OP_WEAK_SCALING_READS_V2);
                     }
                 });
     }
