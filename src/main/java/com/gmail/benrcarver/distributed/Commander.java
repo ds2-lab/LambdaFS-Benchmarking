@@ -1185,7 +1185,8 @@ public class Commander {
         payload.add("directories", directoriesJson);
 
         performDistributedBenchmark(sharedHdfs, 1, payload, numberOfThreads, writesPerThread, null,
-                false, OP_WEAK_SCALING_WRITES, directories, new DistributedBenchmarkOperation() {
+                false, OP_WEAK_SCALING_WRITES, directories, "Write n Files with n Threads (Strong Scaling - Write)",
+                new DistributedBenchmarkOperation() {
                     @Override
                     public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
                                                            int numThreads, int opsPerFile, String inputPath,
@@ -1337,7 +1338,8 @@ public class Commander {
         payload.add("directories", directoriesJson);
 
         performDistributedBenchmark(sharedHdfs, 1, payload, numberOfThreads, writesPerThread, null,
-                false, OP_WEAK_SCALING_WRITES, directories, new DistributedBenchmarkOperation() {
+                false, OP_WEAK_SCALING_WRITES, directories, "Write n Files with n Threads (Weak Scaling - Write)",
+                new DistributedBenchmarkOperation() {
                     @Override
                     public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
                                                            int numThreads, int opsPerFile, String inputPath,
@@ -1535,7 +1537,7 @@ public class Commander {
 
         performDistributedBenchmark(sharedHdfs, numTrials, payload, numThreads,
                 filesPerThread, inputPath, shuffle, OP_WEAK_SCALING_READS_V2, null,
-                new DistributedBenchmarkOperation() {
+                "Read n Files with n Threads (Weak Scaling Read v2)", new DistributedBenchmarkOperation() {
                     @Override
                     public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
                                                            int numThreads, int opsPerFile, String inputPath,
@@ -1583,7 +1585,8 @@ public class Commander {
         payload.addProperty("shuffle", shuffle);
 
         performDistributedBenchmark(sharedHdfs, numTrials, payload, n, readsPerFile, inputPath, shuffle,
-                OP_WEAK_SCALING_READS, null, new DistributedBenchmarkOperation() {
+                OP_WEAK_SCALING_READS, null, "Read n Files with n Threads (Weak Scaling - Read)",
+                new DistributedBenchmarkOperation() {
                     @Override
                     public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
                                                            int numThreads, int opsPerFile, String inputPath,
