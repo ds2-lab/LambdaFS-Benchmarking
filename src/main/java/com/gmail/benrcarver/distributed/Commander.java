@@ -1544,8 +1544,6 @@ public class Commander {
                 issueCommandToFollowers(commandDescription, operationId, payload, true);
             }
 
-            // TODO: Make this return some sort of 'result' object encapsulating the result.
-            //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
             DistributedBenchmarkResult localResult =
                     operation.call(sharedHdfs, nameNodeEndpoint, numThreads, opsPerFile, inputPath, shuffle, opCode, directories);
 
@@ -1558,6 +1556,7 @@ public class Commander {
             double throughput;
             int aggregatedCacheMisses;
             int aggregatedCacheHits;
+
             // Wait for followers' results if we had followers when we first started the operation.
             AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
             throughput = aggregatedResult.throughput;
@@ -1595,48 +1594,74 @@ public class Commander {
     /**
      * Used to automatically establish a number of connections between clients and NameNodes.
      */
-    private void establishConnections() throws FileNotFoundException, InterruptedException {
-        int n = getIntFromUser("How many connections do you want to establish (power of 2's only)?");
+    private void establishConnections() throws IOException, InterruptedException {
+        List<Integer> numClients = Arrays.asList(1, 2, 4, 8, 16, 24, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240, 256);
 
-        if (n % 2 != 0)
-            throw new IllegalArgumentException("The number of connections to be established must be a power of 2.");
+        int targetNumConnections = getIntFromUser("How many connections do you want to establish per client VM?");
 
-        int numIterations = log(n, 2);
+        if (!numClients.contains(targetNumConnections))
+            throw new IllegalArgumentException("The target number of connections must be one of the following: " +
+                    StringUtils.join(numClients, ",") + ". You specified: " + targetNumConnections + ".");
+        // if (targetNumConnections % 2 != 0)
+        //    throw new IllegalArgumentException("The number of connections to be established must be a power of 2.");
 
-                System.out.print("Please specify a file path containing HopsFS files to use:\n> ");
-        String filePath = scanner.nextLine();
+        if (targetNumConnections > 256)
+            throw new IllegalArgumentException("Targeting more than 256 connections per VM is not supported.");
 
-        for (int i = 0; i < numIterations; i++) {
-            int numClientsToUse = (int)Math.pow(2, i);
-            // Two runs per iteration.
-            for (int j = 0; j < 2; j++) {
+        System.out.print("Please specify a file path containing HopsFS files to use:\n> ");
+        String inputPath = scanner.nextLine();
 
-                DistributedBenchmarkResult res =
-                        Commands.weakScalingBenchmarkV2(primaryHdfs, nameNodeEndpoint, numClientsToUse,
-                        4, filePath, true, OP_WEAK_SCALING_READS_V2);
+        int originalPostTrialSleepInterval = postTrialSleepInterval;
 
-                if (numClientsToUse <= 4) {
-                    LOG.debug("Sleeping for 250ms...");
-                    Thread.sleep(250);
-                }
-                else if (numClientsToUse <= 8) {
-                    LOG.debug("Sleeping for 250ms...");
-                    Thread.sleep(1500);
-                }
-                else if (numClientsToUse <= 16) {
-                    LOG.debug("Sleeping for 250ms...");
-                    Thread.sleep(3500);
-                }
-                else if (numClientsToUse <= 32) {
-                    LOG.debug("Sleeping for 250ms...");
-                    Thread.sleep(5000);
-                }
-                else {
-                    LOG.debug("Sleeping for 250ms...");
-                    Thread.sleep(6250);
-                }
-            }
+        LOG.info("Target connections per VM: " + targetNumConnections);
+        LOG.info("Total number of clients: " + (followers.size() * targetNumConnections));
+        LOG.info("File containing HopsFS file paths: '" + inputPath + "'");
+
+        boolean acceptable = getBooleanFromUser("Are these settings acceptable?");
+
+        if (!acceptable) {
+            LOG.warn("Settings were deemed unacceptable. Aborting.");
+            return;
         }
+
+        List<Integer> sleepIntervals = Arrays.asList(125, 125, 250, 500, 500, 750, 750, 750, 775, 800, 950, 1250, 1350, 1450, 1550, 1650, 1750, 1850, 1950, 2050, 2150);
+
+        int targetIndex = numClients.indexOf(targetNumConnections);
+
+        for (int i = 0; i <= targetIndex; i++) {
+            int numClientsToUse = numClients.get(targetNumConnections);
+
+            postTrialSleepInterval = sleepIntervals.get(i);
+
+            LOG.info("Beginning trials using " + numClientsToUse + " clients per VM. Sleep interval: " +
+                    postTrialSleepInterval + " ms.");
+
+            JsonObject payload = new JsonObject();
+            payload.addProperty(OPERATION, OP_WEAK_SCALING_READS_V2);
+            payload.addProperty("numThreads", numClientsToUse);
+            payload.addProperty("filesPerThread", 4);
+            payload.addProperty("inputPath", inputPath);
+            payload.addProperty("shuffle", true);
+
+            performDistributedBenchmark(primaryHdfs, 2, payload, numClientsToUse,
+                    4, inputPath, true, OP_WEAK_SCALING_READS_V2, null,
+                    "Weak Scaling Read v2 -- Connection Establishment", new DistributedBenchmarkOperation() {
+                        @Override
+                        public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
+                                                               int numThreads, int opsPerFile, String inputPath,
+                                                               boolean shuffle, int opCode, List<String> directories)
+                                throws FileNotFoundException, InterruptedException {
+                            return Commands.weakScalingBenchmarkV2(sharedHdfs, nameNodeEndpoint, numThreads,
+                                    opsPerFile, inputPath, shuffle, OP_WEAK_SCALING_READS_V2);
+                        }
+                    });
+
+            LOG.info("Finished iteration " + (i+1) + "/" + (targetIndex+1) + ". Sleeping for 0.5 seconds...");
+            Thread.sleep(500);
+        }
+
+        // Reset `postTrialSleepInterval` to its original value.
+        postTrialSleepInterval = originalPostTrialSleepInterval;
     }
 
     private int getNextOperation() {
