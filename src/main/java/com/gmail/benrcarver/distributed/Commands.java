@@ -339,10 +339,10 @@ public class Commands {
     /**
      * Gets the user inputs for this benchmark, then calls the actual benchmark itself.
      */
-    public static DistributedBenchmarkResult strongScalingBenchmark(final Configuration configuration,
-                                                                    final String endpoint,
-                                                                    int numFilesPerThread, int readsPerFile,
-                                                                    int numThreads, String inputPath)
+    public static DistributedBenchmarkResult strongScalingBenchmarkOld(final Configuration configuration,
+                                                                       final String endpoint,
+                                                                       int numFilesPerThread, int readsPerFile,
+                                                                       int numThreads, String inputPath)
             throws FileNotFoundException, InterruptedException {
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
 

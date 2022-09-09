@@ -10,7 +10,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jcraft.jsch.*;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1032,9 +1031,58 @@ public class Commander {
             waitForDistributedResult(numDistributedResults, operationId, localResult);
     }
 
+    //    public void strongScalingReadOperationNew(final Configuration configuration,
+    //                                           final String nameNodeEndpoint)
+    //            throws InterruptedException, FileNotFoundException {
+    //
+    //        // User provides file containing HopsFS file paths.
+    //        // Specifies how many files each thread should read.
+    //        // Specifies number of threads.
+    //        // Specifies how many times each file should be read.
+    //        int totalNumberOfReads = getIntFromUser("What is the total number of reads to be performed?");
+    //
+    //        int numClientVMs = getIntFromUser("How many client VMs are involved in the operation?");
+    //
+    //        int clientsPerVM = getIntFromUser("How many clients should run on each VM?");
+    //
+    //        System.out.print("Please provide a path to a local file containing HopsFS file paths.\n> ");
+    //        String inputPath = scanner.nextLine();
+    //
+    //        String operationId = UUID.randomUUID().toString();
+    //        int numDistributedResults = followers.size();
+    //        if (followers.size() > 0) {
+    //            JsonObject payload = new JsonObject();
+    //            payload.addProperty(OPERATION, OP_STRONG_SCALING_READS);
+    //            payload.addProperty(OPERATION_ID, operationId);
+    //            payload.addProperty("totalNumberOfReads", totalNumberOfReads);
+    //            payload.addProperty("numClientVMs", numClientVMs);
+    //            payload.addProperty("numClientVMs", numClientVMs);
+    //            payload.addProperty("inputPath", inputPath);
+    //
+    //            issueCommandToFollowers("New Strong Scaling Reads", operationId, payload);
+    //        }
+    //
+    //        DistributedBenchmarkResult localResult =
+    //                Commands.strongScalingBenchmarkOld(configuration, nameNodeEndpoint, filesPerThread, readsPerFile,
+    //                        numThreads, inputPath);
+    //
+    //        if (localResult == null) {
+    //            LOG.warn("Local result is null. Aborting.");
+    //            return;
+    //        }
+    //
+    //        LOG.info("LOCAL result of strong scaling benchmark: " + localResult);
+    //        localResult.setOperationId(operationId);
+    //
+    //        // Wait for followers' results if we had followers when we first started the operation.
+    //        if (numDistributedResults > 0)
+    //            waitForDistributedResult(numDistributedResults, operationId, localResult);
+    //    }
+
     public void strongScalingReadOperation(final Configuration configuration,
                                            final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
+
         // User provides file containing HopsFS file paths.
         // Specifies how many files each thread should read.
         // Specifies number of threads.
@@ -1064,7 +1112,7 @@ public class Commander {
         }
 
         DistributedBenchmarkResult localResult =
-                Commands.strongScalingBenchmark(configuration, nameNodeEndpoint, filesPerThread, readsPerFile,
+                Commands.strongScalingBenchmarkOld(configuration, nameNodeEndpoint, filesPerThread, readsPerFile,
                         numThreads, inputPath);
 
         if (localResult == null) {

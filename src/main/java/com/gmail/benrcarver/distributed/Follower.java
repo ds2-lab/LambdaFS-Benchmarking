@@ -279,7 +279,7 @@ public class Follower {
                 break;
             case OP_STRONG_SCALING_READS:
                 LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
-                result = Commands.strongScalingBenchmark(hdfsConfiguration, nameNodeEndpoint,
+                result = Commands.strongScalingBenchmarkOld(hdfsConfiguration, nameNodeEndpoint,
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
