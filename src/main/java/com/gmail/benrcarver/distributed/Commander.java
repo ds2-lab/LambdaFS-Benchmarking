@@ -418,6 +418,9 @@ public class Commander {
                 int op = getNextOperation();
 
                 switch (op) {
+                    case OP_ESTABLISH_CONNECTIONS:
+                        establishConnections();
+                        break;
                     case OP_SAVE_LATENCIES_TO_FILE:
                         saveLatenciesToFile();
                         break;
@@ -1845,6 +1848,7 @@ public class Commander {
         System.out.println("\n====== MENU ======");
         System.out.println("Debug Operations:");
         System.out.println(
+                "(-13) Establish/Pre-Warm Connections\n" +
                 "(-12) Print latency statistics to a file\n" +
                 "(-11) Toggle 'Benchmarking Mode' in self and followers\n" +
                 "(-10) Toggle 'OperationPerformed' tracking in followers\n" +
