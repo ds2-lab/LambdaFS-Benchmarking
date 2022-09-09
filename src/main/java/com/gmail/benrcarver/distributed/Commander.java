@@ -20,6 +20,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryPoolMXBean;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.*;
@@ -688,10 +689,10 @@ public class Commander {
      * Update the running totals for number of GCs performed and time spent GC-ing.
      */
     private void updateGCMetrics() {
-        List<GarbageCollectorMXBean> mxBeans = ManagementFactory.getGarbageCollectorMXBeans();
+        List<GarbageCollectorMXBean> gcMxBeans = ManagementFactory.getGarbageCollectorMXBeans();
         this.numGarbageCollections = 0;
         this.garbageCollectionTime = 0;
-        for (GarbageCollectorMXBean mxBean : mxBeans) {
+        for (GarbageCollectorMXBean mxBean : gcMxBeans) {
             long count = mxBean.getCollectionCount();
             long time  = mxBean.getCollectionTime();
 
@@ -1847,6 +1848,7 @@ public class Commander {
         System.out.println("\n====== MENU ======");
         System.out.println("Debug Operations:");
         System.out.println(
+                "(-14) HTTP Keep Alive\n" +
                 "(-13) Establish/Pre-Warm Connections\n" +
                 "(-12) Print latency statistics to a file\n" +
                 "(-11) Toggle 'Benchmarking Mode' in self and followers\n" +
