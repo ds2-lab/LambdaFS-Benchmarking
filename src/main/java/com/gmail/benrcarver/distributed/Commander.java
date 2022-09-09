@@ -1617,7 +1617,7 @@ public class Commander {
         int originalPostTrialSleepInterval = postTrialSleepInterval;
 
         LOG.info("Target connections per VM: " + targetNumConnections);
-        LOG.info("Total number of clients: " + (followers.size() * targetNumConnections));
+        LOG.info("Total number of clients: " + ((followers.size() + 1) * targetNumConnections));
         LOG.info("File containing HopsFS file paths: '" + inputPath + "'");
 
         boolean acceptable = getBooleanFromUser("Are these settings acceptable?");
@@ -1632,8 +1632,7 @@ public class Commander {
         int targetIndex = numClients.indexOf(targetNumConnections);
 
         for (int i = 0; i <= targetIndex; i++) {
-            int numClientsToUse = numClients.get(targetNumConnections);
-
+            int numClientsToUse = numClients.get(i);
             postTrialSleepInterval = sleepIntervals.get(i);
 
             LOG.info("Beginning trials using " + numClientsToUse + " clients per VM. Sleep interval: " +
