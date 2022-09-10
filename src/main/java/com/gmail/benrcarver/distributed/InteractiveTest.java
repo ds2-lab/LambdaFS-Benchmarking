@@ -75,7 +75,7 @@ public class InteractiveTest {
                     0, false, false,false);
             commander.startNoLoop();
             DistributedBenchmarkResult dirsResult = commander.createDirectoriesFromFile(
-                    "./fs_data/dirs4writes_vanilla.txt", 16);
+                    "./fs_data/dirs4writes_serverless.txt", 16);
             //DistributedBenchmarkResult filesResult = commander.createEmptyFilesFromFile(
             //        "./fs_data/files_alt.txt", 16);
 
