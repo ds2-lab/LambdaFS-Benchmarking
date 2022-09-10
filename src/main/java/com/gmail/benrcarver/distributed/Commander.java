@@ -1681,7 +1681,7 @@ public class Commander {
                 "\n(15) Read n Files with n Threads (Weak Scaling - Read)\n(16) Read n Files y Times with z Threads (Strong Scaling - Read)" +
                 "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)" +
                 "\n(19) Create directories\n(20) Weak Scaling Reads v2\n(21) File Stat Benchmark\n" +
-                "\n(22) Unavailable.\n(23) List Dir Weak Scaling\n(24)Stat File Weak Scaling.");
+                "\n(22) Unavailable.\n(23) List Dir Weak Scaling\n(24) Stat File Weak Scaling.");
         System.out.println("==================\n");
         System.out.println("What would you like to do?");
         System.out.print("> ");
