@@ -916,10 +916,6 @@ public class Commands {
         LOG.info("Throughput: " + throughput + " ops/sec.");
     }
 
-    public static void createDirectoriesFromFile(DistributedFileSystem hdfs, String nameNodeEndpoint) {
-
-    }
-
     public static void createSubtree(DistributedFileSystem hdfs, String nameNodeEndpoint) throws IOException {
         System.out.print("Subtree root directory:\n> ");
         String subtreeRootPath = scanner.nextLine();
