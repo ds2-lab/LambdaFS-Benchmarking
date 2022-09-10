@@ -1190,40 +1190,73 @@ public class Commander {
         System.out.print("Number of writes per thread? \n> ");
         int writesPerThread = Integer.parseInt(scanner.nextLine());
 
-        String operationId = UUID.randomUUID().toString();
-        int numDistributedResults = followers.size();
-        if (followers.size() > 0) {
-            JsonObject payload = new JsonObject();
-            payload.addProperty(OPERATION, OP_WEAK_SCALING_WRITES);
-            payload.addProperty(OPERATION_ID, operationId);
-            payload.addProperty("n", writesPerThread);
-            payload.addProperty("numberOfThreads", numberOfThreads);
-            payload.addProperty("randomWrites", directoryChoice == 3);
+        int numTrials = getIntFromUser("How many trials would you like to perform?");
 
-            JsonArray directoriesJson = new JsonArray();
-            for (String dir : directories)
-                directoriesJson.add(dir);
+        if (numTrials <= 0)
+            throw new IllegalArgumentException("The number of trials should be at least 1.");
 
-            payload.add("directories", directoriesJson);
+        int currentTrial = 0;
+        AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
+        Double[] results = new Double[numTrials];
 
-            issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload);
+        while (currentTrial < numTrials) {
+            LOG.info("|====| TRIAL #" + currentTrial + " |====|");
+
+            String operationId = UUID.randomUUID().toString();
+            int numDistributedResults = followers.size();
+            if (followers.size() > 0) {
+                JsonObject payload = new JsonObject();
+                payload.addProperty(OPERATION, OP_WEAK_SCALING_WRITES);
+                payload.addProperty(OPERATION_ID, operationId);
+                payload.addProperty("n", writesPerThread);
+                payload.addProperty("numberOfThreads", numberOfThreads);
+                payload.addProperty("randomWrites", directoryChoice == 3);
+
+                JsonArray directoriesJson = new JsonArray();
+                for (String dir : directories)
+                    directoriesJson.add(dir);
+
+                payload.add("directories", directoriesJson);
+
+                issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload);
+            }
+
+            LOG.info("Each thread should be writing " + writesPerThread + " files...");
+
+            DistributedBenchmarkResult localResult =
+                    Commands.writeFilesInternal(writesPerThread, numberOfThreads, directories,
+                            OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3));
+            LOG.info("Received local result...");
+            localResult.setOperationId(operationId);
+            localResult.setOperation(OP_WEAK_SCALING_WRITES);
+
+            //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
+            localResult.setOperationId(operationId);
+
+            // Wait for followers' results if we had followers when we first started the operation.
+            AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
+
+            aggregatedResults[currentTrial] = aggregatedResult;
+            results[currentTrial] = aggregatedResult.throughput;
+            currentTrial++;
+
+            if (!(currentTrial >= numTrials)) {
+                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
+                        postTrialSleepInterval + " ms.");
+                performClientVMGarbageCollection();
+                Thread.sleep(postTrialSleepInterval);
+            }
+
+            currentTrial += 1;
         }
 
-        LOG.info("Each thread should be writing " + writesPerThread + " files...");
+        System.out.println("[THROUGHPUT]");
+        for (double throughputResult : results) {
+            System.out.println(throughputResult);
+        }
 
-        DistributedBenchmarkResult localResult =
-                Commands.writeFilesInternal(writesPerThread, numberOfThreads, directories,
-                        OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3));
-        LOG.info("Received local result...");
-        localResult.setOperationId(operationId);
-        localResult.setOperation(OP_WEAK_SCALING_WRITES);
-
-        //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
-        localResult.setOperationId(operationId);
-
-        // Wait for followers' results if we had followers when we first started the operation.
-        if (numDistributedResults > 0)
-            waitForDistributedResult(numDistributedResults, operationId, localResult);
+        for (AggregatedResult result : aggregatedResults)
+            System.out.println(result.metricsString);
     }
 
     /**
