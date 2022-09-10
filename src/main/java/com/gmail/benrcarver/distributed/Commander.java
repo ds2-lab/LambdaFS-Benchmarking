@@ -1001,7 +1001,7 @@ public class Commander {
         int numDistributedResults = followers.size();
         if (followers.size() > 0) {
             JsonObject payload = new JsonObject();
-            payload.addProperty(OPERATION, OP_STRONG_SCALING_READS);
+            payload.addProperty(OPERATION, OP_STRONG_SCALING_WRITES);
             payload.addProperty(OPERATION_ID, operationId);
             payload.addProperty("n", writesPerThread);
             payload.addProperty("numberOfThreads", numberOfThreads);
@@ -1019,9 +1019,9 @@ public class Commander {
 
         DistributedBenchmarkResult localResult =
                 Commands.writeFilesInternal(writesPerThread, numberOfThreads, directories,
-                        OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, false);
+                        OP_STRONG_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, false);
         localResult.setOperationId(operationId);
-        localResult.setOperation(OP_WEAK_SCALING_WRITES);
+        localResult.setOperation(OP_STRONG_SCALING_WRITES);
 
         //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
         localResult.setOperationId(operationId);
@@ -1122,6 +1122,7 @@ public class Commander {
 
         LOG.info("LOCAL result of strong scaling benchmark: " + localResult);
         localResult.setOperationId(operationId);
+        localResult.setOperation(OP_STRONG_SCALING_READS);
 
         // Wait for followers' results if we had followers when we first started the operation.
         if (numDistributedResults > 0)
@@ -1194,7 +1195,7 @@ public class Commander {
         int numDistributedResults = followers.size();
         if (followers.size() > 0) {
             JsonObject payload = new JsonObject();
-            payload.addProperty(OPERATION, OP_STRONG_SCALING_READS);
+            payload.addProperty(OPERATION, OP_WEAK_SCALING_WRITES);
             payload.addProperty(OPERATION_ID, operationId);
             payload.addProperty("n", writesPerThread);
             payload.addProperty("numberOfThreads", numberOfThreads);
@@ -1213,7 +1214,7 @@ public class Commander {
 
         DistributedBenchmarkResult localResult =
                 Commands.writeFilesInternal(writesPerThread, numberOfThreads, directories,
-                        OP_STRONG_SCALING_READS, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3));
+                        OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3));
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
