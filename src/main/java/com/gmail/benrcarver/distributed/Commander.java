@@ -1257,7 +1257,7 @@ public class Commander {
             return new AggregatedResult(localResult.getOpsPerSecond(), avgLatency, metricsString);
         }
 
-        LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
+        LOG.info("Waiting for " + numDistributedResults + " distributed result(s).");
         BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
         assert(resultQueue != null);
 

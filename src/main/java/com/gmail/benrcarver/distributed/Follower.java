@@ -180,7 +180,7 @@ public class Follower {
                 break;
             case OP_CLEAR_METRIC_DATA:
                 LOG.info("Clearing statistics packages...");
-                Commands.clearMetricData(hdfs);
+                Commands.clearMetricDataNoPrompt(hdfs);
                 break;
             case OP_TOGGLE_OPS_PERFORMED_FOLLOWERS:
                 boolean toggle = message.getAsJsonPrimitive(TRACK_OP_PERFORMED).getAsBoolean();
@@ -290,7 +290,7 @@ public class Follower {
                 break;
             case OP_WEAK_SCALING_WRITES:
                 LOG.info("'Write n Files with n Threads (Weak Scaling - Write)' selected!");
-                JsonArray directoriesJson = message.getAsJsonPrimitive("directories").getAsJsonArray();
+                JsonArray directoriesJson = message.getAsJsonArray("directories");
                 List<String> directories = new ArrayList<>();
                 for (JsonElement elem : directoriesJson) {
                     directories.add(elem.getAsString());
