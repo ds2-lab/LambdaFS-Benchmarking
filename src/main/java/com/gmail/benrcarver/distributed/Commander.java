@@ -1197,7 +1197,7 @@ public class Commander {
 
         int currentTrial = 0;
         AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
-        Double[] results = new Double[numTrials];
+        double[] results = new double[numTrials];
 
         while (currentTrial < numTrials) {
             LOG.info("|====| TRIAL #" + currentTrial + " |====|");
@@ -1246,8 +1246,6 @@ public class Commander {
                 performClientVMGarbageCollection();
                 Thread.sleep(postTrialSleepInterval);
             }
-
-            currentTrial += 1;
         }
 
         System.out.println("[THROUGHPUT]");
