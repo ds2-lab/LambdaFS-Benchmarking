@@ -1214,6 +1214,7 @@ public class Commander {
         DistributedBenchmarkResult localResult =
                 Commands.writeFilesInternal(writesPerThread, numberOfThreads, directories,
                         OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3));
+        LOG.info("Received local result...");
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_WEAK_SCALING_WRITES);
 
