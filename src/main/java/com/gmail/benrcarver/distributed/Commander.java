@@ -1082,7 +1082,6 @@ public class Commander {
     public void strongScalingReadOperation(final Configuration configuration,
                                            final String nameNodeEndpoint)
             throws InterruptedException, FileNotFoundException {
-
         // User provides file containing HopsFS file paths.
         // Specifies how many files each thread should read.
         // Specifies number of threads.
