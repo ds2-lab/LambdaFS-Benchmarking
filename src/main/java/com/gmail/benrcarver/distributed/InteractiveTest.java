@@ -92,18 +92,18 @@ public class InteractiveTest {
                         ", N: " + latency.getN() + "]");
             }
 
-            LOG.info("========== FILES RESULT ==========");
-            LOG.info("Num Ops Performed   : " + filesResult.numOpsPerformed);
-            LOG.info("Duration (sec)      : " + filesResult.durationSeconds);
-            LOG.info("Throughput          : " + filesResult.getOpsPerSecond());
-
-            if (filesResult.latencyStatistics != null) {
-                DescriptiveStatistics latency = filesResult.latencyStatistics;
-
-                LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
-                        ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
-                        ", N: " + latency.getN() + "]");
-            }
+//            LOG.info("========== FILES RESULT ==========");
+//            LOG.info("Num Ops Performed   : " + filesResult.numOpsPerformed);
+//            LOG.info("Duration (sec)      : " + filesResult.durationSeconds);
+//            LOG.info("Throughput          : " + filesResult.getOpsPerSecond());
+//
+//            if (filesResult.latencyStatistics != null) {
+//                DescriptiveStatistics latency = filesResult.latencyStatistics;
+//
+//                LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
+//                        ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
+//                        ", N: " + latency.getN() + "]");
+//            }
         }
 
         // If the user specified the worker argument, then we launch as a Follower.
