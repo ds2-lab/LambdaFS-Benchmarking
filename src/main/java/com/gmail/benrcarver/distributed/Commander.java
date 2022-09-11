@@ -1239,27 +1239,29 @@ public class Commander {
         System.out.print("Number of writes per thread? \n> ");
         int writesPerThread = Integer.parseInt(scanner.nextLine());
 
-        int minLength = 0;
-        System.out.print("Min string length (default " + minLength + "):\n> ");
-        try {
-            minLength = Integer.parseInt(scanner.nextLine());
-        } catch (NumberFormatException ex) {
-            LOG.info("Defaulting to " + minLength + ".");
-        }
+        int numTrials = getIntFromUser("How many trials should be performed?");
 
-        int maxLength = 0;
-        System.out.print("Max string length (default " + maxLength + "):\n> ");
-        try {
-            maxLength = Integer.parseInt(scanner.nextLine());
-        } catch (NumberFormatException ex) {
-            LOG.info("Defaulting to " + maxLength + ".");
-        }
+//        int minLength = 0;
+//        System.out.print("Min string length (default " + minLength + "):\n> ");
+//        try {
+//            minLength = Integer.parseInt(scanner.nextLine());
+//        } catch (NumberFormatException ex) {
+//            LOG.info("Defaulting to " + minLength + ".");
+//        }
+//
+//        int maxLength = 0;
+//        System.out.print("Max string length (default " + maxLength + "):\n> ");
+//        try {
+//            maxLength = Integer.parseInt(scanner.nextLine());
+//        } catch (NumberFormatException ex) {
+//            LOG.info("Defaulting to " + maxLength + ".");
+//        }
 
         JsonObject payload = new JsonObject();
         payload.addProperty(OPERATION, OP_WEAK_SCALING_WRITES);
         payload.addProperty("n", writesPerThread);
-        payload.addProperty("minLength", minLength);
-        payload.addProperty("maxLength", maxLength);
+        // payload.addProperty("minLength", minLength);
+        // payload.addProperty("maxLength", maxLength);
         payload.addProperty("numberOfThreads", numberOfThreads);
         payload.addProperty("randomWrites", directoryChoice == 3);
 
@@ -1269,7 +1271,7 @@ public class Commander {
 
         payload.add("directories", directoriesJson);
 
-        performDistributedBenchmark(sharedHdfs, 1, payload, numberOfThreads, writesPerThread, null,
+        performDistributedBenchmark(sharedHdfs, numTrials, payload, numberOfThreads, writesPerThread, null,
                 false, OP_WEAK_SCALING_WRITES, directories, "Write n Files with n Threads (Weak Scaling - Write)",
                 new DistributedBenchmarkOperation() {
                     @Override
