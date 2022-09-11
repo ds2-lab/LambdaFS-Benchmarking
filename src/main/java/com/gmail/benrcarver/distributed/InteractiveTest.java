@@ -74,36 +74,36 @@ public class InteractiveTest {
                     true, /* If it has this option, then it is true */
                     0, false, false,false);
             commander.startNoLoop();
-            DistributedBenchmarkResult dirsResult = commander.createDirectoriesFromFile(
-                    "./fs_data/dirs4writes_serverless.txt", 16);
-            //DistributedBenchmarkResult filesResult = commander.createEmptyFilesFromFile(
-            //        "./fs_data/files_alt.txt", 16);
+            //DistributedBenchmarkResult dirsResult = commander.createDirectoriesFromFile(
+            //        "./fs_data/dirs4writes_serverless.txt", 16);
+            DistributedBenchmarkResult filesResult = commander.createEmptyFilesFromFile(
+                    "./fs_data/files_alt.txt", 16);
 
-            LOG.info("========== DIRS RESULT ==========");
-            LOG.info("Num Ops Performed   : " + dirsResult.numOpsPerformed);
-            LOG.info("Duration (sec)      : " + dirsResult.durationSeconds);
-            LOG.info("Throughput          : " + dirsResult.getOpsPerSecond());
-
-            if (dirsResult.latencyStatistics != null) {
-                DescriptiveStatistics latency = dirsResult.latencyStatistics;
-
-                LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
-                        ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
-                        ", N: " + latency.getN() + "]");
-            }
-
-//            LOG.info("========== FILES RESULT ==========");
-//            LOG.info("Num Ops Performed   : " + filesResult.numOpsPerformed);
-//            LOG.info("Duration (sec)      : " + filesResult.durationSeconds);
-//            LOG.info("Throughput          : " + filesResult.getOpsPerSecond());
+//            LOG.info("========== DIRS RESULT ==========");
+//            LOG.info("Num Ops Performed   : " + dirsResult.numOpsPerformed);
+//            LOG.info("Duration (sec)      : " + dirsResult.durationSeconds);
+//            LOG.info("Throughput          : " + dirsResult.getOpsPerSecond());
 //
-//            if (filesResult.latencyStatistics != null) {
-//                DescriptiveStatistics latency = filesResult.latencyStatistics;
+//            if (dirsResult.latencyStatistics != null) {
+//                DescriptiveStatistics latency = dirsResult.latencyStatistics;
 //
 //                LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
 //                        ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
 //                        ", N: " + latency.getN() + "]");
 //            }
+
+            LOG.info("========== FILES RESULT ==========");
+            LOG.info("Num Ops Performed   : " + filesResult.numOpsPerformed);
+            LOG.info("Duration (sec)      : " + filesResult.durationSeconds);
+            LOG.info("Throughput          : " + filesResult.getOpsPerSecond());
+
+            if (filesResult.latencyStatistics != null) {
+                DescriptiveStatistics latency = filesResult.latencyStatistics;
+
+                LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
+                        ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
+                        ", N: " + latency.getN() + "]");
+            }
         }
 
         // If the user specified the worker argument, then we launch as a Follower.
