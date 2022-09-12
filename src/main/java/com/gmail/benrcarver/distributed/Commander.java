@@ -1341,6 +1341,7 @@ public class Commander {
             trialAvgLatency += latency.getMean();
         }
 
+        ArrayList<String> followerIds = new ArrayList<>();
         for (DistributedBenchmarkResult res : resultQueue) {
             LOG.info("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");
             LOG.info("Num Ops Performed   : " + res.numOpsPerformed);
@@ -1350,6 +1351,7 @@ public class Commander {
             opsPerformed.addValue(res.numOpsPerformed);
             duration.addValue(res.durationSeconds);
             throughput.addValue(res.getOpsPerSecond());
+            followerIds.add(res.jvmId);
 
             if (res.latencyStatistics != null) {
                 DescriptiveStatistics latency = res.latencyStatistics;
@@ -1376,7 +1378,7 @@ public class Commander {
 
         LOG.info(metricsString);
 
-        return new AggregatedResult(aggregateThroughput, trialAvgLatency, metricsString);
+        return new AggregatedResult(aggregateThroughput, trialAvgLatency, metricsString, followerIds);
     }
 
     /**
@@ -1726,11 +1728,18 @@ public class Commander {
         public double throughput;
         public double averageLatency;
         public String metricsString; // All the metrics I'd want formatted so that I can copy & paste into Excel.
+        public List<String> followerIds;
 
-        public AggregatedResult(double throughput, double averageLatency, String metricsString) {
+        public AggregatedResult(double throughput, double averageLatency,
+                                String metricsString, List<String> followerIds) {
             this.throughput = throughput;
             this.averageLatency = averageLatency;
             this.metricsString = metricsString;
+            this.followerIds = followerIds;
+        }
+
+        public AggregatedResult(double throughput, double averageLatency, String metricsString) {
+            this(throughput, averageLatency, metricsString, new ArrayList<>());
         }
     }
 }
