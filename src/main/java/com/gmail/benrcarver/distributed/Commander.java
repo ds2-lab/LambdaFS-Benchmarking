@@ -1019,7 +1019,8 @@ public class Commander {
 
         DistributedBenchmarkResult localResult =
                 Commands.writeFilesInternal(writesPerThread, numberOfThreads, directories,
-                        OP_STRONG_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, false);
+                        OP_STRONG_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, false,
+                        OPERATION_ID, false);
         localResult.setOperationId(operationId);
         localResult.setOperation(OP_STRONG_SCALING_WRITES);
 
@@ -1195,6 +1196,8 @@ public class Commander {
         if (numTrials <= 0)
             throw new IllegalArgumentException("The number of trials should be at least 1.");
 
+        boolean writePathsToFile = getBooleanFromUser("Write HopsFS file paths to file?");
+
         int currentTrial = 0;
         AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
         double[] results = new double[numTrials];
@@ -1211,6 +1214,7 @@ public class Commander {
                 payload.addProperty("n", writesPerThread);
                 payload.addProperty("numberOfThreads", numberOfThreads);
                 payload.addProperty("randomWrites", directoryChoice == 3);
+                payload.addProperty("writePathsToFile", writePathsToFile);
 
                 JsonArray directoriesJson = new JsonArray();
                 for (String dir : directories)
@@ -1222,10 +1226,10 @@ public class Commander {
             }
 
             LOG.info("Each thread should be writing " + writesPerThread + " files...");
-
             DistributedBenchmarkResult localResult =
                     Commands.writeFilesInternal(writesPerThread, numberOfThreads, directories,
-                            OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3));
+                            OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3),
+                            OPERATION_ID, writePathsToFile);
             LOG.info("Received local result...");
             localResult.setOperationId(operationId);
             localResult.setOperation(OP_WEAK_SCALING_WRITES);
@@ -1406,8 +1410,6 @@ public class Commander {
 
         boolean shuffle = getBooleanFromUser("Shuffle file paths around?");
 
-        boolean writePathsToFile = getBooleanFromUser("Write HopsFS file paths to file?");
-
         int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
 
         int currentTrial = 0;
@@ -1425,7 +1427,6 @@ public class Commander {
                 payload.addProperty("filesPerThread", filesPerThread);
                 payload.addProperty("inputPath", inputPath);
                 payload.addProperty("shuffle", shuffle);
-                payload.addProperty("writePathsToFile", writePathsToFile);
 
                 issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload);
             }
@@ -1434,7 +1435,7 @@ public class Commander {
             //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
             DistributedBenchmarkResult localResult =
                     Commands.weakScalingBenchmarkV2(configuration, nameNodeEndpoint, numThreads,
-                            filesPerThread, inputPath, shuffle, OP_WEAK_SCALING_READS_V2, operationId, writePathsToFile);
+                            filesPerThread, inputPath, shuffle, OP_WEAK_SCALING_READS_V2, operationId);
 
             if (localResult == null) {
                 LOG.warn("Local result is null. Aborting.");

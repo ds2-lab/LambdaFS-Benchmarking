@@ -292,14 +292,16 @@ public class Follower {
                 LOG.info("'Write n Files with n Threads (Weak Scaling - Write)' selected!");
                 JsonArray directoriesJson = message.getAsJsonArray("directories");
                 List<String> directories = new ArrayList<>();
-                for (JsonElement elem : directoriesJson) {
+                for (JsonElement elem : directoriesJson)
                     directories.add(elem.getAsString());
-                }
+
                 result = Commands.writeFilesInternal(
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("numberOfThreads").getAsInt(),
                         directories, OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint,
-                        message.getAsJsonPrimitive("randomWrites").getAsBoolean());
+                        message.getAsJsonPrimitive("randomWrites").getAsBoolean(),
+                        operationId,
+                        message.getAsJsonPrimitive("writePathsToFile").getAsBoolean());
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for WEAK SCALING (WRITE) benchmark: " + result);
                 sendResultToLeader(result);
@@ -316,7 +318,7 @@ public class Follower {
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
                         directories, OP_STRONG_SCALING_WRITES, hdfsConfiguration,
-                        nameNodeEndpoint, false);
+                        nameNodeEndpoint, false, operationId, false);
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for STRONG SCALING (WRITE) benchmark: " + result);
                 sendResultToLeader(result);
@@ -328,7 +330,7 @@ public class Follower {
                         message.getAsJsonPrimitive("filesPerThread").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
                         message.getAsJsonPrimitive("shuffle").getAsBoolean(), OP_WEAK_SCALING_READS_V2,
-                        operationId, message.getAsJsonPrimitive("writePathsToFile").getAsBoolean());
+                        operationId);
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for OP_WEAK_SCALING_READS_V2 benchmark: " + result);
                 sendResultToLeader(result);

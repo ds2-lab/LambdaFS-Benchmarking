@@ -484,8 +484,7 @@ public class Commands {
     public static DistributedBenchmarkResult weakScalingBenchmarkV2(final Configuration configuration,
                                                                     final String nameNodeEndpoint, int numThreads,
                                                                     final int filesPerThread, String inputPath,
-                                                                    boolean shuffle, int opCode, String operationId,
-                                                                    boolean writePathsToFile)
+                                                                    boolean shuffle, int opCode, String operationId)
             throws InterruptedException, FileNotFoundException {
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
 
@@ -527,30 +526,6 @@ public class Commands {
                         return readFile(path, hdfs, nameNodeEndpoint);
                     }
                 });
-
-
-        if (writePathsToFile) {
-            String dirPath = "./weakScalingWriteFilesCreated/";
-            String filePath = dirPath.concat(operationId + "-" + result.jvmId + ".txt");
-
-            LOG.debug("Writing HopsFS file paths to file: '" + filePath + "'");
-
-            File dir = new File(dirPath);
-            if (!dir.exists())
-                dir.mkdir();
-
-            File file = new File(filePath);
-            try {
-                FileWriter fw = new FileWriter(file.getAbsoluteFile());
-                BufferedWriter bw = new BufferedWriter(fw);
-                for (String path : paths) {
-                    bw.write(path + "\n");
-                }
-                bw.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
 
         return result;
     }
@@ -816,7 +791,7 @@ public class Commands {
         }
 
         writeFilesInternal(numFiles, numThreads, Collections.singletonList(targetDirectory),
-                OP_WEAK_SCALING_WRITES, configuration, nameNodeEndpoint, false);
+                OP_WEAK_SCALING_WRITES, configuration, nameNodeEndpoint, false, "N/A", false);
     }
 
     /**
@@ -836,7 +811,8 @@ public class Commands {
     public static DistributedBenchmarkResult writeFilesInternal(int filesPerDirectory, int numThreads,
                                                                 List<String> targetDirectories, int opCode,
                                                                 Configuration configuration,
-                                                                final String nameNodeEndpoint, boolean randomWrites)
+                                                                final String nameNodeEndpoint, boolean randomWrites,
+                                                                String operationId, boolean writePathsToFile)
             throws IOException, InterruptedException {
         // Generate the file contents and file names. targetDirectories has length equal to numThreads
         // except when randomWrites is true (in which case, in may vary). But either way, each thread
@@ -888,13 +864,38 @@ public class Commands {
         assert(targetPathsPerThread != null);
         assert(targetPathsPerThread.length == numThreads);
 
-        return executeBenchmark(nameNodeEndpoint, numThreads, targetPathsPerThread, 1, opCode,
+        DistributedBenchmarkResult result = executeBenchmark(nameNodeEndpoint, numThreads, targetPathsPerThread, 1, opCode,
                 new FSOperation(nameNodeEndpoint, configuration) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
                         return createFile(path, content, hdfs, nameNodeEndpoint);
                     }
                 });
+
+        if (writePathsToFile) {
+            String dirPath = "./weakScalingWriteFilesCreated/";
+            String filePath = dirPath.concat(operationId + "-" + result.jvmId + ".txt");
+
+            LOG.debug("Writing HopsFS file paths to file: '" + filePath + "'");
+
+            File dir = new File(dirPath);
+            if (!dir.exists())
+                dir.mkdir();
+
+            File file = new File(filePath);
+            try {
+                FileWriter fw = new FileWriter(file.getAbsoluteFile());
+                BufferedWriter bw = new BufferedWriter(fw);
+                for (String path : targetPaths) {
+                    bw.write(path + "\n");
+                }
+                bw.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return result;
     }
 
     /**
