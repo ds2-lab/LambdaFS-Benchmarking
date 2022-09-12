@@ -482,9 +482,10 @@ public class Commands {
      * @param inputPath Path to local file containing HopsFS file paths (of the files to read).
      */
     public static DistributedBenchmarkResult weakScalingBenchmarkV2(final Configuration configuration,
-                                                        final String nameNodeEndpoint, int numThreads,
-                                                        final int filesPerThread, String inputPath,
-                                                        boolean shuffle, int opCode)
+                                                                    final String nameNodeEndpoint, int numThreads,
+                                                                    final int filesPerThread, String inputPath,
+                                                                    boolean shuffle, int opCode, String operationId,
+                                                                    boolean writePathsToFile)
             throws InterruptedException, FileNotFoundException {
         List<String> paths = Utils.getFilePathsFromFile(inputPath);
 
@@ -519,13 +520,39 @@ public class Commands {
                 Collections.shuffle(paths);
         }
 
-        return executeBenchmark(nameNodeEndpoint, numThreads, fileBatches, 1, opCode,
-                new FSOperation(nameNodeEndpoint, configuration) {
+        DistributedBenchmarkResult result = executeBenchmark(nameNodeEndpoint, numThreads, fileBatches, 1,
+                opCode, new FSOperation(nameNodeEndpoint, configuration) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
                         return readFile(path, hdfs, nameNodeEndpoint);
                     }
                 });
+
+
+        if (writePathsToFile) {
+            String dirPath = "./weakScalingWriteFilesCreated/";
+            String filePath = dirPath.concat(operationId + "-" + result.jvmId + ".txt");
+
+            LOG.debug("Writing HopsFS file paths to file: '" + filePath + "'");
+
+            File dir = new File(dirPath);
+            if (!dir.exists())
+                dir.mkdir();
+
+            File file = new File(filePath);
+            try {
+                FileWriter fw = new FileWriter(file.getAbsoluteFile());
+                BufferedWriter bw = new BufferedWriter(fw);
+                for (String path : paths) {
+                    bw.write(path + "\n");
+                }
+                bw.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return result;
     }
 
     public static DistributedBenchmarkResult listDirectoryWeakScaling(final Configuration configuration,

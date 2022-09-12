@@ -1404,6 +1404,8 @@ public class Commander {
 
         boolean shuffle = getBooleanFromUser("Shuffle file paths around?");
 
+        boolean writePathsToFile = getBooleanFromUser("Write HopsFS file paths to file?");
+
         int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
 
         int currentTrial = 0;
@@ -1421,6 +1423,7 @@ public class Commander {
                 payload.addProperty("filesPerThread", filesPerThread);
                 payload.addProperty("inputPath", inputPath);
                 payload.addProperty("shuffle", shuffle);
+                payload.addProperty("writePathsToFile", writePathsToFile);
 
                 issueCommandToFollowers("Read n Files with n Threads (Weak Scaling - Read)", operationId, payload);
             }
@@ -1429,7 +1432,7 @@ public class Commander {
             //       Then, if we have followers, we'll wait for their results to be sent to us, then we'll merge them.
             DistributedBenchmarkResult localResult =
                     Commands.weakScalingBenchmarkV2(configuration, nameNodeEndpoint, numThreads,
-                            filesPerThread, inputPath, shuffle, OP_WEAK_SCALING_READS_V2);
+                            filesPerThread, inputPath, shuffle, OP_WEAK_SCALING_READS_V2, operationId, writePathsToFile);
 
             if (localResult == null) {
                 LOG.warn("Local result is null. Aborting.");
