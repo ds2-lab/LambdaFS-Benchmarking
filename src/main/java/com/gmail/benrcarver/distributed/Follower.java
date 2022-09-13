@@ -331,7 +331,7 @@ public class Follower {
                 }
                 result = Commands.writeFilesInternal(
                         message.getAsJsonPrimitive("n").getAsInt(),
-                        message.getAsJsonPrimitive("numThreads").getAsInt(),
+                        message.getAsJsonPrimitive("numberOfThreads").getAsInt(),
                         directories, hdfs, OP_WEAK_SCALING_WRITES, nameNodeEndpoint,
                         message.getAsJsonPrimitive("randomWrites").getAsBoolean());
                 result.setOperationId(operationId);
