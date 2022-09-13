@@ -414,6 +414,8 @@ public class Commands {
                 for (FileStatus status : fileStatus)
                     LOG.debug(status.getPath().toString());
                 LOG.debug("Directory '" + targetDirectory + "' contains " + fileStatus.length + " files.");
+            } else {
+                LOG.info("Number of files in directory: " + fileStatus.length);
             }
             return true;
         } catch (IOException ex) {
