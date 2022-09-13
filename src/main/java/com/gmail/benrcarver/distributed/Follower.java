@@ -324,7 +324,7 @@ public class Follower {
                 break;
             case OP_WEAK_SCALING_WRITES:
                 LOG.info("'Write n Files with n Threads (Weak Scaling - Write)' selected!");
-                JsonArray directoriesJson = message.getAsJsonPrimitive("directories").getAsJsonArray();
+                JsonArray directoriesJson = message.getAsJsonArray("directories");
                 List<String> directories = new ArrayList<>();
                 for (JsonElement elem : directoriesJson) {
                     directories.add(elem.getAsString());
