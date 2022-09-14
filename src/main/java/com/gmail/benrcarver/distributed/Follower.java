@@ -365,6 +365,24 @@ public class Follower {
                 LOG.info("Obtained local result for STAT FILES WEAK SCALING benchmark: " + result);
                 sendResultToLeader(result);
                 break;
+            case OP_MKDIR_WEAK_SCALING:
+                LOG.info("MKDIR WEAK SCALING selected!");
+                directoriesJson = message.getAsJsonArray("directories");
+                directories = new ArrayList<>();
+                for (JsonElement elem : directoriesJson)
+                    directories.add(elem.getAsString());
+
+                result = Commands.mkdirWeakScaling(
+                        message.getAsJsonPrimitive("n").getAsInt(),
+                        message.getAsJsonPrimitive("numberOfThreads").getAsInt(),
+                        directories, OP_MKDIR_WEAK_SCALING, hdfsConfiguration, nameNodeEndpoint,
+                        message.getAsJsonPrimitive("randomMkdirs").getAsBoolean(),
+                        operationId,
+                        message.getAsJsonPrimitive("writePathsToFile").getAsBoolean());
+                result.setOperationId(operationId);
+                LOG.info("Obtained local result for WEAK SCALING (MKDIR) benchmark: " + result);
+                sendResultToLeader(result);
+                break;
             default:
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
                 break;

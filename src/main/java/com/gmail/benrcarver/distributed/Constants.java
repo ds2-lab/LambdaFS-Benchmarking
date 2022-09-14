@@ -44,4 +44,5 @@ public class Constants {
     public static final int OP_CREATE_DIRECTORIES_FROM_FILE = 22;
     public static final int OP_LIST_DIRECTORIES_FROM_FILE = 23;
     public static final int OP_STAT_FILES_WEAK_SCALING = 24;
+    public static final int OP_MKDIR_WEAK_SCALING = 25;
 }

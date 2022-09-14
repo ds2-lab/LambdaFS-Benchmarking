@@ -615,6 +615,9 @@ public class Commander {
                         LOG.info("STAT FILES WEAK SCALING selected!");
                         statFilesWeakScaling(hdfsConfiguration, nameNodeEndpoint);
                         break;
+                    case OP_MKDIR_WEAK_SCALING:
+                        LOG.info("MKDIR WEAK SCALING selected!");
+                        mkdirWeakScaling(hdfsConfiguration, nameNodeEndpoint);
                     default:
                         LOG.info("ERROR: Unknown or invalid operation specified: " + op);
                         break;
@@ -631,6 +634,137 @@ public class Commander {
             if (numGCsPerformedDuringLastOp > 0)
                 LOG.debug("Spent " + timeSpentInGCDuringLastOp + " ms garbage collecting during the last operation.");
         }
+    }
+
+    private void mkdirWeakScaling(final Configuration configuration,
+                                  final String nameNodeEndpoint) throws InterruptedException, IOException {
+        int directoryChoice = getIntFromUser("Should the threads create directories within the " +
+                "SAME DIRECTORY [1], DIFFERENT DIRECTORIES [2], or \"RANDOM MKDIRs\" [3]?");
+
+        // Validate input.
+        if (directoryChoice < 1 || directoryChoice > 3) {
+            LOG.error("Invalid argument specified. Should be \"1\" for same directory, \"2\" for different directories. " +
+                    "Or \"3\" for random MKDIRs. Instead, got \"" + directoryChoice + "\"");
+            return;
+        }
+
+        int dirInputMethodChoice = getIntFromUser("Manually input (comma-separated list) [1], " +
+                "or specify file containing directories [2]?");
+
+        List<String> directories;
+        if (dirInputMethodChoice == 1) {
+            System.out.print("Please enter the directories as a comma-separated list:\n> ");
+            String listOfDirectories = scanner.nextLine();
+            directories = Arrays.asList(listOfDirectories.split(","));
+
+            if (directories.size() == 1)
+                LOG.info("1 directory specified.");
+            else
+                LOG.info(directories.size() + " directories specified.");
+        }
+        else if (dirInputMethodChoice == 2) {
+            System.out.print("Please provide path to file containing HopsFS directories:\n> ");
+            String filePath = scanner.nextLine();
+            directories = Utils.getFilePathsFromFile(filePath);
+
+            if (directories.size() == 1)
+                LOG.info("1 directory specified in file.");
+            else
+                LOG.info(directories.size() + " directories specified in file.");
+        }
+        else {
+            LOG.error("Invalid option specified (" + dirInputMethodChoice +
+                    "). Please enter \"1\" or \"2\" for this prompt.");
+            return;
+        }
+
+        System.out.print("Number of threads? \n> ");
+        int numberOfThreads = Integer.parseInt(scanner.nextLine());
+
+        if (directoryChoice == 1) {
+            Random rng = new Random();
+            int idx = rng.nextInt(directories.size());
+            String dir = directories.get(idx);
+            directories = new ArrayList<>(numberOfThreads);
+            for (int i = 0; i < numberOfThreads; i++)
+                directories.add(dir); // This way, they'll all write to the same directory. We can reuse old code.
+        } else if (directoryChoice == 2) {
+            Collections.shuffle(directories);
+            directories = directories.subList(0, numberOfThreads);
+        } // If neither of the above are true, then we use the entire directories list.
+        //   We'll generate a bunch of random writes using the full list.
+
+        System.out.print("Number of directories to be created per thread? \n> ");
+        int mkdirsPerThread = Integer.parseInt(scanner.nextLine());
+
+        int numTrials = getIntFromUser("How many trials would you like to perform?");
+
+        if (numTrials <= 0)
+            throw new IllegalArgumentException("The number of trials should be at least 1.");
+
+        boolean writePathsToFile = getBooleanFromUser("Write HopsFS directory paths to file?");
+
+        int currentTrial = 0;
+        AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
+        double[] results = new double[numTrials];
+
+        while (currentTrial < numTrials) {
+            LOG.info("|====| TRIAL #" + currentTrial + " |====|");
+
+            String operationId = UUID.randomUUID().toString();
+            int numDistributedResults = followers.size();
+            if (followers.size() > 0) {
+                JsonObject payload = new JsonObject();
+                payload.addProperty(OPERATION, OP_MKDIR_WEAK_SCALING);
+                payload.addProperty(OPERATION_ID, operationId);
+                payload.addProperty("n", mkdirsPerThread);
+                payload.addProperty("numberOfThreads", numberOfThreads);
+                payload.addProperty("randomMkdirs", directoryChoice == 3);
+                payload.addProperty("writePathsToFile", writePathsToFile);
+
+                JsonArray directoriesJson = new JsonArray();
+                for (String dir : directories)
+                    directoriesJson.add(dir);
+
+                payload.add("directories", directoriesJson);
+
+                issueCommandToFollowers("Write n Files with n Threads (Weak Scaling - Write)", operationId, payload);
+            }
+
+            LOG.info("Each thread should be writing " + mkdirsPerThread + " files...");
+            DistributedBenchmarkResult localResult =
+                    Commands.mkdirWeakScaling(mkdirsPerThread, numberOfThreads, directories,
+                            OP_MKDIR_WEAK_SCALING, hdfsConfiguration, nameNodeEndpoint, (directoryChoice == 3),
+                            operationId, writePathsToFile);
+            LOG.info("Received local result...");
+            localResult.setOperationId(operationId);
+            localResult.setOperation(OP_MKDIR_WEAK_SCALING);
+
+            //LOG.info("LOCAL result of weak scaling benchmark: " + localResult);
+            localResult.setOperationId(operationId);
+
+            // Wait for followers' results if we had followers when we first started the operation.
+            AggregatedResult aggregatedResult = waitForDistributedResult(numDistributedResults, operationId, localResult);
+
+            aggregatedResults[currentTrial] = aggregatedResult;
+            results[currentTrial] = aggregatedResult.throughput;
+            currentTrial++;
+
+            if (!(currentTrial >= numTrials)) {
+                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
+                        postTrialSleepInterval + " ms.");
+                performClientVMGarbageCollection();
+                Thread.sleep(postTrialSleepInterval);
+            }
+        }
+
+        System.out.println("[THROUGHPUT]");
+        for (double throughputResult : results) {
+            System.out.println(throughputResult);
+        }
+
+        for (AggregatedResult result : aggregatedResults)
+            System.out.println(result.metricsString);
     }
 
     private void saveLatenciesToFile() {
@@ -1718,8 +1852,9 @@ public class Commander {
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
                 "\n(15) Read n Files with n Threads (Weak Scaling - Read)\n(16) Read n Files y Times with z Threads (Strong Scaling - Read)" +
                 "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)" +
-                "\n(19) Create directories\n(20) Weak Scaling Reads v2\n(21) File Stat Benchmark\n" +
-                "\n(22) Unavailable.\n(23) List Dir Weak Scaling\n(24) Stat File Weak Scaling.");
+                "\n(19) Create directories\n(20) Weak Scaling Reads v2\n(21) File Stat Benchmark" +
+                "\n(22) Unavailable.\n(23) List Dir Weak Scaling\n(24) Stat File Weak Scaling." +
+                "\n(25) MKDIR Weak Scaling\n");
         System.out.println("==================\n");
         System.out.println("What would you like to do?");
         System.out.print("> ");

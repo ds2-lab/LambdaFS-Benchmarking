@@ -794,6 +794,97 @@ public class Commands {
                 OP_WEAK_SCALING_WRITES, configuration, nameNodeEndpoint, false, "N/A", false);
     }
 
+    public static DistributedBenchmarkResult mkdirWeakScaling(int mkdirsPerDirectory, int numThreads,
+                                                              List<String> targetDirectories, int opCode,
+                                                              Configuration configuration,
+                                                              final String nameNodeEndpoint, boolean randomWrites,
+                                                              String operationId, boolean writePathsToFile)
+            throws IOException, InterruptedException {
+        // Generate the file contents and file names. targetDirectories has length equal to numThreads
+        // except when randomWrites is true (in which case, in may vary). But either way, each thread
+        // will be reading n files, so this works.
+        int totalNumberOfDirectories = mkdirsPerDirectory * numThreads;
+        LOG.info("Generating " + mkdirsPerDirectory + " directories for each directory (total of " +
+                totalNumberOfDirectories + " files).");
+        final String[] targetPaths = new String[totalNumberOfDirectories];
+
+        // The standard way of generating files. Just generate a bunch of files for each provided directory.
+        if (!randomWrites) {
+            int counter = 0;
+            // Generate file names and subsequently the full file paths.
+            for (String targetDirectory : targetDirectories) {
+                // File names.
+                String[] targetDirs = Utils.getFixedLengthRandomStrings(mkdirsPerDirectory, 15);
+
+                // Create the full paths.
+                for (String targetDir : targetDirs) {
+                    targetPaths[counter++] = targetDirectory + "/" + "dir_" + targetDir + "/";
+                }
+            }
+        } else {
+            // Generate truly random reads using the `targetDirectories` list as the sample space from which
+            // we draw random directories to write to. We generate random writes with replacement from the
+            // targetDirectories list.
+            Random rng = new Random();
+
+            // Generate the filenames. These will be appended to the end of the directories.
+            Utils.getFixedLengthRandomStrings(totalNumberOfDirectories, 20, targetPaths);
+
+            for (int i = 0; i < totalNumberOfDirectories; i++) {
+                // Randomly select a directory from the list of all target directories.
+                String directory = targetDirectories.get(rng.nextInt(targetDirectories.size()));
+
+                // We initially put all the randomly-generated filenames in 'targetPaths'. Now, we prepend each
+                // randomly-generated filename with the randomly-selected directory. We used targetPaths to store
+                // the filenames first just to avoid allocating too many arrays for large read tests.
+                targetPaths[i] = directory + "/" + "dir_" + targetPaths[i] + "/";
+            }
+        }
+
+        LOG.info("Generated a total of " + totalNumberOfDirectories + " file(s).");
+
+        Utils.write("./output/mkdirInDirectoryPaths-" + Instant.now().toEpochMilli() + ".txt", targetPaths);
+
+        // TODO: Are we splitting this correctly?
+        int numMkdirsPerThread = targetPaths.length / numThreads;
+        final String[][] targetPathsPerThread = Utils.splitArray(targetPaths, numMkdirsPerThread);
+        assert (targetPathsPerThread != null);
+        assert (targetPathsPerThread.length == numThreads);
+
+        DistributedBenchmarkResult result = executeBenchmark(nameNodeEndpoint, numThreads, targetPathsPerThread, 1, opCode,
+                new FSOperation(nameNodeEndpoint, configuration) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return mkdir(path, hdfs, nameNodeEndpoint);
+                    }
+                });
+
+        if (writePathsToFile) {
+            String dirPath = "./weakScalingMkdirDirectoriesCreated/";
+            String filePath = dirPath.concat(operationId + "-" + result.jvmId + ".txt");
+
+            LOG.debug("Writing HopsFS directory paths to file: '" + filePath + "'");
+
+            File dir = new File(dirPath);
+            if (!dir.exists())
+                dir.mkdir();
+
+            File file = new File(filePath);
+            try {
+                FileWriter fw = new FileWriter(file.getAbsoluteFile());
+                BufferedWriter bw = new BufferedWriter(fw);
+                for (String path : targetPaths) {
+                    bw.write(path + "\n");
+                }
+                bw.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return result;
+    }
+
     /**
      * Write a bunch of files to a bunch of directories.
      *
