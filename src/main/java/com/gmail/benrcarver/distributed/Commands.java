@@ -559,7 +559,7 @@ public class Commands {
                 new FSOperation(nameNodeEndpoint, configuration) {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
-                        return listDirectory(hdfs, path, nameNodeEndpoint);
+                        return listDirectoryNoPrint(hdfs, path, nameNodeEndpoint);
                     }
                 });
     }
@@ -1219,13 +1219,20 @@ public class Commands {
     public static boolean listDirectory(DistributedFileSystem hdfs, String targetDirectory, String nameNodeEndpoint) {
         try {
             FileStatus[] fileStatus = hdfs.listStatus(new Path(nameNodeEndpoint + targetDirectory));
-            if (LOG.isDebugEnabled()) {
-                for (FileStatus status : fileStatus)
-                    LOG.debug(status.getPath().toString());
-                LOG.debug("Directory '" + targetDirectory + "' contains " + fileStatus.length + " files.");
-            } //else {
-              //  LOG.info("Number of files in directory: " + fileStatus.length);
-            //}
+            LOG.info("Directory '" + targetDirectory + "' contains " + fileStatus.length + " files.");
+            for (FileStatus status : fileStatus)
+                LOG.info(status.getPath().toString());
+            LOG.info("Directory '" + targetDirectory + "' contains " + fileStatus.length + " files.");
+            return true;
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        return false;
+    }
+
+    public static boolean listDirectoryNoPrint(DistributedFileSystem hdfs, String targetDirectory, String nameNodeEndpoint) {
+        try {
+            FileStatus[] fileStatus = hdfs.listStatus(new Path(nameNodeEndpoint + targetDirectory));
             return true;
         } catch (IOException ex) {
             ex.printStackTrace();
