@@ -425,6 +425,14 @@ public class Commander {
                 sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
                 sftpChannel.disconnect();
                 LOG.debug("SFTP'd hdfs-site.xml to Follower " + host + ".");
+
+                LOG.debug("SFTP-ing log4j.properties to Follower " + host + " now.");
+                sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                sftpChannel.connect();
+                String log4jPath = "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties";
+                sftpChannel.put(log4jPath, log4jPath);
+                sftpChannel.disconnect();
+                LOG.debug("SFTP'd log4j.properties to Follower " + host + ".");
             }
 
 //            LOG.debug("SFTP-ing '109200' file to Follower " + host + " now.");
