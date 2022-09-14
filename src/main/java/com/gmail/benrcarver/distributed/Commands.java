@@ -1308,10 +1308,11 @@ public class Commands {
         Path filePathRename = new Path(nameNodeEndpoint + renamedFileName);
 
         try {
-            LOG.info("\t Original file path: \"" + originalFileName + "\"");
-            LOG.info("\t New file path: \"" + renamedFileName + "\"");
+            LOG.info("Original file path: \"" + originalFileName + "\"");
+            LOG.info("New file path: \"" + renamedFileName + "\"");
+            long start = System.currentTimeMillis();
             hdfs.rename(filePath, filePathRename);
-            LOG.info("\t Finished rename operation.");
+            LOG.info("Finished rename operation in " + (System.currentTimeMillis() - start) + "ms.");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
