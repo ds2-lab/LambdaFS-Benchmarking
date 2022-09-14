@@ -618,6 +618,7 @@ public class Commander {
                     case OP_MKDIR_WEAK_SCALING:
                         LOG.info("MKDIR WEAK SCALING selected!");
                         mkdirWeakScaling(hdfsConfiguration, nameNodeEndpoint);
+                        break;
                     default:
                         LOG.info("ERROR: Unknown or invalid operation specified: " + op);
                         break;
