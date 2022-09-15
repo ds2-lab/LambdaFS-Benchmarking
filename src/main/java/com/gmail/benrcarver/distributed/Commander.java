@@ -426,6 +426,14 @@ public class Commander {
                 sftpChannel.disconnect();
                 LOG.debug("SFTP'd hdfs-site.xml to Follower " + host + ".");
 
+                LOG.debug("SFTP-ing core-site.xml to Follower " + host + " now.");
+                sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                sftpChannel.connect();
+                String coreSitePath = "/home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0.2-RC0/etc/hadoop/core-site.xml";
+                sftpChannel.put(coreSitePath, coreSitePath);
+                sftpChannel.disconnect();
+                LOG.debug("SFTP'd core-site.xml to Follower " + host + ".");
+
                 LOG.debug("SFTP-ing log4j.properties to Follower " + host + " now.");
                 sftpChannel = (ChannelSftp) session.openChannel("sftp");
                 sftpChannel.connect();
