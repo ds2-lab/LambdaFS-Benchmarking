@@ -1220,6 +1220,95 @@ public class Commands {
         LOG.info("==================================");
     }
 
+    public static DistributedBenchmarkResult mkdirWeakScaling(DistributedFileSystem sharedHdfs, int mkdirsPerDirectory,
+                                                              int numThreads, List<String> targetDirectories, int opCode,
+                                                              final String nameNodeEndpoint, boolean randomWrites)
+            throws IOException, InterruptedException {
+        // Generate the file contents and file names. targetDirectories has length equal to numThreads
+        // except when randomWrites is true (in which case, in may vary). But either way, each thread
+        // will be reading n files, so this works.
+        int totalNumberOfDirectories = mkdirsPerDirectory * numThreads;
+        LOG.info("Generating " + mkdirsPerDirectory + " directories for each directory (total of " +
+                totalNumberOfDirectories + " files).");
+        final String[] targetPaths = new String[totalNumberOfDirectories];
+
+        // The standard way of generating files. Just generate a bunch of files for each provided directory.
+        if (!randomWrites) {
+            int counter = 0;
+            // Generate file names and subsequently the full file paths.
+            for (String targetDirectory : targetDirectories) {
+                // File names.
+                String[] targetDirs = Utils.getFixedLengthRandomStrings(mkdirsPerDirectory, 15);
+
+                // Create the full paths.
+                for (String targetDir : targetDirs) {
+                    targetPaths[counter++] = targetDirectory + "/" + "dir_" + targetDir + "/";
+                }
+            }
+        } else {
+            // Generate truly random reads using the `targetDirectories` list as the sample space from which
+            // we draw random directories to write to. We generate random writes with replacement from the
+            // targetDirectories list.
+            Random rng = new Random();
+
+            // Generate the filenames. These will be appended to the end of the directories.
+            Utils.getFixedLengthRandomStrings(totalNumberOfDirectories, 20, targetPaths);
+
+            for (int i = 0; i < totalNumberOfDirectories; i++) {
+                // Randomly select a directory from the list of all target directories.
+                String directory = targetDirectories.get(rng.nextInt(targetDirectories.size()));
+
+                // We initially put all the randomly-generated filenames in 'targetPaths'. Now, we prepend each
+                // randomly-generated filename with the randomly-selected directory. We used targetPaths to store
+                // the filenames first just to avoid allocating too many arrays for large read tests.
+                targetPaths[i] = directory + "/" + "dir_" + targetPaths[i] + "/";
+            }
+        }
+
+        LOG.info("Generated a total of " + totalNumberOfDirectories + " file(s).");
+
+        Utils.write("./output/mkdirInDirectoryPaths-" + Instant.now().toEpochMilli() + ".txt", targetPaths);
+
+        // TODO: Are we splitting this correctly?
+        int numMkdirsPerThread = targetPaths.length / numThreads;
+        final String[][] targetPathsPerThread = Utils.splitArray(targetPaths, numMkdirsPerThread);
+        assert (targetPathsPerThread != null);
+        assert (targetPathsPerThread.length == numThreads);
+
+        DistributedBenchmarkResult result = executeBenchmark(sharedHdfs, nameNodeEndpoint, numThreads,
+                targetPathsPerThread, 1, opCode, new FSOperation(nameNodeEndpoint) {
+                    @Override
+                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
+                        return mkdir(path, hdfs, nameNodeEndpoint);
+                    }
+                });
+
+//        if (writePathsToFile) {
+//            String dirPath = "./weakScalingMkdirDirectoriesCreated/";
+//            String filePath = dirPath.concat(operationId + "-" + result.jvmId + ".txt");
+//
+//            LOG.debug("Writing HopsFS directory paths to file: '" + filePath + "'");
+//
+//            File dir = new File(dirPath);
+//            if (!dir.exists())
+//                dir.mkdir();
+//
+//            File file = new File(filePath);
+//            try {
+//                FileWriter fw = new FileWriter(file.getAbsoluteFile());
+//                BufferedWriter bw = new BufferedWriter(fw);
+//                for (String path : targetPaths) {
+//                    bw.write(path + "\n");
+//                }
+//                bw.close();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+
+        return result;
+    }
+
     public static Stack<TreeNode> createChildDirectories(String basePath, int subDirs,
                                                          DistributedFileSystem hdfs,
                                                          String nameNodeEndpoint,
@@ -1336,16 +1425,18 @@ public class Commands {
      * Create a new directory with the given path.
      * @param path The path of the new directory.
      */
-    public static void mkdir(String path, DistributedFileSystem hdfs, String nameNodeEndpoint) {
+    public static boolean mkdir(String path, DistributedFileSystem hdfs, String nameNodeEndpoint) {
         Path filePath = new Path(nameNodeEndpoint + path);
 
         try {
-            LOG.info("\t Attempting to create new directory: \"" + path + "\"");
-            boolean directoryCreated = hdfs.mkdirs(filePath);
-            LOG.info("\t Directory created successfully: " + directoryCreated);
+            // LOG.info("\t Attempting to create new directory: \"" + path + "\"");
+            return hdfs.mkdirs(filePath);
+            // LOG.info("\t Directory created successfully: " + directoryCreated);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+
+        return false;
     }
 
     public static void getActiveNameNodesOperation(DistributedFileSystem hdfs) {

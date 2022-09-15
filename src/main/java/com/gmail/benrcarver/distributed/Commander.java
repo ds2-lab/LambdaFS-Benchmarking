@@ -20,7 +20,6 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryPoolMXBean;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.*;
@@ -322,39 +321,56 @@ public class Commander {
             session.setConfig(sshConfig);
             session.connect();
 
+            ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+            sftpChannel.connect();
+
             if (scpJars) {
                 LOG.debug("SFTP-ing hadoop-hdfs-3.2.0.3-SNAPSHOT.jar to Follower " + host + ".");
-                ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
-                sftpChannel.connect();
-                sftpChannel.put(HADOOP_HDFS_JAR_PATH, HADOOP_HDFS_JAR_PATH);
-                sftpChannel.disconnect();
 
+                sftpChannel.put(HADOOP_HDFS_JAR_PATH, HADOOP_HDFS_JAR_PATH);
+                //sftpChannel.disconnect();
                 LOG.debug("SFTP-ing HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + host + ".");
-                sftpChannel = (ChannelSftp) session.openChannel("sftp");
-                sftpChannel.connect();
+                //sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                //sftpChannel.connect();
                 sftpChannel.put(BENCHMARK_JAR_PATH, BENCHMARK_JAR_PATH);
-                sftpChannel.disconnect();
+                //sftpChannel.disconnect();
             }
 
             if (scpConfig) {
                 LOG.debug("SFTP-ing hdfs-site.xml to Follower " + host + ".");
-                ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
-                sftpChannel.connect();
+                //ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                //sftpChannel.connect();
                 sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
-                sftpChannel.disconnect();
+                //sftpChannel.disconnect();
 
                 LOG.debug("SFTP-ing 109200alt to Follower " + host + ".");
-                sftpChannel = (ChannelSftp) session.openChannel("sftp");
-                sftpChannel.connect();
+                //sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                //sftpChannel.connect();
                 sftpChannel.put("/home/ubuntu/repos/HopsFS-Benchmarking-Utility/109200alt", "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/109200alt");
                 sftpChannel.put("/home/ubuntu/repos/HopsFS-Benchmarking-Utility/dirs_alt.txt", "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/dirs_alt.txt");
-                sftpChannel.disconnect();
+                //sftpChannel.disconnect();
+
+                LOG.debug("SFTP-ing log4j.properties to Follower " + host + " now.");
+                //sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                //sftpChannel.connect();
+                String log4jPath = "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties";
+                sftpChannel.put(log4jPath, log4jPath);
+                //sftpChannel.disconnect();
+                LOG.debug("SFTP'd log4j.properties to Follower " + host + ".");
+
+                LOG.debug("SFTP-ing logback.xml to Follower " + host + " now.");
+                //sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                //sftpChannel.connect();
+                String logbackPath = "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml";
+                sftpChannel.put(logbackPath, logbackPath);
+                //sftpChannel.disconnect();
+                LOG.debug("SFTP'd logback.xml to Follower " + host + ".");
             }
 
-            ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
-            sftpChannel.connect();
-            sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties", "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties");
-            sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml", "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml");
+            //ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+            //sftpChannel.connect();
+            //sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties", "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties");
+            //sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml", "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml");
             sftpChannel.disconnect();
 
             if (!manuallyLaunchFollowers)
@@ -590,6 +606,10 @@ public class Commander {
                         LOG.info("STAT FILES WEAK SCALING selected!");
                         statFilesWeakScaling(primaryHdfs, nameNodeEndpoint);
                         break;
+                    case OP_MKDIR_WEAK_SCALING:
+                        LOG.info("MKDIR WEAK SCALING selected!");
+                        mkdirWeakScaling(primaryHdfs, nameNodeEndpoint);
+                        break;
                     default:
                         LOG.info("ERROR: Unknown or invalid operation specified: " + op);
                         break;
@@ -606,6 +626,101 @@ public class Commander {
             if (numGCsPerformedDuringLastOp > 0)
                 LOG.debug("Spent " + timeSpentInGCDuringLastOp + " ms garbage collecting during the last operation.");
         }
+    }
+
+    private void mkdirWeakScaling(final DistributedFileSystem sharedHdfs,
+                                  final String nameNodeEndpoint) throws IOException, InterruptedException {
+        int directoryChoice = getIntFromUser("Should the threads create directories within the " +
+                "SAME DIRECTORY [1], DIFFERENT DIRECTORIES [2], or \"RANDOM MKDIRs\" [3]?");
+
+        // Validate input.
+        if (directoryChoice < 1 || directoryChoice > 3) {
+            LOG.error("Invalid argument specified. Should be \"1\" for same directory, \"2\" for different directories. " +
+                    "Or \"3\" for random MKDIRs. Instead, got \"" + directoryChoice + "\"");
+            return;
+        }
+
+        int dirInputMethodChoice = getIntFromUser("Manually input (comma-separated list) [1], " +
+                "or specify file containing directories [2]?");
+
+        List<String> directories;
+        if (dirInputMethodChoice == 1) {
+            System.out.print("Please enter the directories as a comma-separated list:\n> ");
+            String listOfDirectories = scanner.nextLine();
+            directories = Arrays.asList(listOfDirectories.split(","));
+
+            if (directories.size() == 1)
+                LOG.info("1 directory specified.");
+            else
+                LOG.info(directories.size() + " directories specified.");
+        }
+        else if (dirInputMethodChoice == 2) {
+            System.out.print("Please provide path to file containing HopsFS directories:\n> ");
+            String filePath = scanner.nextLine();
+            directories = Utils.getFilePathsFromFile(filePath);
+
+            if (directories.size() == 1)
+                LOG.info("1 directory specified in file.");
+            else
+                LOG.info(directories.size() + " directories specified in file.");
+        }
+        else {
+            LOG.error("Invalid option specified (" + dirInputMethodChoice +
+                    "). Please enter \"1\" or \"2\" for this prompt.");
+            return;
+        }
+
+        System.out.print("Number of threads? \n> ");
+        int numberOfThreads = Integer.parseInt(scanner.nextLine());
+
+        if (directoryChoice == 1) {
+            Random rng = new Random();
+            int idx = rng.nextInt(directories.size());
+            String dir = directories.get(idx);
+            directories = new ArrayList<>(numberOfThreads);
+            for (int i = 0; i < numberOfThreads; i++)
+                directories.add(dir); // This way, they'll all write to the same directory. We can reuse old code.
+        } else if (directoryChoice == 2) {
+            Collections.shuffle(directories);
+            directories = directories.subList(0, numberOfThreads);
+        } // If neither of the above are true, then we use the entire directories list.
+        //   We'll generate a bunch of random writes using the full list.
+
+        System.out.print("Number of directories to be created per thread? \n> ");
+        int mkdirsPerThread = Integer.parseInt(scanner.nextLine());
+
+        int numTrials = getIntFromUser("How many trials would you like to perform?");
+
+        if (numTrials <= 0)
+            throw new IllegalArgumentException("The number of trials should be at least 1.");
+
+        boolean writePathsToFile = getBooleanFromUser("Write HopsFS directory paths to file?");
+
+        JsonObject payload = new JsonObject();
+        payload.addProperty(OPERATION, OP_MKDIR_WEAK_SCALING);
+        payload.addProperty("n", mkdirsPerThread);
+        payload.addProperty("numberOfThreads", numberOfThreads);
+        payload.addProperty("randomMkdirs", directoryChoice == 3);
+        payload.addProperty("writePathsToFile", writePathsToFile);
+
+        JsonArray directoriesJson = new JsonArray();
+        for (String dir : directories)
+            directoriesJson.add(dir);
+
+        payload.add("directories", directoriesJson);
+
+        performDistributedBenchmark(sharedHdfs, numTrials, payload, numberOfThreads, mkdirsPerThread, null,
+                false, OP_MKDIR_WEAK_SCALING, directories, "Weak Scaling (MKDIR)",
+                new DistributedBenchmarkOperation() {
+                    @Override
+                    public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
+                                                           int numThreads, int opsPerFile, String inputPath,
+                                                           boolean shuffle, int opCode, List<String> directories)
+                            throws IOException, InterruptedException {
+                        return Commands.mkdirWeakScaling(sharedHdfs, opsPerFile, numThreads, directories,
+                                OP_MKDIR_WEAK_SCALING, nameNodeEndpoint, (directoryChoice == 3));
+                    }
+                });
     }
 
     private void statFilesWeakScaling(final DistributedFileSystem sharedHdfs,
