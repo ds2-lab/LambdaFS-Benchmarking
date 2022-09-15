@@ -780,7 +780,7 @@ public class Commander {
 
         JsonObject payload = new JsonObject();
         payload.addProperty(OPERATION, OP_LIST_DIRECTORIES_FROM_FILE);
-        payload.addProperty("n", readsPerFile);
+        payload.addProperty("n", numberOfThreads);
         payload.addProperty("listsPerFile", readsPerFile);
         payload.addProperty("inputPath", inputPath);
         payload.addProperty("shuffle", shuffle);
@@ -1982,7 +1982,8 @@ public class Commander {
                 "\n(15) Read n Files with n Threads (Weak Scaling - Read)\n(16) Read n Files y Times with z Threads (Strong Scaling - Read)" +
                 "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)" +
                 "\n(19) Create directories.\n(20) Weak Scaling Reads v2\n(21) File Stat Benchmark" +
-                "\n(22) Unavailable.\n(23) List Directories from File (Weak Scaling)\n(24) Stat File (Weak Scaling)");
+                "\n(22) Unavailable.\n(23) List Directories from File (Weak Scaling)\n(24) Stat File (Weak Scaling)" +
+                "\n(25) Weak Scaling (MKDIR)\n");
         System.out.println("==================\n");
         System.out.println("What would you like to do?");
         System.out.print("> ");
