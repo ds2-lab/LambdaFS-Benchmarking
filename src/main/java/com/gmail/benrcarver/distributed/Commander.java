@@ -343,11 +343,10 @@ public class Commander {
                 sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
                 //sftpChannel.disconnect();
 
-                LOG.debug("SFTP-ing 109200alt to Follower " + host + ".");
+                LOG.debug("SFTP-ing mkdirWeakScaling to Follower " + host + ".");
                 //sftpChannel = (ChannelSftp) session.openChannel("sftp");
                 //sftpChannel.connect();
-                sftpChannel.put("/home/ubuntu/repos/HopsFS-Benchmarking-Utility/109200alt", "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/109200alt");
-                sftpChannel.put("/home/ubuntu/repos/HopsFS-Benchmarking-Utility/dirs_alt.txt", "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/dirs_alt.txt");
+                sftpChannel.put("/home/ubuntu/repos/HopsFS-Benchmarking-Utility/mkdirWeakScaling", "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/mkdirWeakScaling");
                 //sftpChannel.disconnect();
 
                 LOG.debug("SFTP-ing log4j.properties to Follower " + host + " now.");
