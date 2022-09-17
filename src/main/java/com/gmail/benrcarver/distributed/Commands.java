@@ -15,6 +15,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.google.gson.JsonObject;
 import io.hops.metrics.TransactionEvent;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hdfs.serverless.consistency.ActiveServerlessNameNode;
+import org.apache.hadoop.hdfs.serverless.consistency.ActiveServerlessNameNodeList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
@@ -22,8 +24,6 @@ import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatisti
 import io.hops.leader_election.node.SortedActiveNodeList;
 import io.hops.leader_election.node.ActiveNode;
 import org.apache.commons.math3.util.Pair;
-import org.apache.hadoop.hdfs.serverless.operation.ActiveServerlessNameNodeList;
-import org.apache.hadoop.hdfs.serverless.operation.ActiveServerlessNameNode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;

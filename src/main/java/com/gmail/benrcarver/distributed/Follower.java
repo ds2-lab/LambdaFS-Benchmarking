@@ -23,6 +23,7 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.gmail.benrcarver.distributed.Commands.hdfsClients;
 import static com.gmail.benrcarver.distributed.Constants.*;
 
 /**
@@ -171,6 +172,23 @@ public class Follower {
         }
 
         switch(operation) {
+            case OP_SET_CONSISTENCY_PROTOCOL_ENABLED:
+                boolean toggle = message.getAsJsonPrimitive("TOGGLE").getAsBoolean();
+
+                hdfs.setConsistencyProtocolEnabled(toggle);
+
+                for (DistributedFileSystem dfs : hdfsClients) {
+                    dfs.setConsistencyProtocolEnabled(toggle);
+                }
+                break;
+            case OP_SET_LOG_LEVEL:
+                String newLogLevel = message.getAsJsonPrimitive("LOG_LEVEL").getAsString();
+                hdfs.setServerlessFunctionLogLevel(newLogLevel);
+
+                for (DistributedFileSystem dfs : hdfsClients) {
+                    dfs.setServerlessFunctionLogLevel(newLogLevel);
+                }
+                break;
             case OP_TOGGLE_BENCHMARK_MODE:
                 boolean benchmarkModeEnabled = message.getAsJsonPrimitive(BENCHMARK_MODE).getAsBoolean();
 
@@ -187,7 +205,7 @@ public class Follower {
 
                 break;
             case OP_TOGGLE_OPS_PERFORMED_FOLLOWERS:
-                boolean toggle = message.getAsJsonPrimitive(TRACK_OP_PERFORMED).getAsBoolean();
+                toggle = message.getAsJsonPrimitive(TRACK_OP_PERFORMED).getAsBoolean();
 
                 if (toggle)
                     LOG.debug("ENABLING OperationPerformed tracking.");

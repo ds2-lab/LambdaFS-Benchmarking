@@ -980,12 +980,26 @@ public class Commander {
                 newLogLevel.equalsIgnoreCase("ALL") ||
                 newLogLevel.equalsIgnoreCase("TRACE"))) {
             LOG.error("Invalid log level specified: '" + newLogLevel + "'");
+            return;
         } else {
             primaryHdfs.setServerlessFunctionLogLevel(newLogLevel);
 
             for (DistributedFileSystem hdfs : hdfsClients) {
                 hdfs.setServerlessFunctionLogLevel(newLogLevel);
             }
+        }
+
+        if (!nonDistributed) {
+            JsonObject payload = new JsonObject();
+            String operationId = UUID.randomUUID().toString();
+            payload.addProperty(OPERATION, OP_SET_LOG_LEVEL);
+            payload.addProperty(OPERATION_ID, operationId);
+            payload.addProperty("LOG_LEVEL", newLogLevel);
+
+            issueCommandToFollowers("Setting serverless log level to " + newLogLevel, operationId,
+                    payload, false);
+        } else {
+            LOG.warn("Running in non-distributed mode. We have no followers.");
         }
     }
 
@@ -1003,18 +1017,15 @@ public class Commander {
         String newFlag = scanner.nextLine();
         newFlag = newFlag.trim();
 
+        boolean toggle;
+
         if (newFlag.equalsIgnoreCase("t") || newFlag.equalsIgnoreCase("y")) {
             if (!currentFlag)
                 LOG.info("ENABLING consistency protocol.");
             else
                 LOG.info("Consistency protocol is already enabled.");
 
-            primaryHdfs.setConsistencyProtocolEnabled(true);
-            consistencyEnabled = true;
-
-            for (DistributedFileSystem hdfs : hdfsClients) {
-                hdfs.setConsistencyProtocolEnabled(true);
-            }
+            toggle = true;
         }
         else if (newFlag.equalsIgnoreCase("f") || newFlag.equalsIgnoreCase("n")) {
             if (currentFlag)
@@ -1022,12 +1033,31 @@ public class Commander {
             else
                 LOG.info("Consistency protocol is already disabled.");
 
-            primaryHdfs.setConsistencyProtocolEnabled(false);
-            consistencyEnabled = false;
+            toggle = false;
+        }
+        else {
+            LOG.info("Keeping consistency protocol toggle the same as before (" + (currentFlag ? "ENABLED)." : "DISABLED)."));
+            return;
+        }
 
-            for (DistributedFileSystem hdfs : hdfsClients) {
-                hdfs.setConsistencyProtocolEnabled(false);
-            }
+        primaryHdfs.setConsistencyProtocolEnabled(toggle);
+        consistencyEnabled = toggle;
+
+        for (DistributedFileSystem hdfs : hdfsClients) {
+            hdfs.setConsistencyProtocolEnabled(toggle);
+        }
+
+        if (!nonDistributed) {
+            JsonObject payload = new JsonObject();
+            String operationId = UUID.randomUUID().toString();
+            payload.addProperty(OPERATION, OP_SET_CONSISTENCY_PROTOCOL_ENABLED);
+            payload.addProperty(OPERATION_ID, operationId);
+            payload.addProperty("TOGGLE", toggle);
+
+            issueCommandToFollowers(toggle ? "Enabling " : "Disabling " + "consistency protocol.",
+                    operationId, payload, false);
+        } else {
+            LOG.warn("Running in non-distributed mode. We have no followers.");
         }
     }
 
@@ -1830,8 +1860,8 @@ public class Commander {
 
         // For the HDFS instance we're creating, toggle the consistency protocol + benchmark mode
         // based on whether the client has toggled those options within the benchmarking application.
-        hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
-        hdfs.setBenchmarkModeEnabled(Commands.BENCHMARKING_MODE);
+        // hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
+        // hdfs.setBenchmarkModeEnabled(Commands.BENCHMARKING_MODE);
 
         // The primary HDFS instance should use whatever the default log level is for the HDFS instance we create,
         // as HopsFS has a default log level. If we're creating a non-primary HDFS instance, then we just assign it
