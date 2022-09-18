@@ -2065,9 +2065,9 @@ public class Commander {
                 "(-9)  Perform client VM garbage collection\n" +
                 "(-8)  Print/modify post-trial sleep interval\n" +
                 "(-7)  Print currently active NameNodes\n" +
-                "(-6)  Get/set consistency protocol enabled flag.\n  (-5) Get/set serverless log4j debug level.\n" +
-                "(-4)  Clear statistics\n  (-3) Output statistics packages to CSV\n" +
-                "(-2)  Output operations performed + write to file\n  (-1) Print TCP debug information.");
+                "(-6)  Get/set consistency protocol enabled flag.\n(-5)  Get/set serverless log4j debug level.\n" +
+                "(-4)  Clear statistics\n(-3)  Output statistics packages to CSV\n" +
+                "(-2)  Output operations performed + write to file\n(-1)  Print TCP debug information.");
         System.out.println("\nStandard Operations:");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
