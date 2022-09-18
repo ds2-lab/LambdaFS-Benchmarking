@@ -178,7 +178,7 @@ public class Follower {
                 hdfs.setHttpTcpReplacementChance(chance);
 
                 for (DistributedFileSystem dfs : hdfsClients) {
-                    dfs.setConsistencyProtocolEnabled(chance);
+                    dfs.setHttpTcpReplacementChance(chance);
                 }
                 break;
             case OP_SET_CONSISTENCY_PROTOCOL_ENABLED:
