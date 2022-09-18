@@ -193,8 +193,8 @@ public class Commands {
 
                 int completed = numThreadsFinished.incrementAndGet();
 
-                if (LOG.isDebugEnabled())
-                    LOG.debug("Thread " + threadId + " has finished executing. " + completed + "/" + numThreads +
+                //if (LOG.isDebugEnabled())
+                LOG.info("Thread " + threadId + " has finished executing. " + completed + "/" + numThreads +
                             " have finished executing.");
 
                 endLatch.countDown();
