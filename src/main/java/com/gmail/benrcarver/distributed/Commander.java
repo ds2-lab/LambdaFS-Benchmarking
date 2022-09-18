@@ -1554,31 +1554,33 @@ public class Commander {
         cacheHits.addValue(localResult.cacheHits);
         cacheMisses.addValue(localResult.cacheMisses);
 
-        LOG.debug("========== LOCAL RESULT ==========");
-        LOG.debug("Num Ops Performed   : " + localResult.numOpsPerformed);
-        LOG.debug("Duration (sec)      : " + localResult.durationSeconds);
-        LOG.debug("Cache hits          : " + localResult.cacheHits);
-        LOG.debug("Cache misses        : " + localResult.cacheMisses);
+        LOG.info("========== LOCAL RESULT ==========");
+        LOG.info("Num Ops Performed   : " + localResult.numOpsPerformed);
+        LOG.info("Duration (sec)      : " + localResult.durationSeconds);
+        LOG.info("Cache hits          : " + localResult.cacheHits);
+        LOG.info("Cache misses        : " + localResult.cacheMisses);
         if (localResult.cacheHits + localResult.cacheMisses > 0)
-            LOG.debug("Cache hit percentage: " + (localResult.cacheHits/(localResult.cacheHits + localResult.cacheMisses)));
+            LOG.info("Cache hit percentage: " + (localResult.cacheHits/(localResult.cacheHits + localResult.cacheMisses)));
         else
-            LOG.debug("Cache hit percentage: N/A");
-        LOG.debug("Throughput          : " + localResult.getOpsPerSecond());
+            LOG.info("Cache hit percentage: N/A");
+        LOG.info("Throughput          : " + localResult.getOpsPerSecond());
 
         double trialAvgTcpLatency = localResult.tcpLatencyStatistics.getMean();
         double trialAvgHttpLatency = localResult.httpLatencyStatistics.getMean();
 
+        List<Double> allThroughputValues = new ArrayList<>(resultQueue.size() + 1);
+        allThroughputValues.add(localResult.getOpsPerSecond());
         for (DistributedBenchmarkResult res : resultQueue) {
-            LOG.debug("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");
-            LOG.debug("Num Ops Performed   : " + res.numOpsPerformed);
-            LOG.debug("Duration (sec)      : " + res.durationSeconds);
-            LOG.debug("Cache hits          : " + res.cacheHits);
-            LOG.debug("Cache misses        : " + res.cacheMisses);
+            LOG.info("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");
+            LOG.info("Num Ops Performed   : " + res.numOpsPerformed);
+            LOG.info("Duration (sec)      : " + res.durationSeconds);
+            LOG.info("Cache hits          : " + res.cacheHits);
+            LOG.info("Cache misses        : " + res.cacheMisses);
             if (res.cacheHits + res.cacheMisses > 0)
-                LOG.debug("Cache hit percentage: " + (res.cacheHits/(res.cacheHits + res.cacheMisses)));
+                LOG.info("Cache hit percentage: " + (res.cacheHits/(res.cacheHits + res.cacheMisses)));
             else
-                LOG.debug("Cache hit percentage: N/A");
-            LOG.debug("Throughput          : " + res.getOpsPerSecond());
+                LOG.info("Cache hit percentage: N/A");
+            LOG.info("Throughput          : " + res.getOpsPerSecond());
 
             opsPerformed.addValue(res.numOpsPerformed);
             duration.addValue(res.durationSeconds);
@@ -1608,12 +1610,15 @@ public class Commander {
             if (res.txEvents != null) {
                 primaryHdfs.mergeTransactionEvents(res.txEvents, true);
             }
+
+            allThroughputValues.add(res.getOpsPerSecond());
         }
 
         trialAvgTcpLatency = trialAvgTcpLatency / (1 + numDistributedResults);   // Add 1 to account for local result.
         trialAvgHttpLatency = trialAvgHttpLatency / (1 + numDistributedResults); // Add 1 to account for local result.
         double aggregateThroughput = (opsPerformed.getSum() / duration.getMean());
 
+        LOG.info("");
         LOG.info("==== AGGREGATED RESULTS ====");
         LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
         LOG.info("Cache hits: " + cacheHits.getSum());
@@ -1629,6 +1634,15 @@ public class Commander {
                 trialAvgHttpLatency, (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0);
 
         LOG.info(metricsString);
+
+        // Create a copy and sort it so the estimated results are ordered by largest to smallest throughput.
+        Collections.sort(allThroughputValues);
+        System.out.println("\n['Estimated' Throughput]");
+        String format = "%10.2f --> %10.2f";
+        for (double throughputResult : allThroughputValues) {
+            String formatted = String.format(format, throughputResult, throughputResult * allThroughputValues.size());
+            System.out.println(formatted);
+        }
 
         return new AggregatedResult(aggregateThroughput, (int)cacheHits.getSum(), (int)cacheMisses.getSum(), metricsString);
     }
@@ -1780,7 +1794,7 @@ public class Commander {
             }
         }
 
-        System.out.println("[THROUGHPUT]");
+        System.out.println("\n[THROUGHPUT]");
         for (double throughputResult : results) {
             System.out.println(throughputResult);
         }
@@ -1792,16 +1806,6 @@ public class Commander {
 
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString);
-
-        // Create a copy and sort it so the estimated results are ordered by largest to smallest throughput.
-        Double[] resultsCopy = Arrays.copyOf(results, results.length);
-        Arrays.sort(resultsCopy);
-        System.out.println("['Estimated' Throughput]");
-        String format = "%10.2f --> %10.2f";
-        for (double throughputResult : resultsCopy) {
-            String formatted = String.format(format, throughputResult, throughputResult * results.length);
-            System.out.println(formatted);
-        }
     }
 
     /**
