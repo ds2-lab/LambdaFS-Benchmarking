@@ -434,6 +434,9 @@ public class Commander {
                 int op = getNextOperation();
 
                 switch (op) {
+                    case OP_SET_HTTP_TCP_REPLACEMENT_CHANCE:
+                        setHttpTcpReplacementChance();
+                        break;
                     case OP_ESTABLISH_CONNECTIONS:
                         establishConnections();
                         break;
@@ -1084,6 +1087,56 @@ public class Commander {
             postTrialSleepInterval = newInterval;
         } catch (NumberFormatException ex) {
             LOG.error("Invalid value specified. Returning.");
+        }
+    }
+
+    private void setHttpTcpReplacementChance() {
+        if (!isServerless) {
+            LOG.error("HTTP/TCP replacement is not supported by Vanilla HopsFS!");
+            return;
+        }
+
+        double currentChance = primaryHdfs.getHttpTcpReplacementChance();
+        LOG.info("");
+        LOG.info("Current HTTP/TCP replacement chance: " + (currentChance * 100) + "%");
+
+        System.out.print("New value (between 0.0 and 1.0)? (Enter nothing to keep it the same.):\n> ");
+        String newChance = scanner.nextLine();
+        newChance = newChance.trim();
+
+        if (newChance.equals("")) {
+            LOG.info("Keeping the value the same.");
+            return;
+        }
+
+        double chance;
+        try {
+             chance = Double.parseDouble(newChance);
+
+             primaryHdfs.setHttpTcpReplacementChance(chance);
+
+            for (DistributedFileSystem hdfs : hdfsClients) {
+                hdfs.setHttpTcpReplacementChance(chance);
+            }
+        } catch (NumberFormatException ex) {
+            LOG.error("Invalid chance specified: " + newChance);
+            return;
+        } catch (IllegalArgumentException ex) {
+            LOG.error("Illegal chance specified:", ex);
+            return;
+        }
+
+        if (!nonDistributed) {
+            JsonObject payload = new JsonObject();
+            String operationId = UUID.randomUUID().toString();
+            payload.addProperty(OPERATION, OP_SET_HTTP_TCP_REPLACEMENT_CHANCE);
+            payload.addProperty(OPERATION_ID, operationId);
+            payload.addProperty("CHANCE", chance);
+
+            issueCommandToFollowers("Setting HTTP/TCP replacement chance.",
+                    operationId, payload, false);
+        } else {
+            LOG.warn("Running in non-distributed mode. We have no followers.");
         }
     }
 
@@ -1739,6 +1792,16 @@ public class Commander {
 
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString);
+
+        // Create a copy and sort it so the estimated results are ordered by largest to smallest throughput.
+        Double[] resultsCopy = Arrays.copyOf(results, results.length);
+        Arrays.sort(resultsCopy);
+        System.out.println("['Estimated' Throughput]");
+        String format = "%10.2f --> %10.2f";
+        for (double throughputResult : resultsCopy) {
+            String formatted = String.format(format, throughputResult, throughputResult * results.length);
+            System.out.println(formatted);
+        }
     }
 
     /**
@@ -1994,7 +2057,7 @@ public class Commander {
         System.out.println("\n====== MENU ======");
         System.out.println("Debug Operations:");
         System.out.println(
-                "(-14) HTTP Keep Alive\n" +
+                "(-14) Set Random HTTP/TCP Replacement Chance\n" +
                 "(-13) Establish/Pre-Warm Connections\n" +
                 "(-12) Print latency statistics to a file\n" +
                 "(-11) Toggle 'Benchmarking Mode' in self and followers\n" +

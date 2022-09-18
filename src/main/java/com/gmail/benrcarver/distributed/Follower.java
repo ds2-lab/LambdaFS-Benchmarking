@@ -172,6 +172,15 @@ public class Follower {
         }
 
         switch(operation) {
+            case OP_SET_HTTP_TCP_REPLACEMENT_CHANCE:
+                double chance = message.getAsJsonPrimitive("CHANCE").getAsDouble();
+
+                hdfs.setHttpTcpReplacementChance(chance);
+
+                for (DistributedFileSystem dfs : hdfsClients) {
+                    dfs.setConsistencyProtocolEnabled(chance);
+                }
+                break;
             case OP_SET_CONSISTENCY_PROTOCOL_ENABLED:
                 boolean toggle = message.getAsJsonPrimitive("TOGGLE").getAsBoolean();
 
