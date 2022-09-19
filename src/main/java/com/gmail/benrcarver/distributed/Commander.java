@@ -1098,7 +1098,7 @@ public class Commander {
 
         double currentChance = primaryHdfs.getHttpTcpReplacementChance();
         LOG.info("");
-        LOG.info("Current HTTP/TCP replacement chance: " + (currentChance * 100) + "%");
+        LOG.info("Current HTTP/TCP replacement chance: " + currentChance);
 
         System.out.print("New value (between 0.0 and 1.0)? (Enter nothing to keep it the same.):\n> ");
         String newChance = scanner.nextLine();
