@@ -1255,9 +1255,9 @@ public class Commands {
         Path filePath = new Path(nameNodeEndpoint + path);
 
         try {
-            LOG.info("\t Attempting to create new directory: \"" + path + "\"");
+            // LOG.info("\t Attempting to create new directory: \"" + path + "\"");
             boolean directoryCreated = hdfs.mkdirs(filePath);
-            LOG.info("\t Directory created successfully: " + directoryCreated);
+            // LOG.info("\t Directory created successfully: " + directoryCreated);
 
             return directoryCreated;
         } catch (IOException ex) {
