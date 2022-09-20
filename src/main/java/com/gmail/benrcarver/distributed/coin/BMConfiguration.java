@@ -1,6 +1,7 @@
 package com.gmail.benrcarver.distributed.coin;
 
 import com.gmail.benrcarver.distributed.Constants;
+import com.gmail.benrcarver.distributed.workload.BenchmarkDistribution;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -16,10 +17,7 @@ import static com.gmail.benrcarver.distributed.coin.FileSizeMultiFaceCoin.isTwoD
 /**
  * Originally written by Salman Niazi, the author of HopsFS.
  */
-public class BMConfiguration  implements Serializable {
-
-    private List<InetAddress> listOfSlaves = null;
-    private List<String> nameNodeList = null;
+public class BMConfiguration implements Serializable {
     private Properties props = null;
 
     private BMConfiguration() {
@@ -117,6 +115,27 @@ public class BMConfiguration  implements Serializable {
 
     public long getRawBmMkdirPhaseDuration() {
         return getLong(Constants.RAW_MKDIR_PHASE_DURATION_KEY, Constants.RAW_MKDIR_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getInterleavedBmDuration() {
+        return getLong(Constants.INTERLEAVED_BM_DURATION_KEY, Constants.INTERLEAVED_BM_DURATION_DEFAULT);
+    }
+
+    public BenchmarkDistribution getInterleavedBMIaTDistribution() {
+        String val = getString(Constants.INTERLEAVED_BM_IAT_DISTRIBUTION_KEY, Constants.INTERLEAVED_BM_IAT_DISTRIBUTION_DEFAULT);
+        return BenchmarkDistribution.valueOf(val);
+    }
+
+    public double getInterleavedBMIaTPoissonLambda() {
+        return getDouble(Constants.INTERLEAVED_BM_IAT_POISSON_LAMBDA_KEY, Constants.INTERLEAVED_BM_IAT_POISSON_LAMBDA_DEFAULT);
+    }
+
+    public double getInterleavedBMIaTParetoAlpha() {
+        return getDouble(Constants.INTERLEAVED_BM_IAT_PARETO_ALPHA_KEY, Constants.INTERLEAVED_BM_IAT_PARETO_ALPHA_DEFAULT);
+    }
+
+    public double getInterleavedBMIaTParetoLocation() {
+        return getDouble(Constants.INTERLEAVED_BM_IAT_PARETO_LOCATION_KEY, Constants.INTERLEAVED_BM_IAT_PARETO_LOCATION_DEFAULT);
     }
 
     public BigDecimal getInterleavedBmMkdirPercentage() {

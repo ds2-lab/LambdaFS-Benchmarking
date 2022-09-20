@@ -1,5 +1,6 @@
 package com.gmail.benrcarver.distributed;
 
+import com.gmail.benrcarver.distributed.coin.BMConfiguration;
 import com.gmail.benrcarver.distributed.util.TreeNode;
 import com.gmail.benrcarver.distributed.util.Utils;
 
@@ -576,7 +577,6 @@ public class Commands {
      * Gets the user inputs for this benchmark, then calls the actual benchmark itself.
      */
     public static DistributedBenchmarkResult strongScalingBenchmark(final DistributedFileSystem sharedHdfs,
-                                                                    final String endpoint,
                                                                     int numFilesPerThread, int readsPerFile,
                                                                     int numThreads, String inputPath)
             throws FileNotFoundException, InterruptedException {
@@ -609,7 +609,7 @@ public class Commands {
 
         return executeBenchmark(
                 sharedHdfs, numThreads, filesPerThread, readsPerFile, OP_STRONG_SCALING_READS,
-                new FSOperation(endpoint) {
+                new FSOperation() {
                     @Override
                     public boolean call(DistributedFileSystem hdfs, String path, String content) {
                         return readFile(path, hdfs);
@@ -1195,6 +1195,13 @@ public class Commands {
         Utils.write("./output/createSubtree-" + Instant.now().toEpochMilli()+ ".txt", directoriesCreated.toArray(new String[0]));
 
         LOG.info("==================================");
+    }
+
+    public static DistributedBenchmarkResult executeRandomlyGeneratedWorkload(DistributedFileSystem sharedHdfs,
+                                                                              BMConfiguration configuration)
+            throws IOException, InterruptedException {
+
+        return null;
     }
 
     public static DistributedBenchmarkResult mkdirWeakScaling(DistributedFileSystem sharedHdfs, int mkdirsPerDirectory,

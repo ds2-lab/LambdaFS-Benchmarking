@@ -4,6 +4,7 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.FrameworkMessage;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
+import com.gmail.benrcarver.distributed.coin.BMConfiguration;
 import com.gmail.benrcarver.distributed.util.Utils;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -26,6 +27,7 @@ import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -422,7 +424,7 @@ public class Commander {
     private void interactiveLoop() {
         LOG.info("Beginning execution as LEADER now.");
 
-        primaryHdfs = initDfsClient(null, NAME_NODE_ENDPOINT, true);
+        primaryHdfs = initDfsClient(null, true);
 
         while (true) {
             updateGCMetrics();
@@ -570,7 +572,7 @@ public class Commander {
                         break;
                     case OP_WRITE_FILES_TO_DIRS:
                         LOG.info("WRITE FILES TO DIRECTORIES selected!");
-                        Commands.writeFilesToDirectories(primaryHdfs, NAME_NODE_ENDPOINT);
+                        Commands.writeFilesToDirectories(primaryHdfs);
                         break;
                     case OP_WEAK_SCALING_READS:
                         LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
@@ -578,7 +580,7 @@ public class Commander {
                         break;
                     case OP_STRONG_SCALING_READS:
                         LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
-                        strongScalingReadOperation(primaryHdfs, NAME_NODE_ENDPOINT);
+                        strongScalingReadOperation(primaryHdfs);
                         break;
                     case OP_WEAK_SCALING_WRITES:
                         LOG.info("'Write n Files with n Threads (Weak Scaling - Write)' selected!");
@@ -606,11 +608,15 @@ public class Commander {
                         break;
                     case OP_STAT_FILES_WEAK_SCALING:
                         LOG.info("STAT FILES WEAK SCALING selected!");
-                        statFilesWeakScaling(primaryHdfs, NAME_NODE_ENDPOINT);
+                        statFilesWeakScaling(primaryHdfs);
                         break;
                     case OP_MKDIR_WEAK_SCALING:
                         LOG.info("MKDIR WEAK SCALING selected!");
-                        mkdirWeakScaling(primaryHdfs, NAME_NODE_ENDPOINT);
+                        mkdirWeakScaling(primaryHdfs);
+                        break;
+                    case OP_GENERATED_WORKLOAD:
+                        LOG.info("Randomly-Generated Workload selected!");
+                        randomlyGeneratedWorkload(primaryHdfs);
                         break;
                     default:
                         LOG.info("ERROR: Unknown or invalid operation specified: " + op);
@@ -630,8 +636,49 @@ public class Commander {
         }
     }
 
-    private void mkdirWeakScaling(final DistributedFileSystem sharedHdfs,
-                                  final String nameNodeEndpoint) throws IOException, InterruptedException {
+    private void randomlyGeneratedWorkload(final DistributedFileSystem sharedHdfs) throws SQLException, IOException, InterruptedException {
+        System.out.print("Please enter location of workload config file (enter nothing to default to ./workload.yaml):\n> ");
+        String workloadConfigFile = scanner.nextLine();
+
+        System.out.println("Attempting to load workload from file: '" + workloadConfigFile + "'");
+
+        BMConfiguration configuration = new BMConfiguration(workloadConfigFile);
+
+        JsonObject payload = new JsonObject();
+        payload.addProperty(OPERATION, OP_GENERATED_WORKLOAD);
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutputStream out;
+        try {
+            out = new ObjectOutputStream(bos);
+            out.writeObject(configuration);
+            out.flush();
+            byte[] configAsBytes = bos.toByteArray();
+            String base64 = Base64.getEncoder().encodeToString(configAsBytes);
+            payload.addProperty("configuration", base64);
+        } finally {
+            try {
+                bos.close();
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+        }
+
+        performDistributedBenchmark(sharedHdfs, 1, payload, -1, -1, null,
+                false, OP_GENERATED_WORKLOAD, new ArrayList<>(), "Randomly Generated Workload",
+                new DistributedBenchmarkOperation() {
+                    @Override
+                    public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
+                                                           int numThreads, int opsPerFile, String inputPath,
+                                                           boolean shuffle, int opCode, List<String> directories)
+                            throws IOException, InterruptedException {
+                        return Commands.executeRandomlyGeneratedWorkload(sharedHdfs, opsPerFile, numThreads, directories,
+                                OP_GENERATED_WORKLOAD, false);
+                    }
+                });
+    }
+
+    private void mkdirWeakScaling(final DistributedFileSystem sharedHdfs) throws IOException, InterruptedException {
         int directoryChoice = getIntFromUser("Should the threads create directories within the " +
                 "SAME DIRECTORY [1], DIFFERENT DIRECTORIES [2], or \"RANDOM MKDIRs\" [3]?");
 
@@ -725,8 +772,7 @@ public class Commander {
                 });
     }
 
-    private void statFilesWeakScaling(final DistributedFileSystem sharedHdfs,
-                                      final String nameNodeEndpoint) throws InterruptedException, IOException {
+    private void statFilesWeakScaling(final DistributedFileSystem sharedHdfs) throws InterruptedException, IOException {
         System.out.print("How many threads should be used?\n> ");
         String inputN = scanner.nextLine();
         int numThreads = Integer.parseInt(inputN);
@@ -1327,8 +1373,7 @@ public class Commander {
                 });
     }
 
-    public void strongScalingReadOperation(final DistributedFileSystem sharedHdfs,
-                                           final String nameNodeEndpoint)
+    public void strongScalingReadOperation(final DistributedFileSystem sharedHdfs)
             throws InterruptedException, FileNotFoundException {
         // User provides file containing HopsFS file paths.
         // Specifies how many files each thread should read.
@@ -1359,7 +1404,7 @@ public class Commander {
         }
 
         DistributedBenchmarkResult localResult =
-                Commands.strongScalingBenchmark(sharedHdfs, nameNodeEndpoint, filesPerThread, readsPerFile,
+                Commands.strongScalingBenchmark(sharedHdfs, filesPerThread, readsPerFile,
                         numThreads, inputPath);
 
         if (localResult == null) {
@@ -1897,18 +1942,13 @@ public class Commander {
     /**
      * Create an HDFS client.
      * @param primaryHdfs The main/shared DistributedFileSystem instance. Will be null if we're creating it, of course.
-     * @param nameNodeEndpoint Where HTTP requests are directed.
      * @param creatingPrimary Are we creating the primary/shared instance?
      */
     public static DistributedFileSystem initDfsClient(DistributedFileSystem primaryHdfs,
                                                       boolean creatingPrimary) {
         LOG.debug("Creating HDFS client now...");
-        Configuration hdfsConfiguration = Utils.getConfiguration(hdfsConfigFilePath);
-        try {
-            hdfsConfiguration.addResource(new File(hdfsConfigFilePath).toURI().toURL());
-        } catch (MalformedURLException ex) {
-            ex.printStackTrace();
-        }
+        Configuration hdfsConfiguration;
+        hdfsConfiguration = Utils.getConfiguration(hdfsConfigFilePath);
         LOG.info("Created configuration.");
         DistributedFileSystem hdfs = new DistributedFileSystem();
         LOG.info("Created DistributedFileSystem object.");
@@ -2079,7 +2119,7 @@ public class Commander {
                 "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)" +
                 "\n(19) Create directories.\n(20) Weak Scaling Reads v2\n(21) File Stat Benchmark" +
                 "\n(22) Unavailable.\n(23) List Directories from File (Weak Scaling)\n(24) Stat File (Weak Scaling)" +
-                "\n(25) Weak Scaling (MKDIR)\n");
+                "\n(25) Weak Scaling (MKDIR).\n(26) Randomly-generated workload.\n");
         System.out.println("==================\n");
         System.out.println("What would you like to do?");
         System.out.print("> ");

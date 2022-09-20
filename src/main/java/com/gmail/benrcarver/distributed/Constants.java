@@ -56,25 +56,41 @@ public class Constants {
     public static final int OP_GENERATED_WORKLOAD = 26;
 
     public static String INTLVD_CREATE_FILES_PERCENTAGE_KEY = "interleaved.create.files.percentage";
-    public static double    INTLVD_CREATE_FILES_PERCENTAGE_DEFAULT = 0;
+    public static double INTLVD_CREATE_FILES_PERCENTAGE_DEFAULT = 0;
 
     public static String RAW_READ_FILES_PHASE_DURATION_KEY = "raw.read.files.phase.duration";
     public static long   RAW_READ_FILES_PHASE_DURATION_DEFAULT = 0;
 
     public static String INTLVD_READ_FILES_PERCENTAGE_KEY = "interleaved.read.files.percentage";
-    public static double    INTLVD_READ_FILES_PERCENTAGE_DEFAULT = 0;
+    public static double INTLVD_READ_FILES_PERCENTAGE_DEFAULT = 0;
+
+    public static String INTERLEAVED_BM_IAT_DISTRIBUTION_KEY = "interleaved.bm.iat.distribution";
+    public static String INTERLEAVED_BM_IAT_DISTRIBUTION_DEFAULT = "UNIFORM";
+
+    public static String INTERLEAVED_BM_IAT_POISSON_LAMBDA_KEY = "interleaved.bm.iat.poisson.lambda";
+    public static double INTERLEAVED_BM_IAT_POISSON_LAMBDA_DEFAULT = 10.0; // Expected concurrency
+
+    public static String INTERLEAVED_BM_IAT_PARETO_ALPHA_KEY = "interleaved.bm.iat.pareto.alpha";
+    public static double INTERLEAVED_BM_IAT_PARETO_ALPHA_DEFAULT = 2; // Scale parameter
+
+    public static String INTERLEAVED_BM_IAT_PARETO_LOCATION_KEY = "interleaved.bm.iat.pareto.location";
+    public static double INTERLEAVED_BM_IAT_PARETO_LOCATION_DEFAULT = 10.0; // Expected concurrency
+
+
+    public static String INTERLEAVED_BM_DURATION_KEY = "interleaved.bm.duration";
+    public static long   INTERLEAVED_BM_DURATION_DEFAULT = 60*1000;
 
     public static String RAW_RENAME_FILES_PHASE_DURATION_KEY = "raw.rename.files.phase.duration";
     public static long   RAW_RENAME_FILES_PHASE_DURATION_DEFAULT = 0;
 
     public static String INTLVD_RENAME_FILES_PERCENTAGE_KEY = "interleaved.rename.files.percentage";
-    public static double    INTLVD_RENAME_FILES_PERCENTAGE_DEFAULT = 0;
+    public static double INTLVD_RENAME_FILES_PERCENTAGE_DEFAULT = 0;
 
     public static String RAW_LS_FILE_PHASE_DURATION_KEY = "raw.ls.files.phase.duration";
     public static long   RAW_LS_FILE_PHASE_DURATION_DEFAULT = 0;
 
     public static String INTLVD_LS_FILE_PERCENTAGE_KEY = "interleaved.ls.files.percentage";
-    public static double    INTLVD_LS_FILE_PERCENTAGE_DEFAULT = 0;
+    public static double INTLVD_LS_FILE_PERCENTAGE_DEFAULT = 0;
 
     public static String RAW_LS_DIR_PHASE_DURATION_KEY = "raw.ls.dirs.phase.duration";
     public static long   RAW_LS_DIR_PHASE_DURATION_DEFAULT = 0;
@@ -83,13 +99,13 @@ public class Constants {
     public static String INTERLEAVED_WORKLOAD_NAME_DEFAULT = "default";
 
     public static String INTLVD_LS_DIR_PERCENTAGE_KEY = "interleaved.ls.dirs.percentage";
-    public static double    INTLVD_LS_DIR_PERCENTAGE_DEFAULT = 0;
+    public static double INTLVD_LS_DIR_PERCENTAGE_DEFAULT = 0;
 
     public static String RAW_DElETE_FILES_PHASE_DURATION_KEY = "raw.delete.files.phase.duration";
     public static long   RAW_DELETE_FILES_PHASE_DURATION_DEFAULT = 0;
 
     public static String INTLVD_DELETE_FILES_PERCENTAGE_KEY = "interleaved.delete.files.percentage";
-    public static double    INTLVD_DELETE_FILES_PERCENTAGE_DEFAULT = 0;
+    public static double INTLVD_DELETE_FILES_PERCENTAGE_DEFAULT = 0;
 
     public static String RAW_CHMOD_FILES_PHASE_DURATION_KEY = "raw.chmod.files.phase.duration";
     public static long   RAW_CHMOD_FILES_PHASE_DURATION_DEFAULT = 0;
@@ -98,34 +114,34 @@ public class Constants {
     public static long   RAW_CHMOD_DIRS_PHASE_DURATION_DEFAULT = 0;
 
     public static String INTLVD_CHMOD_FILES_PERCENTAGE_KEY = "interleaved.chmod.files.percentage";
-    public static double    INTLVD_CHMOD_FILES_PERCENTAGE_DEFAULT = 0;
+    public static double INTLVD_CHMOD_FILES_PERCENTAGE_DEFAULT = 0;
 
     public static String INTLVD_CHMOD_DIRS_PERCENTAGE_KEY = "interleaved.chmod.dirs.percentage";
-    public static double    INTLVD_CHMOD_DIRS_PERCENTAGE_DEFAULT = 0;
+    public static double INTLVD_CHMOD_DIRS_PERCENTAGE_DEFAULT = 0;
 
     public static String RAW_MKDIR_PHASE_DURATION_KEY = "raw.mkdir.phase.duration";
     public static long   RAW_MKDIR_PHASE_DURATION_DEFAULT = 0;
 
     public static String INTLVD_MKDIR_PERCENTAGE_KEY = "interleaved.mkdir.percentage";
-    public static double    INTLVD_MKDIR_PERCENTAGE_DEFAULT = 0;
+    public static double INTLVD_MKDIR_PERCENTAGE_DEFAULT = 0;
 
     public static String RAW_SETREPLICATION_PHASE_DURATION_KEY = "raw.file.setReplication.phase.duration";
     public static long   RAW_SETREPLICATION_PHASE_DURATION_DEFAULT = 0;
 
     public static String INTLVD_SETREPLICATION_PERCENTAGE_KEY = "interleaved.file.setReplication.percentage";
-    public static double    INTLVD_SETREPLICATION_PERCENTAGE_DEFAULT = 0;
+    public static double INTLVD_SETREPLICATION_PERCENTAGE_DEFAULT = 0;
 
     public static String RAW_GET_FILE_INFO_PHASE_DURATION_KEY = "raw.file.getInfo.phase.duration";
     public static long   RAW_GET_FILE_INFO_PHASE_DURATION_DEFAULT = 0;
 
     public static String INTLVD_GET_FILE_INFO_PERCENTAGE_KEY = "interleaved.file.getInfo.percentage";
-    public static double    INTLVD_GET_FILE_INFO_PERCENTAGE_DEFAULT = 0;
+    public static double INTLVD_GET_FILE_INFO_PERCENTAGE_DEFAULT = 0;
 
     public static String RAW_GET_DIR_INFO_PHASE_DURATION_KEY = "raw.dir.getInfo.phase.duration";
     public static long   RAW_GET_DIR_INFO_PHASE_DURATION_DEFAULT = 0;
 
     public static String INTLVD_GET_DIR_INFO_PERCENTAGE_KEY = "interleaved.dir.getInfo.percentage";
-    public static double    INTLVD_GET_DIR_INFO_PERCENTAGE_DEFAULT = 0;
+    public static double INTLVD_GET_DIR_INFO_PERCENTAGE_DEFAULT = 0;
 
     public static String RAW_FILE_APPEND_PHASE_DURATION_KEY = "raw.file.append.phase.duration";
     public static long   RAW_FILE_APPEND_PHASE_DURATION_DEFAULT = 0;
@@ -146,9 +162,9 @@ public class Constants {
     public static double INTLVD_DIR_CHANGE_USER_PERCENTAGE_DEFAULT = 0;
 
     public static String BENCHMARK_RANDOM_SEED_KEY = "benchmark.random.seed";
-    public static long BENCHMARK_RANDOM_SEED_DEFAULT = 0;
+    public static long   BENCHMARK_RANDOM_SEED_DEFAULT = 0;
 
-    public static String BENCHMARK_DRYRUN_KEY = "benchmark.dryrun";
+    public static String  BENCHMARK_DRYRUN_KEY = "benchmark.dryrun";
     public static boolean BENCHMARK_DRYRUN_DEFAULT = false;
 
     public static String NUM_WORKER_THREADS_KEY = "num.worker.threads";
@@ -169,12 +185,12 @@ public class Constants {
     public static String FILES_PER_DIR_KEY= "files.per.dir";
     public static int    FILES_PER_DIR_DEFAULT = 16;
 
-    public static String READ_FILES_FROM_DISK= "read.files.from.disk";
+    public static String  READ_FILES_FROM_DISK= "read.files.from.disk";
     public static boolean READ_FILES_FROM_DISK_DEFAULT=false;
 
     public static String DISK_FILES_PATH="disk.files.path";
     public static String DISK_FILES_PATH_DEFAULT="~";
 
     public static final String LEADER_WORKER_WARMUP_DELAY_KEY= "leader.worker.warmup.delay";
-    public static final int LEADER_WORKER_WARMUP_DELAY_KEY_DEFAULT = 0;
+    public static final int    LEADER_WORKER_WARMUP_DELAY_KEY_DEFAULT = 0;
 }

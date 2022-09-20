@@ -3,6 +3,7 @@ package com.gmail.benrcarver.distributed;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
+import com.gmail.benrcarver.distributed.coin.BMConfiguration;
 import com.gmail.benrcarver.distributed.util.Utils;
 import com.google.gson.*;
 import org.slf4j.Logger;
@@ -11,12 +12,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 import static com.gmail.benrcarver.distributed.Commands.hdfsClients;
@@ -318,7 +319,7 @@ public class Follower {
                 break;
             case OP_WRITE_FILES_TO_DIRS:
                 LOG.info("WRITE FILES TO DIRECTORIES selected!");
-                Commands.writeFilesToDirectories(hdfs, nameNodeEndpoint);
+                Commands.writeFilesToDirectories(hdfs);
                 break;
             case OP_WEAK_SCALING_READS:
                 LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
@@ -335,7 +336,7 @@ public class Follower {
                 break;
             case OP_STRONG_SCALING_READS:
                 LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
-                result = Commands.strongScalingBenchmark(hdfs, nameNodeEndpoint,
+                result = Commands.strongScalingBenchmark(hdfs,
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
@@ -436,6 +437,40 @@ public class Follower {
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for WEAK SCALING (MKDIR) benchmark: " + result);
                 sendResultToLeader(result);
+                break;
+            case OP_GENERATED_WORKLOAD:
+                LOG.info("RANDOMLY-GENERATED WORKLOAD selected!");
+
+                String base64Config = hdfsConfiguration.get("configuration");
+                byte[] configBytes = Base64.getDecoder().decode(base64Config);
+
+                ByteArrayInputStream bis = new ByteArrayInputStream(configBytes);
+                ObjectInput in = null;
+                BMConfiguration configuration = null;
+                try {
+                    in = new ObjectInputStream(bis);
+                    configuration = (BMConfiguration) in.readObject();
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        if (in != null) {
+                            in.close();
+                        }
+                    } catch (IOException ex) {
+                        // ignore close exception
+                    }
+                }
+
+                if (configuration == null) {
+                    LOG.error("ERROR: Could not deserialize BMConfiguration object.");
+                }
+
+                result = Commands.executeRandomlyGeneratedWorkload(hdfs, configuration);
+                result.setOperationId(operationId);
+                LOG.info("Obtained local result for WEAK SCALING (MKDIR) benchmark: " + result);
+                sendResultToLeader(result);
+
                 break;
             default:
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
