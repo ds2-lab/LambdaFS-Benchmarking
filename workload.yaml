@@ -1,0 +1,17 @@
+interleaved.workload.name=Spotify
+interleaved.bm.duration=150000
+interleaved.create.files.percentage=2.7
+interleaved.file.append.percentage=0
+interleaved.read.files.percentage=69.22
+interleaved.rename.files.percentage=1.3
+interleaved.ls.dirs.percentage=8.52
+interleaved.ls.files.percentage=0.49
+interleaved.delete.files.percentage=0.75
+interleaved.chmod.files.percentage=0.00
+interleaved.chmod.dirs.percentage=0.00
+interleaved.mkdir.percentage=0.02
+interleaved.file.setReplication.percentage=0.0
+interleaved.file.getInfo.percentage=13.04
+interleaved.dir.getInfo.percentage=3.96
+interleaved.file.change.user.percentage=0.0
+interleaved.dir.change.user.percentage=0.0

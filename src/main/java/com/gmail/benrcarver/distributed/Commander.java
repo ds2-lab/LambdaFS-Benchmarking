@@ -60,7 +60,7 @@ public class Commander {
     /**
      * Has a default value.
      */
-    private String nameNodeEndpoint = "hdfs://10.150.0.17:9000/";
+    public static String NAME_NODE_ENDPOINT = "hdfs://10.150.0.17:9000/";
 
     /**
      * Used to obtain input from the user.
@@ -256,7 +256,7 @@ public class Commander {
 
             LOG.info("Loaded configuration: " + config.toString());
 
-            nameNodeEndpoint = config.getNamenodeEndpoint();
+            NAME_NODE_ENDPOINT = config.getNamenodeEndpoint();
             followerConfigs = config.getFollowers();
             hdfsConfigFilePath = config.getHdfsConfigFile();
             isServerless = config.getIsServerless();
@@ -422,7 +422,7 @@ public class Commander {
     private void interactiveLoop() {
         LOG.info("Beginning execution as LEADER now.");
 
-        primaryHdfs = initDfsClient(null, nameNodeEndpoint, true);
+        primaryHdfs = initDfsClient(null, NAME_NODE_ENDPOINT, true);
 
         while (true) {
             updateGCMetrics();
@@ -518,35 +518,35 @@ public class Commander {
                         System.exit(0);
                     case OP_CREATE_FILE:
                         LOG.info("CREATE FILE selected!");
-                        Commands.createFileOperation(primaryHdfs, nameNodeEndpoint);
+                        Commands.createFileOperation(primaryHdfs);
                         break;
                     case OP_MKDIR:
                         LOG.info("MAKE DIRECTORY selected!");
-                        Commands.mkdirOperation(primaryHdfs, nameNodeEndpoint);
+                        Commands.mkdirOperation(primaryHdfs);
                         break;
                     case OP_READ_FILE:
                         LOG.info("READ FILE selected!");
-                        Commands.readOperation(primaryHdfs, nameNodeEndpoint);
+                        Commands.readOperation(primaryHdfs);
                         break;
                     case OP_RENAME:
                         LOG.info("RENAME selected!");
-                        Commands.renameOperation(primaryHdfs, nameNodeEndpoint);
+                        Commands.renameOperation(primaryHdfs);
                         break;
                     case OP_DELETE:
                         LOG.info("DELETE selected!");
-                        Commands.deleteOperation(primaryHdfs, nameNodeEndpoint);
+                        Commands.deleteOperation(primaryHdfs);
                         break;
                     case OP_LIST:
                         LOG.info("LIST selected!");
-                        Commands.listOperation(primaryHdfs, nameNodeEndpoint);
+                        Commands.listOperation(primaryHdfs);
                         break;
                     case OP_APPEND:
                         LOG.info("APPEND selected!");
-                        Commands.appendOperation(primaryHdfs, nameNodeEndpoint);
+                        Commands.appendOperation(primaryHdfs);
                         break;
                     case OP_CREATE_SUBTREE:
                         LOG.info("CREATE SUBTREE selected!");
-                        Commands.createSubtree(primaryHdfs, nameNodeEndpoint);
+                        Commands.createSubtree(primaryHdfs);
                         break;
                     case OP_PING:
                         LOG.info("PING selected!");
@@ -558,19 +558,19 @@ public class Commander {
                         break;
                     case OP_WRITE_FILES_TO_DIR:
                         LOG.info("WRITE FILES TO DIRECTORY selected!");
-                        Commands.writeFilesToDirectory(primaryHdfs, nameNodeEndpoint);
+                        Commands.writeFilesToDirectory(primaryHdfs);
                         break;
                     case OP_READ_FILES:
                         LOG.info("READ FILES selected!");
-                        Commands.readFilesOperation(primaryHdfs, nameNodeEndpoint, OP_READ_FILES);
+                        Commands.readFilesOperation(primaryHdfs, OP_READ_FILES);
                         break;
                     case OP_DELETE_FILES:
                         LOG.info("DELETE FILES selected!");
-                        Commands.deleteFilesOperation(primaryHdfs, nameNodeEndpoint);
+                        Commands.deleteFilesOperation(primaryHdfs);
                         break;
                     case OP_WRITE_FILES_TO_DIRS:
                         LOG.info("WRITE FILES TO DIRECTORIES selected!");
-                        Commands.writeFilesToDirectories(primaryHdfs, nameNodeEndpoint);
+                        Commands.writeFilesToDirectories(primaryHdfs, NAME_NODE_ENDPOINT);
                         break;
                     case OP_WEAK_SCALING_READS:
                         LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
@@ -578,7 +578,7 @@ public class Commander {
                         break;
                     case OP_STRONG_SCALING_READS:
                         LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
-                        strongScalingReadOperation(primaryHdfs, nameNodeEndpoint);
+                        strongScalingReadOperation(primaryHdfs, NAME_NODE_ENDPOINT);
                         break;
                     case OP_WEAK_SCALING_WRITES:
                         LOG.info("'Write n Files with n Threads (Weak Scaling - Write)' selected!");
@@ -590,7 +590,7 @@ public class Commander {
                         break;
                     case OP_CREATE_DIRECTORIES:
                         LOG.info("CREATE DIRECTORIES selected!");
-                        Commands.createDirectories(primaryHdfs, nameNodeEndpoint);
+                        Commands.createDirectories(primaryHdfs);
                         break;
                     case OP_WEAK_SCALING_READS_V2:
                         LOG.info("WeakScalingReadsV2 Selected!");
@@ -598,7 +598,7 @@ public class Commander {
                         break;
                     case OP_GET_FILE_STATUS:
                         LOG.info("OP_GET_FILE_STATUS selected!");
-                        Commands.getFileStatusOperation(primaryHdfs, nameNodeEndpoint);
+                        Commands.getFileStatusOperation(primaryHdfs, NAME_NODE_ENDPOINT);
                         break;
                     case OP_LIST_DIRECTORIES_FROM_FILE:
                         LOG.info("LIST DIRECTORIES FROM FILE selected!");
@@ -606,11 +606,11 @@ public class Commander {
                         break;
                     case OP_STAT_FILES_WEAK_SCALING:
                         LOG.info("STAT FILES WEAK SCALING selected!");
-                        statFilesWeakScaling(primaryHdfs, nameNodeEndpoint);
+                        statFilesWeakScaling(primaryHdfs, NAME_NODE_ENDPOINT);
                         break;
                     case OP_MKDIR_WEAK_SCALING:
                         LOG.info("MKDIR WEAK SCALING selected!");
-                        mkdirWeakScaling(primaryHdfs, nameNodeEndpoint);
+                        mkdirWeakScaling(primaryHdfs, NAME_NODE_ENDPOINT);
                         break;
                     default:
                         LOG.info("ERROR: Unknown or invalid operation specified: " + op);
@@ -720,7 +720,7 @@ public class Commander {
                                                            boolean shuffle, int opCode, List<String> directories)
                             throws IOException, InterruptedException {
                         return Commands.mkdirWeakScaling(sharedHdfs, opsPerFile, numThreads, directories,
-                                OP_MKDIR_WEAK_SCALING, nameNodeEndpoint, (directoryChoice == 3));
+                                OP_MKDIR_WEAK_SCALING, (directoryChoice == 3));
                     }
                 });
     }
@@ -758,7 +758,7 @@ public class Commander {
                                                            int numThreads, int opsPerFile, String inputPath,
                                                            boolean shuffle, int opCode, List<String> directories)
                             throws FileNotFoundException, InterruptedException {
-                        return Commands.statFilesWeakScaling(sharedHdfs, nameNodeEndpoint, numThreads,
+                        return Commands.statFilesWeakScaling(sharedHdfs, numThreads,
                                 opsPerFile, inputPath, shuffle, OP_STAT_FILES_WEAK_SCALING);
                     }
                 });
@@ -796,7 +796,7 @@ public class Commander {
                                                            int numThreads, int opsPerFile, String inputPath,
                                                            boolean shuffle, int opCode, List<String> directories)
                             throws FileNotFoundException, InterruptedException {
-                        return Commands.listDirectoryWeakScaling(sharedHdfs, nameNodeEndpoint, numThreads,
+                        return Commands.listDirectoryWeakScaling(sharedHdfs, numThreads,
                                 opsPerFile, inputPath, shuffle, OP_LIST_DIRECTORIES_FROM_FILE);
                     }
                 });
@@ -1322,7 +1322,7 @@ public class Commander {
                                                            boolean shuffle, int opCode, List<String> directories)
                             throws InterruptedException, IOException {
                         return Commands.writeFilesInternal(opsPerFile, numThreads, directories,
-                                sharedHdfs, OP_STRONG_SCALING_WRITES, nameNodeEndpoint, false);
+                                sharedHdfs, OP_STRONG_SCALING_WRITES, false);
                     }
                 });
     }
@@ -1477,7 +1477,7 @@ public class Commander {
                                                            boolean shuffle, int opCode, List<String> directories)
                             throws IOException, InterruptedException {
                         return Commands.writeFilesInternal(opsPerFile, numThreads, directories,
-                                sharedHdfs, OP_WEAK_SCALING_WRITES, nameNodeEndpoint, (directoryChoice == 3));
+                                sharedHdfs, OP_WEAK_SCALING_WRITES, (directoryChoice == 3));
                     }
                 });
     }
@@ -1688,7 +1688,7 @@ public class Commander {
                                                            int numThreads, int opsPerFile, String inputPath,
                                                            boolean shuffle, int opCode, List<String> directories)
                             throws FileNotFoundException, InterruptedException {
-                        return Commands.weakScalingBenchmarkV2(sharedHdfs, nameNodeEndpoint, numThreads,
+                        return Commands.weakScalingBenchmarkV2(sharedHdfs, numThreads,
                                 opsPerFile, inputPath, shuffle, OP_WEAK_SCALING_READS_V2);
                     }
                 });
@@ -1737,7 +1737,7 @@ public class Commander {
                                                            int numThreads, int opsPerFile, String inputPath,
                                                            boolean shuffle, int opCode, List<String> directories)
                             throws FileNotFoundException, InterruptedException {
-                        return Commands.weakScalingReadsV1(sharedHdfs, nameNodeEndpoint, numThreads, opsPerFile, inputPath, shuffle, opCode);
+                        return Commands.weakScalingReadsV1(sharedHdfs, numThreads, opsPerFile, inputPath, shuffle, opCode);
                     }
                 });
     }
@@ -1762,7 +1762,7 @@ public class Commander {
             }
 
             DistributedBenchmarkResult localResult =
-                    operation.call(sharedHdfs, nameNodeEndpoint, numThreads, opsPerFile, inputPath, shuffle, opCode, directories);
+                    operation.call(sharedHdfs, NAME_NODE_ENDPOINT, numThreads, opsPerFile, inputPath, shuffle, opCode, directories);
 
             if (localResult == null) {
                 LOG.warn("Local result is null. Aborting.");
@@ -1867,7 +1867,7 @@ public class Commander {
                                                                int numThreads, int opsPerFile, String inputPath,
                                                                boolean shuffle, int opCode, List<String> directories)
                                 throws FileNotFoundException, InterruptedException {
-                            return Commands.weakScalingBenchmarkV2(sharedHdfs, nameNodeEndpoint, numThreads,
+                            return Commands.weakScalingBenchmarkV2(sharedHdfs, numThreads,
                                     opsPerFile, inputPath, shuffle, OP_WEAK_SCALING_READS_V2);
                         }
                     });
@@ -1901,7 +1901,6 @@ public class Commander {
      * @param creatingPrimary Are we creating the primary/shared instance?
      */
     public static DistributedFileSystem initDfsClient(DistributedFileSystem primaryHdfs,
-                                                      String nameNodeEndpoint,
                                                       boolean creatingPrimary) {
         LOG.debug("Creating HDFS client now...");
         Configuration hdfsConfiguration = Utils.getConfiguration(hdfsConfigFilePath);
@@ -1915,7 +1914,7 @@ public class Commander {
         LOG.info("Created DistributedFileSystem object.");
 
         try {
-            hdfs.initialize(new URI(nameNodeEndpoint), hdfsConfiguration);
+            hdfs.initialize(new URI(NAME_NODE_ENDPOINT), hdfsConfiguration);
             LOG.info("Called initialize() successfully.");
         } catch (URISyntaxException | IOException ex) {
             LOG.error("");
@@ -1984,7 +1983,7 @@ public class Commander {
 
             JsonObject registrationPayload = new JsonObject();
             registrationPayload.addProperty(OPERATION, OP_REGISTRATION);
-            registrationPayload.addProperty(NAMENODE_ENDPOINT, nameNodeEndpoint);
+            registrationPayload.addProperty(NAMENODE_ENDPOINT, NAME_NODE_ENDPOINT);
             registrationPayload.addProperty(HDFS_CONFIG_PATH, hdfsConfigFilePath);
             registrationPayload.addProperty(TRACK_OP_PERFORMED, followersTrackOpsPerformed);
 
