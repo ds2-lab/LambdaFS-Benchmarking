@@ -191,6 +191,9 @@ public class Constants {
     public static String DISK_FILES_PATH="disk.files.path";
     public static String DISK_FILES_PATH_DEFAULT="~";
 
+    public static String  TREE_DEPTH_KEY = "tree.depth";
+    public static int     TREE_DEPTH_DEFAULT = 3;
+
     public static final String LEADER_WORKER_WARMUP_DELAY_KEY= "leader.worker.warmup.delay";
     public static final int    LEADER_WORKER_WARMUP_DELAY_KEY_DEFAULT = 0;
 }

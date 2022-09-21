@@ -79,7 +79,7 @@ public class Commands {
      *
      * @return An HDFS client instance.
      */
-    private static synchronized DistributedFileSystem getHdfsClient(DistributedFileSystem sharedHdfs) {
+    public static synchronized DistributedFileSystem getHdfsClient(DistributedFileSystem sharedHdfs) {
         DistributedFileSystem hdfs;
         hdfs = hdfsClients.poll();
 
@@ -505,13 +505,7 @@ public class Commands {
                 Collections.shuffle(paths);
         }
 
-        return executeBenchmark(sharedHdfs, numThreads, fileBatches, 1, opCode,
-                new FSOperation() {
-                    @Override
-                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
-                        return getFileStatus(path, hdfs);
-                    }
-                });
+        return executeBenchmark(sharedHdfs, numThreads, fileBatches, 1, opCode, FSOperation.FILE_INFO);
     }
 
     /**
@@ -608,13 +602,7 @@ public class Commands {
         LOG.debug("Each of the " + numThreads + " thread(s) will read " + numFilesPerThread + " random file(s).");
 
         return executeBenchmark(
-                sharedHdfs, numThreads, filesPerThread, readsPerFile, OP_STRONG_SCALING_READS,
-                new FSOperation() {
-                    @Override
-                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
-                        return readFile(path, hdfs);
-                    }
-                });
+                sharedHdfs, numThreads, filesPerThread, readsPerFile, OP_STRONG_SCALING_READS, FSOperation.READ_FILE);
     }
 
     /**
@@ -666,13 +654,7 @@ public class Commands {
         }
 
         return executeBenchmark(
-                sharedHdfs, numThreads, fileBatches, 1, opCode,
-                new FSOperation() {
-                    @Override
-                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
-                        return readFile(path, hdfs);
-                    }
-                });
+                sharedHdfs, numThreads, fileBatches, 1, opCode, FSOperation.READ_FILE);
     }
 
     /**
@@ -709,13 +691,7 @@ public class Commands {
         }
 
         return executeBenchmark(
-                sharedHdfs, numThreads, pathsPerThread, readsPerFile, opCode,
-                new FSOperation() {
-                    @Override
-                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
-                        return readFile(path, hdfs);
-                    }
-                });
+                sharedHdfs, numThreads, pathsPerThread, readsPerFile, opCode, FSOperation.READ_FILE);
     }
 
     /**
@@ -952,13 +928,7 @@ public class Commands {
         LOG.info("pathsPerThread.length: " + pathsPerThread.length);
 
         return executeBenchmark(
-                sharedHdfs, numThreads, pathsPerThread, readsPerFile, opCode,
-                new FSOperation() {
-                    @Override
-                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
-                        return readFile(path, hdfs);
-                    }
-                });
+                sharedHdfs, numThreads, pathsPerThread, readsPerFile, opCode, FSOperation.READ_FILE);
     }
 
     /**
@@ -1059,13 +1029,7 @@ public class Commands {
         assert(targetPathsPerThread.length == numThreads);
 
         return executeBenchmark(
-                sharedHdfs, numThreads, targetPathsPerThread, 1, opCode,
-                new FSOperation() {
-                    @Override
-                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
-                        return createFile(path, content, hdfs);
-                    }
-                });
+                sharedHdfs, numThreads, targetPathsPerThread, 1, opCode, FSOperation.READ_FILE);
     }
 
     /**
@@ -1260,12 +1224,7 @@ public class Commands {
         assert (targetPathsPerThread.length == numThreads);
 
         DistributedBenchmarkResult result = executeBenchmark(sharedHdfs, numThreads,
-                targetPathsPerThread, 1, opCode, new FSOperation() {
-                    @Override
-                    public boolean call(DistributedFileSystem hdfs, String path, String content) {
-                        return mkdir(path, hdfs);
-                    }
-                });
+                targetPathsPerThread, 1, opCode, FSOperation.MKDIRS);
 
 //        if (writePathsToFile) {
 //            String dirPath = "./weakScalingMkdirDirectoriesCreated/";
@@ -1317,7 +1276,7 @@ public class Commands {
         System.out.print("File contents:\n> ");
         String fileContents = scanner.nextLine().trim();
 
-        checkForCancel(fileName);
+        checkForCancel(fileContents);
 
         createFile(fileName, fileContents, hdfs);
     }
@@ -1469,6 +1428,10 @@ public class Commands {
     public static void mkdirOperation(DistributedFileSystem hdfs) {
         System.out.print("New directory path:\n> ");
         String newDirectoryName = scanner.nextLine();
+
+        if (newDirectoryName.equalsIgnoreCase("abort")) {
+            throw new IllegalArgumentException("User specified 'abort' for directory name. Exiting.");
+        }
 
         mkdir(newDirectoryName, hdfs);
     }

@@ -20,18 +20,35 @@ import static com.gmail.benrcarver.distributed.coin.FileSizeMultiFaceCoin.isTwoD
 public class BMConfiguration implements Serializable {
     private Properties props = null;
 
-    private BMConfiguration() {
+    private final int threadsPerWorker;
+
+    public BMConfiguration() {
+        threadsPerWorker = 1;
+    }
+
+    /**
+     * @param threadsPerWorker Number of threads to use on each worker VM.
+     * @param configPath Path to workload configuration file.
+     */
+    public BMConfiguration(int threadsPerWorker, String configPath) throws IOException {
+        this.threadsPerWorker = threadsPerWorker;
+        this.props = loadPropFile(configPath);
     }
 
     public static void printHelp() {
         System.out.println("You are doomed");
     }
 
-    public BMConfiguration(String file) throws FileNotFoundException, IOException, SQLException {
-        props = loadPropFile(file);
+    /**
+     * @param configPath Path to workload configuration file.
+     */
+    public BMConfiguration(String configPath) throws IOException, SQLException {
+        this(1, configPath);
     }
 
-    private Properties loadPropFile(String file) throws FileNotFoundException, IOException {
+    public int getThreadsPerWorker() { return this.threadsPerWorker; }
+
+    private Properties loadPropFile(String file) throws IOException {
         final String PROP_FILE = file;
         Properties props = new Properties();
         InputStream input = new FileInputStream(PROP_FILE);
@@ -174,10 +191,10 @@ public class BMConfiguration implements Serializable {
         return getBigDecimal(Constants.INTLVD_APPEND_FILE_PERCENTAGE_KEY, Constants.INTLVD_APPEND_FILE_PERCENTAGE_DEFAULT);
     }
 
-    public int getWorkerNumThreads() {
-        return getInt(Constants.NUM_WORKER_THREADS_KEY, Constants.NUM_WORKER_THREADS_DEFAULT);
+    public int getTreeDepth() {
+        return getInt(Constants.TREE_DEPTH_KEY, Constants.TREE_DEPTH_DEFAULT);
     }
-
+    
     public String getBaseDir() {
         return getString(Constants.BASE_DIR_KEY, Constants.BASE_DIR_DEFAULT);
     }
