@@ -11,6 +11,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jcraft.jsch.*;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -664,18 +665,20 @@ public class Commander {
             }
         }
 
-        performDistributedBenchmark(sharedHdfs, 1, payload, -1, -1, null,
-                false, OP_GENERATED_WORKLOAD, new ArrayList<>(), "Randomly Generated Workload",
-                new DistributedBenchmarkOperation() {
-                    @Override
-                    public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
-                                                           int numThreads, int opsPerFile, String inputPath,
-                                                           boolean shuffle, int opCode, List<String> directories)
-                            throws IOException, InterruptedException {
-                        return Commands.executeRandomlyGeneratedWorkload(sharedHdfs, opsPerFile, numThreads, directories,
-                                OP_GENERATED_WORKLOAD, false);
-                    }
-                });
+        throw new NotImplementedException("This is not yet implemented!");
+
+//        performDistributedBenchmark(sharedHdfs, 1, payload, -1, -1, null,
+//                false, OP_GENERATED_WORKLOAD, new ArrayList<>(), "Randomly Generated Workload",
+//                new DistributedBenchmarkOperation() {
+//                    @Override
+//                    public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
+//                                                           int numThreads, int opsPerFile, String inputPath,
+//                                                           boolean shuffle, int opCode, List<String> directories)
+//                            throws IOException, InterruptedException {
+//                        return Commands.executeRandomlyGeneratedWorkload(sharedHdfs, opsPerFile, numThreads, directories,
+//                                OP_GENERATED_WORKLOAD, false);
+//                    }
+//                });
     }
 
     private void mkdirWeakScaling(final DistributedFileSystem sharedHdfs) throws IOException, InterruptedException {

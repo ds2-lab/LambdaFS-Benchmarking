@@ -51,6 +51,7 @@ public class RandomlyGeneratedWorkload {
         this.executor = Executors.newFixedThreadPool(bmConf.getThreadsPerWorker());
     }
 
+    /*
     protected WarmUpCommand.Response warmUp(WarmUpCommand.Request cmd)
             throws IOException, InterruptedException {
         // Warm-up is done in two stages.
@@ -227,4 +228,5 @@ public class RandomlyGeneratedWorkload {
         double opsPerMSec = (double) (ops) / (double) timePassed;
         return opsPerMSec * 1000;
     }
+    */
 }
