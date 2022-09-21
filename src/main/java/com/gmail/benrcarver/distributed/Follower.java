@@ -5,6 +5,7 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.gmail.benrcarver.distributed.coin.BMConfiguration;
 import com.gmail.benrcarver.distributed.util.Utils;
+import com.gmail.benrcarver.distributed.workload.RandomlyGeneratedWorkload;
 import com.google.gson.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import static com.gmail.benrcarver.distributed.Commands.hdfsClients;
 import static com.gmail.benrcarver.distributed.Constants.*;
@@ -41,6 +43,8 @@ public class Follower {
     private String hdfsConfigFilePath;
     private Configuration hdfsConfiguration;
     private DistributedFileSystem hdfs;
+
+    private RandomlyGeneratedWorkload activeWorkload;
 
     /**
      * The approximate number of collections that occurred.
@@ -90,6 +94,8 @@ public class Follower {
                         LOG.error("Encountered IOException while handling message from Leader:", e);
                     } catch (InterruptedException e) {
                         LOG.error("Encountered InterruptedException while handling message from Leader:", e);
+                    } catch (ExecutionException e) {
+                        LOG.error("Encountered ExecutionException while handling message from Leader:", e);
                     }
                 }
             }
@@ -153,7 +159,7 @@ public class Follower {
         }
     }
 
-    private void handleMessageFromLeader(JsonObject message, DistributedFileSystem hdfs) throws IOException, InterruptedException {
+    private void handleMessageFromLeader(JsonObject message, DistributedFileSystem hdfs) throws IOException, InterruptedException, ExecutionException {
         int operation = message.getAsJsonPrimitive(OPERATION).getAsInt();
 
         updateGCMetrics();
@@ -438,7 +444,7 @@ public class Follower {
                 LOG.info("Obtained local result for WEAK SCALING (MKDIR) benchmark: " + result);
                 sendResultToLeader(result);
                 break;
-            case OP_GENERATED_WORKLOAD:
+            case OP_PREPARE_GENERATED_WORKLOAD:
                 LOG.info("RANDOMLY-GENERATED WORKLOAD selected!");
 
                 String base64Config = hdfsConfiguration.get("configuration");
@@ -464,14 +470,58 @@ public class Follower {
 
                 if (configuration == null) {
                     LOG.error("ERROR: Could not deserialize BMConfiguration object.");
+                    sendResultToLeader(0, operationId);
+                } else {
+                    activeWorkload = new RandomlyGeneratedWorkload(configuration, hdfs);
+                    sendResultToLeader(1, operationId);
+                }
+                break;
+            case OP_DO_WARMUP_FOR_PREPARED_WORKLOAD:
+                if (activeWorkload == null || activeWorkload.getCurrentState() != RandomlyGeneratedWorkload.WorkloadState.CREATED) {
+                    LOG.error("We do not have an already-created workload.");
+                    sendResultToLeader(0, operationId);
+                } else {
+                    activeWorkload.doWarmup();
+
+                    if (activeWorkload.getCurrentState() == RandomlyGeneratedWorkload.WorkloadState.READY) {
+                        LOG.debug("Successfully warmed-up random workload.");
+                        sendResultToLeader(1, operationId);
+                    }
+                    else {
+                        LOG.debug("Failed to warm-up random workload.");
+                        sendResultToLeader(0, operationId);
+                    }
+                }
+                break;
+            case OP_DO_RANDOM_WORKLOAD:
+                if (activeWorkload == null || activeWorkload.getCurrentState() != RandomlyGeneratedWorkload.WorkloadState.READY) {
+                    LOG.error("We do not have an already-created workload.");
+
+                    sendResultToLeader(0, operationId);
+                } else {
+                    result = activeWorkload.doWorkload(operationId);
+
+                    if (activeWorkload.getCurrentState() == RandomlyGeneratedWorkload.WorkloadState.FINISHED) {
+                        LOG.debug("Successfully executed random workload.");
+                        sendResultToLeader(result);
+                    }
+                    else {
+                        LOG.debug("Failed to execute random workload.");
+                        sendResultToLeader(0, operationId);
+                    }
                 }
 
-                result = Commands.executeRandomlyGeneratedWorkload(hdfs, configuration);
-                result.setOperationId(operationId);
-                LOG.info("Obtained local result for WEAK SCALING (MKDIR) benchmark: " + result);
-                sendResultToLeader(result);
-
                 break;
+            case OP_ABORT_RANDOM_WORKLOAD:
+                if (activeWorkload == null) {
+                    LOG.error("We do not have a random workload to abort.");
+
+                    sendResultToLeader(0, operationId);
+                } else {
+                    LOG.debug("Aborting randomly-generated workload.");
+                    activeWorkload = null;
+                    sendResultToLeader(1, operationId);
+                }
             default:
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
                 break;
@@ -490,6 +540,12 @@ public class Follower {
         assert result != null;
         LOG.debug("Sending result for operation " + result.opId + " now...");
         int bytesSent = this.client.sendTCP(result);
+        LOG.debug("Successfully sent " + bytesSent + " byte(s) to leader.");
+    }
+
+    private void sendResultToLeader(int ack, String opId) {
+        LOG.debug("Sending result for operation " + opId + " now...");
+        int bytesSent = this.client.sendTCP(ack);
         LOG.debug("Successfully sent " + bytesSent + " byte(s) to leader.");
     }
 

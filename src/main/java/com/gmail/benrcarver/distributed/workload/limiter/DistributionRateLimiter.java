@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class DistributionRateLimiter implements WorkerRateLimiter {
@@ -43,7 +44,7 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
   protected int unfulfilled = 0;
   protected int unfulfilledUnit = 0;
   protected int unfulfilledRemainer = 0;
-  protected AtomicLong completed;
+  protected AtomicInteger completed;
   protected long lastCompleted;
 
   /**
@@ -80,7 +81,7 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
    * @param val AtomicLong The number of completed operations
    */
   @Override
-  public void setStat(String key, AtomicLong val) {
+  public void setStat(String key, AtomicInteger val) {
     // Only completed is supported
     this.completed = val;
     this.lastCompleted = 0;

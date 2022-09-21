@@ -97,7 +97,7 @@ public class Commands {
         return hdfs;
     }
 
-    private static void returnHdfsClient(DistributedFileSystem hdfs) throws InterruptedException {
+    public static void returnHdfsClient(DistributedFileSystem hdfs) throws InterruptedException {
         hdfsClients.add(hdfs);
     }
 

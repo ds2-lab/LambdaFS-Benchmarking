@@ -25,7 +25,6 @@ import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.*;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
@@ -615,7 +614,7 @@ public class Commander {
                         LOG.info("MKDIR WEAK SCALING selected!");
                         mkdirWeakScaling(primaryHdfs);
                         break;
-                    case OP_GENERATED_WORKLOAD:
+                    case OP_PREPARE_GENERATED_WORKLOAD:
                         LOG.info("Randomly-Generated Workload selected!");
                         randomlyGeneratedWorkload(primaryHdfs);
                         break;
@@ -646,7 +645,7 @@ public class Commander {
         BMConfiguration configuration = new BMConfiguration(workloadConfigFile);
 
         JsonObject payload = new JsonObject();
-        payload.addProperty(OPERATION, OP_GENERATED_WORKLOAD);
+        payload.addProperty(OPERATION, OP_PREPARE_GENERATED_WORKLOAD);
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream out;

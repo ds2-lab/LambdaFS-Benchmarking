@@ -18,16 +18,17 @@
 package com.gmail.benrcarver.distributed.workload.limiter;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *
  * @author Tianium
  */
-public interface WorkerRateLimiter extends RateLimiter, Callable {
+public interface WorkerRateLimiter extends RateLimiter, Callable<Object> {
   public void setStart(long startTime);
 
   public void setDuration(long duration);
 
-  public void setStat(String key, AtomicLong val);
+  public void setStat(String key, AtomicInteger val);
 }

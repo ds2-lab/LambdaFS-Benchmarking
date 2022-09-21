@@ -53,7 +53,10 @@ public class Constants {
     public static final int OP_LIST_DIRECTORIES_FROM_FILE = 23;
     public static final int OP_STAT_FILES_WEAK_SCALING = 24;
     public static final int OP_MKDIR_WEAK_SCALING = 25;
-    public static final int OP_GENERATED_WORKLOAD = 26;
+    public static final int OP_PREPARE_GENERATED_WORKLOAD = 26;
+    public static final int OP_DO_WARMUP_FOR_PREPARED_WORKLOAD = 27;
+    public static final int OP_DO_RANDOM_WORKLOAD= 28;
+    public static final int OP_ABORT_RANDOM_WORKLOAD = 29;
 
     public static String INTLVD_CREATE_FILES_PERCENTAGE_KEY = "interleaved.create.files.percentage";
     public static double INTLVD_CREATE_FILES_PERCENTAGE_DEFAULT = 0;

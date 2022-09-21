@@ -1,12 +1,16 @@
 package com.gmail.benrcarver.distributed.workload;
 
 import com.gmail.benrcarver.distributed.Commands;
+import com.gmail.benrcarver.distributed.Constants;
+import com.gmail.benrcarver.distributed.DistributedBenchmarkResult;
 import com.gmail.benrcarver.distributed.FSOperation;
 import com.gmail.benrcarver.distributed.coin.BMConfiguration;
 import com.gmail.benrcarver.distributed.coin.InterleavedMultiFaceCoin;
 import com.gmail.benrcarver.distributed.workload.files.FilePool;
 import com.gmail.benrcarver.distributed.workload.files.FilePoolUtils;
 import com.gmail.benrcarver.distributed.workload.limiter.*;
+import com.google.gson.JsonObject;
+import javafx.concurrent.Worker;
 import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.slf4j.Logger;
@@ -14,30 +18,47 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class RandomlyGeneratedWorkload {
     public static final Logger LOG = LoggerFactory.getLogger(RandomlyGeneratedWorkload.class);
 
+    public enum WorkloadState {
+            CREATED, WARMING_UP, READY, EXECUTING, FINISHED, ERRED
+    };
+
     protected final BMConfiguration bmConf;
 
     private long duration;
     private long startTime = 0;
-    AtomicLong operationsCompleted = new AtomicLong(0);
+    AtomicInteger operationsCompleted = new AtomicInteger(0);
     AtomicLong operationsFailed = new AtomicLong(0);
     Map<FSOperation, AtomicLong> operationsStats = new HashMap<>();
     HashMap<FSOperation, ArrayList<BMOpStats>> opsStats = new HashMap<>();
     SynchronizedDescriptiveStatistics avgLatency = new SynchronizedDescriptiveStatistics();
     private final RateLimiter limiter;
-    private FilePool sharedFilePool;
     private final ExecutorService executor;
 
-    public RandomlyGeneratedWorkload(BMConfiguration bmConf) {
+    private WorkloadState currentState = WorkloadState.CREATED;
+
+    private SynchronizedDescriptiveStatistics tcpLatency = new SynchronizedDescriptiveStatistics();
+    private SynchronizedDescriptiveStatistics httpLatency = new SynchronizedDescriptiveStatistics();
+
+    // Used to synchronize threads; they each connect to HopsFS and then
+    // count down. So, they all cannot start until they are all connected.
+    final CountDownLatch startLatch;
+
+    // Used to synchronize threads; they block when they finish executing to avoid using CPU cycles
+    // by aggregating their results. Once all the threads have finished, they aggregate their results.
+    final CountDownLatch endLatch;
+    final Semaphore readySemaphore;
+    final Semaphore endSemaphore;
+
+    private final DistributedFileSystem sharedHdfs;
+
+    public RandomlyGeneratedWorkload(BMConfiguration bmConf, DistributedFileSystem sharedHdfs) {
         BenchmarkDistribution distribution = bmConf.getInterleavedBMIaTDistribution();
         if (distribution == BenchmarkDistribution.POISSON) {
             limiter = new DistributionRateLimiter(bmConf, new PoissonGenerator(bmConf));
@@ -47,54 +68,79 @@ public class RandomlyGeneratedWorkload {
             limiter = new RateNoLimiter();
         }
 
+        int numThreads = bmConf.getThreadsPerWorker();
+
         this.bmConf = bmConf;
-        this.executor = Executors.newFixedThreadPool(bmConf.getThreadsPerWorker());
+        this.executor = Executors.newFixedThreadPool(numThreads);
+        this.sharedHdfs = sharedHdfs;
+
+        endSemaphore = new Semaphore((numThreads * -1) + 1);
+        readySemaphore = new Semaphore((numThreads * -1) + 1);
+        endLatch = new CountDownLatch(numThreads);
+        startLatch = new CountDownLatch(numThreads + 1);
     }
 
-    /*
-    protected WarmUpCommand.Response warmUp(WarmUpCommand.Request cmd)
-            throws IOException, InterruptedException {
-        // Warm-up is done in two stages.
-        // In the first phase all the parent dirs are created
-        // and then in the second stage we create the further
-        // file/dir in the parent dir.
+    public void doWarmup() throws InterruptedException {
+        currentState = WorkloadState.WARMING_UP;
 
         if (bmConf.getFilesToCreateInWarmUpPhase() > 1) {
-            List<Callable<Boolean>> workers = new ArrayList<>();
-            // Stage 1
+            List workers = new ArrayList<WarmUp>();
+
+            int numThreads = 1;
+            while (numThreads <= bmConf.getThreadsPerWorker()) {
+                LOG.info("Creating " + numThreads + " workers now...");
+                for (int i = 0; i < numThreads; i++) {
+                    Callable worker = new WarmUp(1, bmConf,
+                            "Warming up. Stage0: Warming up clients. ", sharedHdfs);
+                    workers.add(worker);
+                }
+
+                executor.invokeAll(workers); // blocking call
+                workers.clear();
+
+                if (numThreads == 1)
+                    numThreads = 8;
+                else
+                    numThreads += 8;
+
+                if (numThreads > 128)
+                    throw new IllegalStateException("Attempting to create too many threads: " + numThreads);
+            }
+
+            LOG.info("Finished initial warm-up. Moving onto Stage 1 of Warm-Up: Creating Parent Dirs.");
+
             for (int i = 0; i < bmConf.getThreadsPerWorker(); i++) {
-                Callable<Boolean> worker = new WarmUp(1, bmConf, "Warming up. Stage1: Creating Parent Dirs. ");
+                Callable worker = new WarmUp(1, bmConf,
+                        "Warming up. Stage1: Creating Parent Dirs. ", sharedHdfs);
                 workers.add(worker);
             }
+
             executor.invokeAll(workers); // blocking call
             workers.clear();
+
+            LOG.info("Finished creating parent dirs. Moving onto Stage 2.");
 
             // Stage 2
             for (int i = 0; i < bmConf.getThreadsPerWorker(); i++) {
                 Callable worker = new WarmUp(bmConf.getFilesToCreateInWarmUpPhase() - 1,
-                        bmConf, "Warming up. Stage2: Creating files/dirs. ");
+                        bmConf, "Warming up. Stage2: Creating files/dirs. ", sharedHdfs);
                 workers.add(worker);
             }
             executor.invokeAll(workers); // blocking call
-            LOG.info("Finished. Warmup Phase. Created ("+bmConf.getThreadsPerWorker()+"*"+bmConf.getFilesToCreateInWarmUpPhase()+") = "+
+            LOG.debug("Finished. Warmup Phase. Created ("+bmConf.getThreadsPerWorker()+"*"+bmConf.getFilesToCreateInWarmUpPhase()+") = "+
                     (bmConf.getThreadsPerWorker()*bmConf.getFilesToCreateInWarmUpPhase())+" files. ");
             workers.clear();
         }
 
-        return new NamespaceWarmUp.Response();
+        currentState = WorkloadState.READY;
     }
 
-    @Override
-    public String toString() {
-        return "RandomlyGeneratedWorkload(startTime=" + startTime + ", duration=" + duration + ")";
-    }
+    public DistributedBenchmarkResult doWorkload(String opId) throws InterruptedException, ExecutionException {
+        currentState = WorkloadState.EXECUTING;
 
-    protected BenchmarkCommand.Response processCommandInternal(BenchmarkCommand.Request command) throws IOException, InterruptedException {
-        BMConfiguration config = ((InterleavedBenchmarkCommand.Request) command).getConfig();
-
-        duration = config.getInterleavedBmDuration();
-        LOG.info("Starting " + command.getBenchMarkType() + " for duration " + duration);
-        List workers = new ArrayList<Worker>();
+        duration = bmConf.getInterleavedBmDuration();
+        LOG.info("Executing randomly-generated workload for duration " + duration + " ms.");
+        List<Callable<Object>> workers = new ArrayList<>();
         // Add limiter as a worker if supported
         WorkerRateLimiter workerLimiter = null;
         if (limiter instanceof WorkerRateLimiter) {
@@ -102,33 +148,53 @@ public class RandomlyGeneratedWorkload {
             workers.add(workerLimiter);
         }
         for (int i = 0; i < bmConf.getThreadsPerWorker(); i++) {
-            Callable worker = new Worker(config);
+            Callable<Object> worker = new Worker(bmConf);
             workers.add(worker);
         }
-        startTime = System.currentTimeMillis();
+
         if (workerLimiter != null) {
             workerLimiter.setStart(startTime);
             workerLimiter.setDuration(duration);
             workerLimiter.setStat("completed", operationsCompleted);
         }
 
-        executor.invokeAll(workers); // blocking call
+        List<Future<Object>> futures = new ArrayList<>();
+        for (Callable<Object> worker : workers) {
+            Future<Object> future = executor.submit(worker);
+            futures.add(future);
+        }
 
-        long totalTime = System.currentTimeMillis() - startTime;
+        readySemaphore.acquire();                   // Will block until all client threads are ready to go.
+        startTime = System.currentTimeMillis();     // Start the clock.
+        startLatch.countDown();                     // Let the threads start.
 
-        LOG.info("Finished " + command.getBenchMarkType() + " in " + totalTime);
+        endSemaphore.acquire();
+        long endTime = System.currentTimeMillis();
+        long totalTime = endTime - startTime;
+        // executor.invokeAll(workers); // blocking call
 
-        double speed = (operationsCompleted.get() / (double) totalTime) * 1000;
+        LOG.info("Finished randomly-generated workload in " + totalTime + " ms.");
 
-        InterleavedBenchmarkCommand.Response response =
-                new InterleavedBenchmarkCommand.Response(totalTime, operationsCompleted.get(), operationsFailed.get(),
-                        speed, opsStats, avgLatency.getMean(), new ArrayList<String>(), 999);
-        return response;
+        for (Future<Object> future : futures) {
+            future.get();
+        }
+
+        DistributedBenchmarkResult result = new DistributedBenchmarkResult(opId, Constants.OP_PREPARE_GENERATED_WORKLOAD,
+                operationsCompleted.get(), totalTime, startTime, endTime, -1, -1, null,
+                null, tcpLatency, httpLatency);
+
+        currentState = WorkloadState.FINISHED;
+        return result;
+    }
+
+    public WorkloadState getCurrentState() { return this.currentState; }
+
+    @Override
+    public String toString() {
+        return "RandomlyGeneratedWorkload(startTime=" + startTime + ", duration=" + duration + ")";
     }
 
     public class Worker implements Callable<Object> {
-
-        private DistributedFileSystem dfs;
         private FilePool filePool;
         private InterleavedMultiFaceCoin opCoin;
         private BMConfiguration config;
@@ -137,15 +203,34 @@ public class RandomlyGeneratedWorkload {
             this.config = config;
         }
 
-        @Override
-        public Object call() {
-            dfs = Commands.getHdfsClient(null);
+        private void extractMetrics(DistributedFileSystem dfs) throws InterruptedException {
+            endLatch.countDown();
+
             try {
-                filePool = (FilePool)sharedFilePool.clone();
-            } catch (CloneNotSupportedException e) {
-                filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(),
-                        bmConf.getDirPerDir(), bmConf.getFilesPerDir());
+                endLatch.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
+
+            for (double latency : dfs.getLatencyHttpStatistics().getValues()) {
+                httpLatency.addValue(latency);
+            }
+
+            //if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting TCP latencies.");
+            for (double latency : dfs.getLatencyTcpStatistics().getValues()) {
+                tcpLatency.addValue(latency);
+            }
+
+            // First clear the metric data associated with the client.
+            Commands.clearMetricDataNoPrompt(dfs);
+            Commands.returnHdfsClient(dfs);
+        }
+
+        @Override
+        public Object call() throws InterruptedException {
+            DistributedFileSystem dfs = Commands.getHdfsClient(sharedHdfs);
+            filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(),
+                    bmConf.getDirPerDir(), bmConf.getFilesPerDir());
 
             opCoin = new InterleavedMultiFaceCoin(config.getInterleavedBmCreateFilesPercentage(),
                     config.getInterleavedBmAppendFilePercentage(),
@@ -163,9 +248,20 @@ public class RandomlyGeneratedWorkload {
                     config.getInterleavedBmFileChangeOwnerPercentage(),
                     config.getInterleavedBmDirChangeOwnerPercentage()
             );
+
+            readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
+
+            startLatch.countDown(); // Wait for the main thread's signal to actually begin.
+
             while (true) {
                 try {
                     if ((System.currentTimeMillis() - startTime) > duration) {
+                        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+                        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+                        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+                        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+                        endSemaphore.release();
+                        extractMetrics(dfs);
                         return null;
                     }
 
@@ -173,10 +269,18 @@ public class RandomlyGeneratedWorkload {
 
                     // Wait for the limiter to allow the operation
                     if (!limiter.checkRate()) {
+                        Commands.returnHdfsClient(dfs);
+
+                        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+                        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+                        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+                        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+                        endSemaphore.release();
+                        extractMetrics(dfs);
                         return null;
                     }
 
-                    performOperation(op);
+                    performOperation(op, dfs);
 
                 } catch (Exception e) {
                     LOG.error("Exception encountered:", e);
@@ -184,7 +288,7 @@ public class RandomlyGeneratedWorkload {
             }
         }
 
-        private void performOperation(FSOperation opType) throws IOException {
+        private void performOperation(FSOperation opType, DistributedFileSystem dfs) {
             if (LOG.isDebugEnabled())
                 LOG.debug("Performing operation: " + opType.getName());
             String path = FilePoolUtils.getPath(opType, filePool);
@@ -222,11 +326,4 @@ public class RandomlyGeneratedWorkload {
 
         }
     }
-
-    private double speedPSec(long ops, long startTime) {
-        long timePassed = (System.currentTimeMillis() - startTime);
-        double opsPerMSec = (double) (ops) / (double) timePassed;
-        return opsPerMSec * 1000;
-    }
-    */
 }

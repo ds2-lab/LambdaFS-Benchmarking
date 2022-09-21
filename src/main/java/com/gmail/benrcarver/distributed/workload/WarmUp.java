@@ -20,14 +20,14 @@ public class WarmUp implements Callable<Boolean> {
     private final int filesToCreate;
     private final String stage;
     private final BMConfiguration bmConf;
-    private final boolean dryrun;
+    private final DistributedFileSystem sharedHdfs;
 
     public WarmUp(int filesToCreate, BMConfiguration bmConf,
-                      String stage) throws IOException {
+                      String stage, DistributedFileSystem sharedHdfs) {
         this.filesToCreate = filesToCreate;
         this.stage = stage;
         this.bmConf = bmConf;
-        this.dryrun = bmConf.getBenchmarkDryrun();
+        this.sharedHdfs = sharedHdfs;
     }
 
     @Override
@@ -42,31 +42,27 @@ public class WarmUp implements Callable<Boolean> {
     }
 
     public boolean callImpl() throws Exception {
-        if (!dryrun) {
-            dfs = Commands.getHdfsClient(null);
-        }
+        dfs = Commands.getHdfsClient(sharedHdfs);
         filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(), bmConf.getDirPerDir(),
                 bmConf.getFilesPerDir());
-        String filePath = null;
+        String filePath;
 
         LOG.debug("Attempting to create a total of " + filesToCreate + " file(s).");
         for (int i = 0; i < filesToCreate; i++) {
             try {
                 filePath = filePool.getFileToCreate();
                 LOG.debug("Creating file '" + filePath + "' now...");
-                if (!dryrun) {
-                    FSOperation.CREATE_FILE.call(dfs, filePath, "");
-                    filePool.fileCreationSucceeded(filePath);
-                    FSOperation.READ_FILE.call(dfs, filePath, "");
-                } else {
-                    filePool.fileCreationSucceeded(filePath);
-                }
+                FSOperation.CREATE_FILE.call(dfs, filePath, "");
+                filePool.fileCreationSucceeded(filePath);
+                FSOperation.READ_FILE.call(dfs, filePath, "");
             } catch (Exception e) {
                 LOG.error("Exception encountered:", e);
             }
         }
 
         LOG.debug("Warmed up!");
+        Commands.clearMetricDataNoPrompt(dfs);
+        Commands.returnHdfsClient(dfs);
         return true;
     }
 }
