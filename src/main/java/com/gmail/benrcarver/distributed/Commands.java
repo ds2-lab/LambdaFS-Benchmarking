@@ -1161,8 +1161,9 @@ public class Commands {
         LOG.info("==================================");
     }
 
-    public static DistributedBenchmarkResult executeRandomlyGeneratedWorkload(DistributedFileSystem sharedHdfs,
-                                                                              BMConfiguration configuration)
+    public static DistributedBenchmarkResult executeRandomlyGeneratedWorkload(DistributedFileSystem sharedHdfs, int mkdirsPerDirectory,
+                                                                              int numThreads, List<String> targetDirectories,
+                                                                              int opCode, boolean randomWrites)
             throws IOException, InterruptedException {
 
         return null;

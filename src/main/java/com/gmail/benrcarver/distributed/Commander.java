@@ -6,6 +6,8 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.gmail.benrcarver.distributed.coin.BMConfiguration;
 import com.gmail.benrcarver.distributed.util.Utils;
+import com.gmail.benrcarver.distributed.workload.RandomlyGeneratedWorkload;
+import com.gmail.benrcarver.distributed.workload.WorkloadResponse;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -33,6 +35,7 @@ import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.gmail.benrcarver.distributed.Commands.hdfsClients;
@@ -109,6 +112,8 @@ public class Commander {
      * Map from operation ID to the queue in which distributed results should be placed by the TCP server.
      */
     private final ConcurrentHashMap<String, BlockingQueue<DistributedBenchmarkResult>> resultQueues;
+
+    private final BlockingQueue<WorkloadResponse> workloadResponseQueue;
 
     /**
      * Indicates whether we're running in the so-called non-distributed mode or not.
@@ -217,6 +222,7 @@ public class Commander {
         // TODO: Maybe do book-keeping or fault-tolerance here.
         this.followers = new ArrayList<>();
         this.resultQueues = new ConcurrentHashMap<>();
+        this.workloadResponseQueue = new ArrayBlockingQueue<>(16);
         this.numFollowersFromConfigToStart = numFollowersFromConfigToStart;
         this.scpJars = scpJars;
         this.scpConfig = scpConfig;
@@ -636,7 +642,7 @@ public class Commander {
         }
     }
 
-    private void randomlyGeneratedWorkload(final DistributedFileSystem sharedHdfs) throws SQLException, IOException, InterruptedException {
+    private void randomlyGeneratedWorkload(final DistributedFileSystem sharedHdfs) throws SQLException, IOException, InterruptedException, ExecutionException {
         System.out.print("Please enter location of workload config file (enter nothing to default to ./workload.yaml):\n> ");
         String workloadConfigFile = scanner.nextLine();
 
@@ -664,10 +670,166 @@ public class Commander {
             }
         }
 
-        throw new NotImplementedException("This is not yet implemented!");
+        waitingOn.clear();
+        workloadResponseQueue.clear();
+
+        final int expectedNumResponses = followers.size();
+
+        String operationId = UUID.randomUUID().toString();
+        issueCommandToFollowers("Prepare for Random Workload", operationId, payload, true);
+
+        RandomlyGeneratedWorkload workload = new RandomlyGeneratedWorkload(configuration, sharedHdfs);
+
+        int counter = 0;
+        long time = System.currentTimeMillis();
+
+        while (waitingOn.size() > 0) {
+            LOG.debug("Still waiting on the following Followers: " + StringUtils.join(waitingOn, ", "));
+            Thread.sleep(1000);
+
+            int numDisconnects = numDisconnections.getAndSet(0);
+
+            if (numDisconnects > 0) {
+                LOG.warn("There has been at least one disconnection.");
+            }
+
+            counter += (System.currentTimeMillis() - time);
+            time = System.currentTimeMillis();
+            if (counter >= 60000) {
+                boolean decision = getBooleanFromUser("Stop waiting early?");
+
+                if (decision)
+                    break;
+
+                counter = 0;
+            }
+        }
+
+        if (workloadResponseQueue.size() < expectedNumResponses)
+            LOG.error("Expected " + expectedNumResponses + " response(s). Got " + workloadResponseQueue.size());
+
+        boolean errorOccurred = false;
+        for (WorkloadResponse resp : workloadResponseQueue) {
+            if (resp.erred) {
+                LOG.error("Follower encountered error while creating workload...");
+                errorOccurred = true;
+                break;
+            }
+        }
+
+        if (errorOccurred) {
+            payload = new JsonObject();
+            payload.addProperty(OPERATION_ID, operationId);
+            payload.addProperty(OPERATION, OP_ABORT_RANDOM_WORKLOAD);
+            LOG.error("Aborting workload.");
+            issueCommandToFollowers("Abort Random Workload", operationId, payload, false);
+        }
+
+        LOG.info("Continuing to warm-up stage now...");
+        waitingOn.clear();
+        workloadResponseQueue.clear();
+
+        payload = new JsonObject();
+        payload.addProperty(OPERATION_ID, operationId);
+        payload.addProperty(OPERATION, OP_DO_WARMUP_FOR_PREPARED_WORKLOAD);
+        issueCommandToFollowers("Abort Random Workload", operationId, payload, true);
+
+        workload.doWarmup();
+
+        counter = 0;
+        time = System.currentTimeMillis();
+        while (waitingOn.size() > 0) {
+            LOG.debug("Still waiting on the following Followers: " + StringUtils.join(waitingOn, ", "));
+            Thread.sleep(1000);
+
+            int numDisconnects = numDisconnections.getAndSet(0);
+
+            if (numDisconnects > 0) {
+                LOG.warn("There has been at least one disconnection.");
+            }
+
+            counter += (System.currentTimeMillis() - time);
+            time = System.currentTimeMillis();
+            if (counter >= 60000) {
+                boolean decision = getBooleanFromUser("Stop waiting early?");
+
+                if (decision)
+                    break;
+
+                counter = 0;
+            }
+        }
+
+        if (workloadResponseQueue.size() < expectedNumResponses)
+            LOG.error("Expected " + expectedNumResponses + " response(s). Got " + workloadResponseQueue.size());
+
+        errorOccurred = false;
+        for (WorkloadResponse resp : workloadResponseQueue) {
+            if (resp.erred) {
+                LOG.error("Follower encountered error while warming-up workload...");
+                errorOccurred = true;
+                break;
+            }
+        }
+
+        if (errorOccurred) {
+            payload = new JsonObject();
+            payload.addProperty(OPERATION_ID, operationId);
+            payload.addProperty(OPERATION, OP_ABORT_RANDOM_WORKLOAD);
+            LOG.error("Aborting workload.");
+            issueCommandToFollowers("Abort Random Workload", operationId, payload, false);
+        }
+
+        // Do the actual workload.
+        LOG.info("Preparing to do random workload...");
+        waitingOn.clear();
+        workloadResponseQueue.clear();
+
+        payload = new JsonObject();
+        payload.addProperty(OPERATION_ID, operationId);
+        payload.addProperty(OPERATION, OP_DO_WARMUP_FOR_PREPARED_WORKLOAD);
+        issueCommandToFollowers("Abort Random Workload", operationId, payload, true);
+
+        DistributedBenchmarkResult localResult = workload.doWorkload(operationId);
+
+        counter = 0;
+        time = System.currentTimeMillis();
+        while (waitingOn.size() > 0) {
+            LOG.debug("Still waiting on the following Followers: " + StringUtils.join(waitingOn, ", "));
+            Thread.sleep(1000);
+
+            int numDisconnects = numDisconnections.getAndSet(0);
+
+            if (numDisconnects > 0) {
+                LOG.warn("There has been at least one disconnection.");
+            }
+
+            counter += (System.currentTimeMillis() - time);
+            time = System.currentTimeMillis();
+            if (counter >= 60000) {
+                boolean decision = getBooleanFromUser("Stop waiting early?");
+
+                if (decision)
+                    break;
+
+                counter = 0;
+            }
+        }
+
+        if (workloadResponseQueue.size() < expectedNumResponses)
+            LOG.error("Expected " + expectedNumResponses + " response(s). Got " + workloadResponseQueue.size());
+
+        // TODO: Gather results from the result queue.
+        // TODO: Maybe make a generic method for extracting results from a queue...
+        for (WorkloadResponse response : workloadResponseQueue) {
+            if (response.erred)
+                LOG.error("Error occurred while executing workload on one of the Followers...");
+
+            DistributedBenchmarkResult result = response.result;
+        }
 
 //        performDistributedBenchmark(sharedHdfs, 1, payload, -1, -1, null,
-//                false, OP_GENERATED_WORKLOAD, new ArrayList<>(), "Randomly Generated Workload",
+//                false, OP_PREPARE_GENERATED_WORKLOAD, new ArrayList<>(), "Randomly Generated Workload",
 //                new DistributedBenchmarkOperation() {
 //                    @Override
 //                    public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
@@ -675,7 +837,7 @@ public class Commander {
 //                                                           boolean shuffle, int opCode, List<String> directories)
 //                            throws IOException, InterruptedException {
 //                        return Commands.executeRandomlyGeneratedWorkload(sharedHdfs, opsPerFile, numThreads, directories,
-//                                OP_GENERATED_WORKLOAD, false);
+//                                OP_PREPARE_GENERATED_WORKLOAD, false);
 //                    }
 //                });
     }
@@ -2069,6 +2231,11 @@ public class Commander {
                 BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(opId);
                 resultQueue.add(result);
 
+                waitingOn.remove(followerName);
+            }
+            else if (object instanceof WorkloadResponse) {
+                WorkloadResponse response = (WorkloadResponse)object;
+                workloadResponseQueue.add(response);
                 waitingOn.remove(followerName);
             }
             else if (object instanceof FrameworkMessage.KeepAlive) {

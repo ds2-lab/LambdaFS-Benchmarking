@@ -6,6 +6,7 @@ import com.esotericsoftware.kryonet.Listener;
 import com.gmail.benrcarver.distributed.coin.BMConfiguration;
 import com.gmail.benrcarver.distributed.util.Utils;
 import com.gmail.benrcarver.distributed.workload.RandomlyGeneratedWorkload;
+import com.gmail.benrcarver.distributed.workload.WorkloadResponse;
 import com.google.gson.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -470,26 +471,26 @@ public class Follower {
 
                 if (configuration == null) {
                     LOG.error("ERROR: Could not deserialize BMConfiguration object.");
-                    sendResultToLeader(0, operationId);
+                    sendResultToLeader(new WorkloadResponse(true, null), operationId);
                 } else {
                     activeWorkload = new RandomlyGeneratedWorkload(configuration, hdfs);
-                    sendResultToLeader(1, operationId);
+                    sendResultToLeader(new WorkloadResponse(false, null), operationId);
                 }
                 break;
             case OP_DO_WARMUP_FOR_PREPARED_WORKLOAD:
                 if (activeWorkload == null || activeWorkload.getCurrentState() != RandomlyGeneratedWorkload.WorkloadState.CREATED) {
                     LOG.error("We do not have an already-created workload.");
-                    sendResultToLeader(0, operationId);
+                    sendResultToLeader(new WorkloadResponse(true, null), operationId);
                 } else {
                     activeWorkload.doWarmup();
 
                     if (activeWorkload.getCurrentState() == RandomlyGeneratedWorkload.WorkloadState.READY) {
                         LOG.debug("Successfully warmed-up random workload.");
-                        sendResultToLeader(1, operationId);
+                        sendResultToLeader(new WorkloadResponse(false, null), operationId);
                     }
                     else {
-                        LOG.debug("Failed to warm-up random workload.");
-                        sendResultToLeader(0, operationId);
+                        LOG.error("Failed to warm-up random workload.");
+                        sendResultToLeader(new WorkloadResponse(true, null), operationId);
                     }
                 }
                 break;
@@ -497,17 +498,17 @@ public class Follower {
                 if (activeWorkload == null || activeWorkload.getCurrentState() != RandomlyGeneratedWorkload.WorkloadState.READY) {
                     LOG.error("We do not have an already-created workload.");
 
-                    sendResultToLeader(0, operationId);
+                    sendResultToLeader(new WorkloadResponse(true, null), operationId);
                 } else {
                     result = activeWorkload.doWorkload(operationId);
 
                     if (activeWorkload.getCurrentState() == RandomlyGeneratedWorkload.WorkloadState.FINISHED) {
                         LOG.debug("Successfully executed random workload.");
-                        sendResultToLeader(result);
+                        sendResultToLeader(new WorkloadResponse(false, result), operationId);
                     }
                     else {
-                        LOG.debug("Failed to execute random workload.");
-                        sendResultToLeader(0, operationId);
+                        LOG.error("Failed to execute random workload.");
+                        sendResultToLeader(new WorkloadResponse(true, null), operationId);
                     }
                 }
 
@@ -516,12 +517,13 @@ public class Follower {
                 if (activeWorkload == null) {
                     LOG.error("We do not have a random workload to abort.");
 
-                    sendResultToLeader(0, operationId);
+                    sendResultToLeader(new WorkloadResponse(true, null), operationId);
                 } else {
-                    LOG.debug("Aborting randomly-generated workload.");
+                    LOG.warn("Aborting randomly-generated workload.");
                     activeWorkload = null;
-                    sendResultToLeader(1, operationId);
+                    sendResultToLeader(new WorkloadResponse(false, null), operationId);
                 }
+                break;
             default:
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
                 break;
@@ -543,9 +545,9 @@ public class Follower {
         LOG.debug("Successfully sent " + bytesSent + " byte(s) to leader.");
     }
 
-    private void sendResultToLeader(int ack, String opId) {
+    private void sendResultToLeader(WorkloadResponse resp, String opId) {
         LOG.debug("Sending result for operation " + opId + " now...");
-        int bytesSent = this.client.sendTCP(ack);
+        int bytesSent = this.client.sendTCP(resp);
         LOG.debug("Successfully sent " + bytesSent + " byte(s) to leader.");
     }
 

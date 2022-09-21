@@ -9,18 +9,18 @@ import com.gmail.benrcarver.distributed.coin.InterleavedMultiFaceCoin;
 import com.gmail.benrcarver.distributed.workload.files.FilePool;
 import com.gmail.benrcarver.distributed.workload.files.FilePoolUtils;
 import com.gmail.benrcarver.distributed.workload.limiter.*;
-import com.google.gson.JsonObject;
-import javafx.concurrent.Worker;
 import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+// TODO: Commander actually start and drive workload.
+// TODO: Collect timeline latency & throughput data.
 
 public class RandomlyGeneratedWorkload {
     public static final Logger LOG = LoggerFactory.getLogger(RandomlyGeneratedWorkload.class);
