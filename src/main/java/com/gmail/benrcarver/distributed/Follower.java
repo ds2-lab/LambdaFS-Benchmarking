@@ -504,7 +504,7 @@ public class Follower {
 
                     if (activeWorkload.getCurrentState() == RandomlyGeneratedWorkload.WorkloadState.FINISHED) {
                         LOG.debug("Successfully executed random workload.");
-                        sendResultToLeader(new WorkloadResponse(false, result), operationId);
+                        sendResultToLeader(result);
                     }
                     else {
                         LOG.error("Failed to execute random workload.");

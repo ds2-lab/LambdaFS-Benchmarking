@@ -785,10 +785,14 @@ public class Commander {
         waitingOn.clear();
         workloadResponseQueue.clear();
 
+        BlockingQueue<DistributedBenchmarkResult> resultQueue = new
+                ArrayBlockingQueue<>(expectedNumResponses);
+        resultQueues.put(operationId, resultQueue);
+
         payload = new JsonObject();
         payload.addProperty(OPERATION_ID, operationId);
-        payload.addProperty(OPERATION, OP_DO_WARMUP_FOR_PREPARED_WORKLOAD);
-        issueCommandToFollowers("Abort Random Workload", operationId, payload, true);
+        payload.addProperty(OPERATION, OP_DO_RANDOM_WORKLOAD);
+        issueCommandToFollowers("Execute Random Workload", operationId, payload, true);
 
         DistributedBenchmarkResult localResult = workload.doWorkload(operationId);
 
@@ -816,30 +820,10 @@ public class Commander {
             }
         }
 
-        if (workloadResponseQueue.size() < expectedNumResponses)
-            LOG.error("Expected " + expectedNumResponses + " response(s). Got " + workloadResponseQueue.size());
+        AggregatedResult aggregatedResult =
+                extractDistributedResultFromQueue(resultQueue, localResult, expectedNumResponses);
 
-        // TODO: Gather results from the result queue.
-        // TODO: Maybe make a generic method for extracting results from a queue...
-        for (WorkloadResponse response : workloadResponseQueue) {
-            if (response.erred)
-                LOG.error("Error occurred while executing workload on one of the Followers...");
-
-            DistributedBenchmarkResult result = response.result;
-        }
-
-//        performDistributedBenchmark(sharedHdfs, 1, payload, -1, -1, null,
-//                false, OP_PREPARE_GENERATED_WORKLOAD, new ArrayList<>(), "Randomly Generated Workload",
-//                new DistributedBenchmarkOperation() {
-//                    @Override
-//                    public DistributedBenchmarkResult call(DistributedFileSystem sharedHdfs, String nameNodeEndpoint,
-//                                                           int numThreads, int opsPerFile, String inputPath,
-//                                                           boolean shuffle, int opCode, List<String> directories)
-//                            throws IOException, InterruptedException {
-//                        return Commands.executeRandomlyGeneratedWorkload(sharedHdfs, opsPerFile, numThreads, directories,
-//                                OP_PREPARE_GENERATED_WORKLOAD, false);
-//                    }
-//                });
+        System.out.println(aggregatedResult.metricsString);
     }
 
     private void mkdirWeakScaling(final DistributedFileSystem sharedHdfs) throws IOException, InterruptedException {
@@ -1751,6 +1735,20 @@ public class Commander {
             }
         }
 
+        return extractDistributedResultFromQueue(resultQueue, localResult, numDistributedResults);
+    }
+
+    /**
+     * Extract results from queue and aggregate them together. Return the aggregated result.
+     *
+     * @param resultQueue The queue from which to extract results.
+     * @param localResult The result from local execution.
+     * @param numDistributedResults Expected number of results from queue.
+     */
+    private AggregatedResult extractDistributedResultFromQueue(
+            BlockingQueue<DistributedBenchmarkResult> resultQueue,
+            DistributedBenchmarkResult localResult,
+            int numDistributedResults) {
         DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
         DescriptiveStatistics duration = new DescriptiveStatistics();
         DescriptiveStatistics throughput = new DescriptiveStatistics();
