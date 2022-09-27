@@ -264,9 +264,20 @@ public class RandomlyGeneratedWorkload {
                     config.getInterleavedBmDirChangeOwnerPercentage()
             );
 
+            LOG.debug("Acquiring 'ready' semaphore now...");
             readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
 
+            LOG.debug("Acquired 'ready' semaphore. Counting down start latch now...");
             startLatch.countDown(); // Wait for the main thread's signal to actually begin.
+
+            try {
+                LOG.debug("Awaiting 'start' latch now...")
+                startLatch.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            LOG.debug("Go go go!");
 
             int numOperations = 0;
             while (true) {
