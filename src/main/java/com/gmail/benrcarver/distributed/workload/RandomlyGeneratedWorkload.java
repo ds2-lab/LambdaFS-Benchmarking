@@ -81,6 +81,9 @@ public class RandomlyGeneratedWorkload {
     }
 
     public void doWarmup() throws InterruptedException {
+        LOG.debug("Beginning warm-up for random workload in approximately 2 seconds.");
+        TimeUnit.MILLISECONDS.sleep(2000);
+
         currentState = WorkloadState.WARMING_UP;
 
         if (bmConf.getFilesToCreateInWarmUpPhase() > 1) {
@@ -133,6 +136,9 @@ public class RandomlyGeneratedWorkload {
         }
 
         currentState = WorkloadState.READY;
+
+        LOG.debug("Warm-up completed.");
+        TimeUnit.MILLISECONDS.sleep(500);
     }
 
     public DistributedBenchmarkResult doWorkload(String opId) throws InterruptedException, ExecutionException {
@@ -147,6 +153,9 @@ public class RandomlyGeneratedWorkload {
             workerLimiter = (WorkerRateLimiter) limiter;
             workers.add(workerLimiter);
         }
+
+        LOG.debug("Creating " + bmConf.getThreadsPerWorker() + " threads now...");
+
         for (int i = 0; i < bmConf.getThreadsPerWorker(); i++) {
             Callable<Object> worker = new Worker(bmConf);
             workers.add(worker);
@@ -166,6 +175,10 @@ public class RandomlyGeneratedWorkload {
 
         readySemaphore.acquire();                   // Will block until all client threads are ready to go.
         startTime = System.currentTimeMillis();     // Start the clock.
+
+        TimeUnit.MILLISECONDS.sleep(250);
+        LOG.debug("Starting workload NOW.");
+        TimeUnit.MILLISECONDS.sleep(250);
         startLatch.countDown();                     // Let the threads start.
 
         endSemaphore.acquire();
