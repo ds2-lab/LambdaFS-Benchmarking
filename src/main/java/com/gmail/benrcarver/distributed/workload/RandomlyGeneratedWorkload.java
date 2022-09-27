@@ -9,7 +9,6 @@ import com.gmail.benrcarver.distributed.coin.InterleavedMultiFaceCoin;
 import com.gmail.benrcarver.distributed.workload.files.FilePool;
 import com.gmail.benrcarver.distributed.workload.files.FilePoolUtils;
 import com.gmail.benrcarver.distributed.workload.limiter.*;
-import javafx.concurrent.Worker;
 import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.slf4j.Logger;
