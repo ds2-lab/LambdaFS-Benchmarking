@@ -236,13 +236,13 @@ public class RandomlyGeneratedWorkload {
                 tcpLatency.addValue(latency);
             }
 
-            // First clear the metric data associated with the client.
+            // Clear the metric data associated with the client and return it to the pool.
             Commands.clearMetricDataNoPrompt(dfs);
             Commands.returnHdfsClient(dfs);
         }
 
         @Override
-        public Object call() throws InterruptedException {
+        public Object call() {
             DistributedFileSystem dfs = Commands.getHdfsClient(sharedHdfs);
             filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(),
                     bmConf.getDirPerDir(), bmConf.getFilesPerDir());
@@ -268,38 +268,45 @@ public class RandomlyGeneratedWorkload {
 
             startLatch.countDown(); // Wait for the main thread's signal to actually begin.
 
+            int numOperations = 0;
             while (true) {
-                try {
-                    if ((System.currentTimeMillis() - startTime) > duration) {
-                        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
-                        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
-                        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
-                        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
-                        endSemaphore.release();
-                        extractMetrics(dfs);
-                        return null;
+                for (int i = 0; i < 5000; i++) {
+                    try {
+                        if ((System.currentTimeMillis() - startTime) > duration) {
+                            // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+                            // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+                            // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+                            // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+                            endSemaphore.release();
+                            extractMetrics(dfs);
+                            return null;
+                        }
+
+                        FSOperation op = opCoin.flip();
+
+                        if (LOG.isDebugEnabled())
+                            LOG.debug("Generated " + op.getName() + " operation!");
+
+                        // Wait for the limiter to allow the operation
+                        if (!limiter.checkRate()) {
+                            // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+                            // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+                            // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+                            // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+                            endSemaphore.release();
+                            extractMetrics(dfs);
+                            return null;
+                        }
+
+                        performOperation(op, dfs);
+
+                    } catch (Exception e) {
+                        LOG.error("Exception encountered:", e);
                     }
-
-                    FSOperation op = opCoin.flip();
-
-                    // Wait for the limiter to allow the operation
-                    if (!limiter.checkRate()) {
-                        Commands.returnHdfsClient(dfs);
-
-                        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
-                        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
-                        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
-                        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
-                        endSemaphore.release();
-                        extractMetrics(dfs);
-                        return null;
-                    }
-
-                    performOperation(op, dfs);
-
-                } catch (Exception e) {
-                    LOG.error("Exception encountered:", e);
                 }
+
+                numOperations += 5000;
+                LOG.info("Completed " + numOperations + " operations.");
             }
         }
 

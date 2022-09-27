@@ -84,7 +84,6 @@ public class Commands {
         hdfs = hdfsClients.poll();
 
         if (hdfs != null) {
-            hdfs.setConsistencyProtocolEnabled(consistencyEnabled);
             hdfs.setBenchmarkModeEnabled(Commands.BENCHMARKING_MODE);
             hdfs.setConsistencyProtocolEnabled(sharedHdfs.getConsistencyProtocolEnabled());
             hdfs.setServerlessFunctionLogLevel(sharedHdfs.getServerlessFunctionLogLevel());
