@@ -1,4 +1,4 @@
-files.to.create.in.warmup.phase=10
+files.to.create.in.warmup.phase=100
 warmup.phase.wait.time=10000
 
 interleaved.bm.duration=10000
