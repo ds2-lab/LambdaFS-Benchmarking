@@ -36,7 +36,6 @@ public class RandomlyGeneratedWorkload {
     AtomicInteger operationsCompleted = new AtomicInteger(0);
     AtomicLong operationsFailed = new AtomicLong(0);
     Map<FSOperation, AtomicLong> operationsStats = new HashMap<>();
-    HashMap<FSOperation, ArrayList<BMOpStats>> opsStats = new HashMap<>();
     SynchronizedDescriptiveStatistics avgLatency = new SynchronizedDescriptiveStatistics();
     private final RateLimiter limiter;
     private final ExecutorService executor;
@@ -71,7 +70,7 @@ public class RandomlyGeneratedWorkload {
         int numThreads = bmConf.getThreadsPerWorker();
 
         this.bmConf = bmConf;
-        this.executor = Executors.newFixedThreadPool(numThreads);
+        this.executor = Executors.newFixedThreadPool(numThreads + 1);
         this.sharedHdfs = sharedHdfs;
 
         endSemaphore = new Semaphore((numThreads * -1) + 1);
