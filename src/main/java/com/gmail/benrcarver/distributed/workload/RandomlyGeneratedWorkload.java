@@ -321,9 +321,13 @@ public class RandomlyGeneratedWorkload {
                     }
                 }
 
-                LOG.info("Completed " + numOperations + " operations so far. Time elapsed: " +
-                        (System.currentTimeMillis() - startTime) + " ms. Running average throughput: " +
-                        (numOperations / ((System.currentTimeMillis() - startTime) / 1.0e3)));
+                if (LOG.isDebugEnabled())
+                    LOG.debug("Completed " + numOperations + " operations so far. Time elapsed: " +
+                            (System.currentTimeMillis() - startTime) + " ms. Running average throughput: " +
+                            (numOperations / ((System.currentTimeMillis() - startTime) / 1.0e3)));
+                else
+                    LOG.info("Completed " + numOperations + " operations so far. Time elapsed: " +
+                        (System.currentTimeMillis() - startTime) + " ms.");
             }
         }
 

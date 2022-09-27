@@ -1864,19 +1864,19 @@ public class Commander {
         trialAvgHttpLatency = trialAvgHttpLatency / (1 + numDistributedResults); // Add 1 to account for local result.
         double aggregateThroughput = (opsPerformed.getSum() / duration.getMean());
 
+        int totalCacheHits = (int)(cacheHits.getN() > 0 ? cacheHits.getSum() : 0);
+        int totalCacheMisses = (int)(cacheMisses.getN() > 0 ? cacheMisses.getSum() : 0);
+
         LOG.info("");
         LOG.info("==== AGGREGATED RESULTS ====");
         LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
-        LOG.info("Cache hits: " + cacheHits.getSum());
-        LOG.info("Cache misses: " + cacheMisses.getSum());
-        LOG.info("Cache hit percentage: " + (cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum())));
+        LOG.info("Cache hits: " + totalCacheHits);
+        LOG.info("Cache misses: " + totalCacheMisses);
+        LOG.info("Cache hit percentage: " + (totalCacheHits / (totalCacheHits + totalCacheMisses)));
         LOG.info("Average TCP latency: " + trialAvgTcpLatency + " ms");
         LOG.info("Average HTTP latency: " + trialAvgHttpLatency + " ms");
         LOG.info("Average combined latency: " + (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0 + " ms");
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
-
-        int totalCacheHits = cacheHits.getN() > 0 ? (int)cacheHits.getSum() : 0;
-        int totalCacheMisses = cacheHits.getN() > 0 ? (int)cacheMisses.getSum() : 0;
 
         DecimalFormat df = new DecimalFormat("#.####");
         String metricsString = String.format("%s %d %d %s %s %s %s", df.format(aggregateThroughput),
