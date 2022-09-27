@@ -789,9 +789,11 @@ public class Commander {
         waitingOn.clear();
         workloadResponseQueue.clear();
 
-        BlockingQueue<DistributedBenchmarkResult> resultQueue = new
-                ArrayBlockingQueue<>(expectedNumResponses);
-        resultQueues.put(operationId, resultQueue);
+        BlockingQueue<DistributedBenchmarkResult> resultQueue = null;
+        if (expectedNumResponses > 0) {
+            resultQueue = new ArrayBlockingQueue<>(expectedNumResponses);
+            resultQueues.put(operationId, resultQueue);
+        }
 
         payload = new JsonObject();
         payload.addProperty(OPERATION_ID, operationId);
@@ -824,8 +826,27 @@ public class Commander {
             }
         }
 
-        AggregatedResult aggregatedResult =
-                extractDistributedResultFromQueue(resultQueue, localResult, expectedNumResponses);
+        AggregatedResult aggregatedResult;
+        if (expectedNumResponses < 1) {
+            // LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
+            String metricsString = "";
+
+            try {
+                metricsString = String.format("%f %d %d %f %f %f %f", localResult.getOpsPerSecond(),
+                        localResult.cacheHits, localResult.cacheMisses,
+                        ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses)),
+                        localResult.tcpLatencyStatistics.getMean(),
+                        localResult.httpLatencyStatistics.getMean(),
+                        (localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean()) / 2.0);
+            } catch (NullPointerException ex) {
+                LOG.warn("Could not generate metrics string due to NPE.");
+            }
+
+            aggregatedResult = new AggregatedResult(localResult.getOpsPerSecond(), localResult.cacheHits,
+                    localResult.cacheMisses, metricsString);
+        } else {
+            aggregatedResult = extractDistributedResultFromQueue(resultQueue, localResult, expectedNumResponses);
+        }
 
         System.out.println(aggregatedResult.metricsString);
     }
