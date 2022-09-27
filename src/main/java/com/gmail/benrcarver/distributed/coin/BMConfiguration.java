@@ -7,9 +7,6 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.sql.SQLException;
 import java.util.*;
 
 import static com.gmail.benrcarver.distributed.coin.FileSizeMultiFaceCoin.isTwoDecimalPlace;
@@ -20,18 +17,14 @@ import static com.gmail.benrcarver.distributed.coin.FileSizeMultiFaceCoin.isTwoD
 public class BMConfiguration implements Serializable {
     private Properties props = null;
 
-    private final int threadsPerWorker;
-
     public BMConfiguration() {
-        threadsPerWorker = 1;
+
     }
 
     /**
-     * @param threadsPerWorker Number of threads to use on each worker VM.
      * @param configPath Path to workload configuration file.
      */
-    public BMConfiguration(int threadsPerWorker, String configPath) throws IOException {
-        this.threadsPerWorker = threadsPerWorker;
+    public BMConfiguration(String configPath) throws IOException {
         this.props = loadPropFile(configPath);
     }
 
@@ -39,21 +32,16 @@ public class BMConfiguration implements Serializable {
         System.out.println("You are doomed");
     }
 
-    /**
-     * @param configPath Path to workload configuration file.
-     */
-    public BMConfiguration(String configPath) throws IOException, SQLException {
-        this(1, configPath);
-    }
-
-    public int getThreadsPerWorker() { return this.threadsPerWorker; }
 
     private Properties loadPropFile(String file) throws IOException {
-        final String PROP_FILE = file;
         Properties props = new Properties();
-        InputStream input = new FileInputStream(PROP_FILE);
+        InputStream input = new FileInputStream(file);
         props.load(input);
         return props;
+    }
+
+    public int getThreadsPerWorker() {
+        return getInt(Constants.NUM_WORKER_THREADS_KEY, Constants.NUM_WORKER_THREADS_DEFAULT);
     }
 
     public long getBenchMarkRandomSeed() {
@@ -200,7 +188,7 @@ public class BMConfiguration implements Serializable {
     }
 
     public int getFilesToCreateInWarmUpPhase() {
-        return getInt(Constants.FILES_TO_CRAETE_IN_WARM_UP_PHASE_KEY, Constants.FILES_TO_CRAETE_IN_WARM_UP_PHASE_DEFAULT);
+        return getInt(Constants.FILES_TO_CREATE_IN_WARM_UP_PHASE_KEY, Constants.FILES_TO_CREATE_IN_WARM_UP_PHASE_DEFAULT);
     }
 
     public int getWarmUpPhaseWaitTime() {

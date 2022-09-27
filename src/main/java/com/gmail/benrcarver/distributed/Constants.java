@@ -176,8 +176,8 @@ public class Constants {
     public static String BASE_DIR_KEY = "base.dir";
     public static String BASE_DIR_DEFAULT = "/generatedWorkload";
 
-    public static String FILES_TO_CRAETE_IN_WARM_UP_PHASE_KEY = "files.to.create.in.warmup.phase";
-    public static int    FILES_TO_CRAETE_IN_WARM_UP_PHASE_DEFAULT = 10;
+    public static String FILES_TO_CREATE_IN_WARM_UP_PHASE_KEY = "files.to.create.in.warmup.phase";
+    public static int FILES_TO_CREATE_IN_WARM_UP_PHASE_DEFAULT = 10;
 
     public static String WARM_UP_PHASE_WAIT_TIME_KEY = "warmup.phase.wait.time";
     public static int    WARM_UP_PHASE_WAIT_TIME_DEFAULT = 1 * 60 * 1000;

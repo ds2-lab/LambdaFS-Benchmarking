@@ -1,5 +1,15 @@
-interleaved.workload.name=Spotify
-interleaved.bm.duration=150000
+files.to.create.in.warmup.phase=80
+warmup.phase.wait.time=10000
+
+interleaved.bm.duration=10000
+interleaved.bm.iat.unit=15
+interleaved.bm.iat.skipunit=0
+interleaved.bm.iat.distribution=PARETO
+interleaved.bm.iat.pareto.alpha=2
+interleaved.bm.iat.pareto.location=30000
+
+num.worker.threads=4
+
 interleaved.create.files.percentage=2.7
 interleaved.file.append.percentage=0
 interleaved.read.files.percentage=69.22
