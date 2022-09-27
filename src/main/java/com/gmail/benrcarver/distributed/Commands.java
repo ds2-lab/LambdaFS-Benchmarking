@@ -1440,8 +1440,10 @@ public class Commands {
     public static void appendOperation(DistributedFileSystem hdfs) {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
+        checkForCancel(fileName);
         System.out.print("Content to append:\n> ");
         String fileContents = scanner.nextLine();
+        checkForCancel(fileContents);
 
         Path filePath = new Path(Commander.NAME_NODE_ENDPOINT + fileName);
 
