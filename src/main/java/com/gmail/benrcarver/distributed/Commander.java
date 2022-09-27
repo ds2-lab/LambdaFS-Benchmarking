@@ -30,6 +30,7 @@ import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -831,13 +832,14 @@ public class Commander {
             // LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
             String metricsString = "";
 
+            DecimalFormat df = new DecimalFormat("#.####");
             try {
-                metricsString = String.format("%f %d %d %f %f %f %f", localResult.getOpsPerSecond(),
+                metricsString = String.format("%s %d %d %s %s %s %s", df.format(localResult.getOpsPerSecond()),
                         localResult.cacheHits, localResult.cacheMisses,
-                        ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses)),
-                        localResult.tcpLatencyStatistics.getMean(),
-                        localResult.httpLatencyStatistics.getMean(),
-                        (localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean()) / 2.0);
+                        df.format(((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses))),
+                        df.format(localResult.tcpLatencyStatistics.getMean()),
+                        df.format(localResult.httpLatencyStatistics.getMean()),
+                        df.format((localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean()) / 2.0));
             } catch (NullPointerException ex) {
                 LOG.warn("Could not generate metrics string due to NPE.");
             }
@@ -1718,12 +1720,13 @@ public class Commander {
             String metricsString = "";
 
             try {
-                metricsString = String.format("%f %d %d %f %f %f %f", localResult.getOpsPerSecond(),
+                DecimalFormat df = new DecimalFormat("#.####");
+                metricsString = String.format("%s %d %d %s %s %s %s", df.format(localResult.getOpsPerSecond()),
                         localResult.cacheHits, localResult.cacheMisses,
-                        ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses)),
-                        localResult.tcpLatencyStatistics.getMean(),
-                        localResult.httpLatencyStatistics.getMean(),
-                        (localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean()) / 2.0);
+                        df.format(((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses))),
+                        df.format(localResult.tcpLatencyStatistics.getMean()),
+                        df.format(localResult.httpLatencyStatistics.getMean()),
+                        df.format((localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean()) / 2.0));
             } catch (NullPointerException ex) {
                 LOG.warn("Could not generate metrics string due to NPE.");
             }
@@ -1861,9 +1864,11 @@ public class Commander {
         LOG.info("Average combined latency: " + (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0 + " ms");
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
 
-        String metricsString = String.format("%f %f %f %f %f %f %f", aggregateThroughput, cacheHits.getSum(), cacheMisses.getSum(),
-                (cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum())), trialAvgTcpLatency,
-                trialAvgHttpLatency, (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0);
+        DecimalFormat df = new DecimalFormat("#.####");
+        String metricsString = String.format("%s %d %d %s %s %s %s", df.format(aggregateThroughput),
+                (int)cacheHits.getSum(), (int)cacheMisses.getSum(),
+                df.format((cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum()))), df.format(trialAvgTcpLatency),
+                df.format(trialAvgHttpLatency), df.format((trialAvgTcpLatency + trialAvgHttpLatency) / 2.0));
 
         LOG.info(metricsString);
 
@@ -2027,8 +2032,9 @@ public class Commander {
         }
 
         System.out.println("\n[THROUGHPUT]");
+        DecimalFormat df = new DecimalFormat("#.####");
         for (double throughputResult : results) {
-            System.out.println(throughputResult);
+            System.out.println(df.format(throughputResult));
         }
         System.out.println("\n[CACHE HITS] [CACHE MISSES] [HIT RATE]");
         String formatString = "%-12s %-14s %10f";
