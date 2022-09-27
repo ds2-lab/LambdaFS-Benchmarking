@@ -835,8 +835,8 @@ public class Commander {
             DecimalFormat df = new DecimalFormat("#.####");
             try {
                 double avgTcpLatency = localResult.tcpLatencyStatistics.getMean();
-                double avgHttpLatency = localResult.httpLatencyStatistics.getMean();
-                double avgLatency = localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean() / 2.0;
+                double avgHttpLatency = (localResult.httpLatencyStatistics.getN() > 0) ? localResult.httpLatencyStatistics.getMean() : 0;
+                double avgLatency = avgTcpLatency + avgHttpLatency / 2.0;
                 double cacheHitRate = ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses));
                 // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
                 metricsString = String.format("%s %d %d %s %s %s %s", df.format(localResult.getOpsPerSecond()),
@@ -1728,8 +1728,8 @@ public class Commander {
             try {
                 DecimalFormat df = new DecimalFormat("#.####");
                 double avgTcpLatency = localResult.tcpLatencyStatistics.getMean();
-                double avgHttpLatency = localResult.httpLatencyStatistics.getMean();
-                double avgLatency = localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean() / 2.0;
+                double avgHttpLatency = (localResult.httpLatencyStatistics.getN() > 0) ? localResult.httpLatencyStatistics.getMean() : 0;
+                double avgLatency = avgTcpLatency + avgHttpLatency / 2.0;
                 double cacheHitRate = ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses));
                 // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
                 metricsString = String.format("%s %d %d %s %s %s %s", df.format(localResult.getOpsPerSecond()),
@@ -1847,7 +1847,7 @@ public class Commander {
                         ", N: " + latencyHttp.getN() + "]");
 
                 trialAvgTcpLatency += latencyTcp.getMean();
-                trialAvgHttpLatency += latencyHttp.getMean();
+                trialAvgHttpLatency += (latencyHttp.getN() > 0 ? latencyHttp.getMean() : 0);
             }
 
             if (res.opsPerformed != null)
