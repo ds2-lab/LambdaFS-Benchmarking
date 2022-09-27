@@ -448,7 +448,7 @@ public class Follower {
             case OP_PREPARE_GENERATED_WORKLOAD:
                 LOG.info("RANDOMLY-GENERATED WORKLOAD selected!");
 
-                String base64Config = hdfsConfiguration.get("configuration");
+                String base64Config = message.getAsJsonPrimitive("configuration").getAsString();
                 byte[] configBytes = Base64.getDecoder().decode(base64Config);
 
                 ByteArrayInputStream bis = new ByteArrayInputStream(configBytes);
