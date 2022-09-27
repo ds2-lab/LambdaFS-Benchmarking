@@ -112,6 +112,8 @@ public class RandomlyGeneratedWorkload {
 
             LOG.info("Finished initial warm-up. Moving onto Stage 1 of Warm-Up: Creating Parent Dirs.");
 
+            LOG.debug("Creating " + bmConf.getFilesToCreateInWarmUpPhase() + " files/directories.");
+
             for (int i = 0; i < bmConf.getThreadsPerWorker(); i++) {
                 Callable worker = new WarmUp(1, bmConf,
                         "Warming up. Stage1: Creating Parent Dirs. ", sharedHdfs);
