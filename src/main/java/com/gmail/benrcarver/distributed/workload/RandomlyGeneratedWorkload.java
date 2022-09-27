@@ -197,7 +197,7 @@ public class RandomlyGeneratedWorkload {
             future.get();
 
         DistributedBenchmarkResult result = new DistributedBenchmarkResult(opId, Constants.OP_PREPARE_GENERATED_WORKLOAD,
-                operationsCompleted.get(), totalTime * 1000, startTime, endTime, 0, 0, null,
+                operationsCompleted.get(), totalTime / 1.0e3, startTime, endTime, 0, 0, null,
                 null, tcpLatency, httpLatency);
 
         currentState = WorkloadState.FINISHED;
@@ -300,7 +300,7 @@ public class RandomlyGeneratedWorkload {
                         if (LOG.isDebugEnabled()) {
                             LOG.debug("Generated " + op.getName() + " operation! Completed " + numOperations +
                                     " operations so far. Running average throughput: " +
-                                    (numOperations / ((System.currentTimeMillis() - startTime) * 1000)));
+                                    (numOperations / ((System.currentTimeMillis() - startTime) / 1.0e3)));
                         }
 
                         // Wait for the limiter to allow the operation
@@ -323,7 +323,7 @@ public class RandomlyGeneratedWorkload {
 
                 LOG.info("Completed " + numOperations + " operations so far. Time elapsed: " +
                         (System.currentTimeMillis() - startTime) + " ms. Running average throughput: " +
-                        (numOperations / ((System.currentTimeMillis() - startTime) * 1000)));
+                        (numOperations / ((System.currentTimeMillis() - startTime) / 1.0e3)));
             }
         }
 

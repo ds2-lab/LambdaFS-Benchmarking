@@ -1895,7 +1895,7 @@ public class Commander {
             System.out.println(formatted);
         }
 
-        return new AggregatedResult(aggregateThroughput, (int)cacheHits.getSum(), (int)cacheMisses.getSum(), metricsString);
+        return new AggregatedResult(aggregateThroughput, totalCacheHits, totalCacheMisses, metricsString);
     }
 
     /**
