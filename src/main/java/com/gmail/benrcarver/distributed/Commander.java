@@ -646,6 +646,10 @@ public class Commander {
         System.out.print("Please enter location of workload config file (enter nothing to default to ./workload.yaml):\n> ");
         String workloadConfigFile = scanner.nextLine();
 
+        // Default to "./workload.yaml"
+        if (workloadConfigFile.equals(""))
+            workloadConfigFile = "./workload.yaml";
+
         System.out.println("Attempting to load workload from file: '" + workloadConfigFile + "'");
 
         BMConfiguration configuration = new BMConfiguration(workloadConfigFile);
