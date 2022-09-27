@@ -1346,10 +1346,10 @@ public class Commands {
         Path filePath = new Path(Commander.NAME_NODE_ENDPOINT + originalFileName);
         Path filePathRename = new Path(Commander.NAME_NODE_ENDPOINT + renamedFileName);
 
+        LOG.info("Original file path: \"" + originalFileName + "\"");
+        LOG.info("New file path: \"" + renamedFileName + "\"");
+        long start = System.currentTimeMillis();
         try {
-            LOG.info("Original file path: \"" + originalFileName + "\"");
-            LOG.info("New file path: \"" + renamedFileName + "\"");
-            long start = System.currentTimeMillis();
             hdfs.rename(filePath, filePathRename);
         } catch (IOException ex) {
             ex.printStackTrace();
