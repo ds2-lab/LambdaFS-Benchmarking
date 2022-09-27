@@ -425,7 +425,12 @@ public class Commands {
         System.out.print("Target directory:\n> ");
         String targetDirectory = scanner.nextLine();
 
-        return listDirectory(hdfs, targetDirectory);
+        long start = System.currentTimeMillis();
+        boolean success = listDirectory(hdfs, targetDirectory);
+        LOG.info("Completed LIST operation for target '" + targetDirectory + "' in " +
+                (System.currentTimeMillis() - start) + " ms.");
+
+        return success;
     }
 
     public static DistributedBenchmarkResult listDirectoryWeakScaling(final DistributedFileSystem sharedHdfs,
@@ -1279,7 +1284,10 @@ public class Commands {
 
         checkForCancel(fileContents);
 
+        long start = System.currentTimeMillis();
         createFile(fileName, fileContents, hdfs);
+        LOG.info("Completed CREATE FILE for path '" + fileName + "' in " +
+                (System.currentTimeMillis() - start) + " ms.");
     }
 
     /**
@@ -1343,9 +1351,10 @@ public class Commands {
             LOG.info("New file path: \"" + renamedFileName + "\"");
             long start = System.currentTimeMillis();
             hdfs.rename(filePath, filePathRename);
-            LOG.info("Finished rename operation in " + (System.currentTimeMillis() - start) + "ms.");
         } catch (IOException ex) {
             ex.printStackTrace();
+        } finally {
+            LOG.info("Finished rename operation in " + (System.currentTimeMillis() - start) + "ms.");
         }
     }
 
@@ -1489,7 +1498,11 @@ public class Commands {
     public static void readOperation(DistributedFileSystem hdfs) {
         System.out.print("File path:\n> ");
         String fileName = scanner.nextLine();
+
+        long start = System.currentTimeMillis();
         readFile(fileName, hdfs);
+        LOG.info("Completed READ operation for target '" + fileName + "' in " +
+                (System.currentTimeMillis() - start) + " ms.");
     }
 
     /**
@@ -1528,7 +1541,10 @@ public class Commands {
         System.out.print("File or directory path:\n> ");
         String targetPath = scanner.nextLine();
 
+        long start = System.currentTimeMillis();
         delete(targetPath, hdfs);
+        LOG.info("Completed DELETE on target '" + targetPath + "' in " +
+                (System.currentTimeMillis() - start) + " ms.");
     }
 
     public static boolean delete(String targetPath, DistributedFileSystem hdfs) {
