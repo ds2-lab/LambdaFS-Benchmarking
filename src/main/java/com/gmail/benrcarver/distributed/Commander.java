@@ -1875,10 +1875,13 @@ public class Commander {
         LOG.info("Average combined latency: " + (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0 + " ms");
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
 
+        int totalCacheHits = cacheHits.getN() > 0 ? (int)cacheHits.getSum() : 0;
+        int totalCacheMisses = cacheHits.getN() > 0 ? (int)cacheMisses.getSum() : 0;
+
         DecimalFormat df = new DecimalFormat("#.####");
         String metricsString = String.format("%s %d %d %s %s %s %s", df.format(aggregateThroughput),
-                (int)cacheHits.getSum(), (int)cacheMisses.getSum(),
-                df.format((cacheHits.getSum()/(cacheHits.getSum() + cacheMisses.getSum()))), df.format(trialAvgTcpLatency),
+                totalCacheHits, totalCacheMisses,
+                df.format((totalCacheHits/(totalCacheHits + totalCacheMisses))), df.format(trialAvgTcpLatency),
                 df.format(trialAvgHttpLatency), df.format((trialAvgTcpLatency + trialAvgHttpLatency) / 2.0));
 
         LOG.info(metricsString);
