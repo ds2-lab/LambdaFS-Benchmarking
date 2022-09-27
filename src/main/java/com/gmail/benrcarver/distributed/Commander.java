@@ -834,6 +834,7 @@ public class Commander {
 
             DecimalFormat df = new DecimalFormat("#.####");
             try {
+                // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
                 metricsString = String.format("%s %d %d %s %s %s %s", df.format(localResult.getOpsPerSecond()),
                         localResult.cacheHits, localResult.cacheMisses,
                         df.format(((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses))),
@@ -850,6 +851,7 @@ public class Commander {
             aggregatedResult = extractDistributedResultFromQueue(resultQueue, localResult, expectedNumResponses);
         }
 
+        System.out.println("throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
         System.out.println(aggregatedResult.metricsString);
     }
 
@@ -2042,6 +2044,7 @@ public class Commander {
             System.out.printf((formatString) + "%n", cacheHits[i], cacheMisses[i], ((double)cacheHits[i] / (cacheHits[i] + cacheMisses[i])));
         }
 
+        System.out.println("throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString);
     }
@@ -2327,6 +2330,9 @@ public class Commander {
         public double throughput;
         public int cacheHits;
         public int cacheMisses;
+
+        // Format (for serverless):
+        // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
         public String metricsString; // All the metrics I'd want formatted so that I can copy and paste into Excel.
 
         public AggregatedResult(double throughput, int cacheHits, int cacheMisses, String metricsString) {
