@@ -32,7 +32,7 @@ public class RandomlyGeneratedWorkload {
     protected final BMConfiguration bmConf;
 
     private long duration;
-    private long startTime = 0;
+    private volatile long startTime = 0;
     AtomicInteger operationsCompleted = new AtomicInteger(0);
     AtomicLong operationsFailed = new AtomicLong(0);
     Map<FSOperation, AtomicLong> operationsStats = new HashMap<>();
@@ -179,11 +179,11 @@ public class RandomlyGeneratedWorkload {
 
         LOG.debug("Main thread acquiring 'ready' semaphore...");
         readySemaphore.acquire();                   // Will block until all client threads are ready to go.
-        startTime = System.currentTimeMillis();     // Start the clock.
         LOG.debug("Main thread acquired 'ready' semaphore!");
         TimeUnit.MILLISECONDS.sleep(250);
         LOG.debug("Starting workload NOW.");
         TimeUnit.MILLISECONDS.sleep(250);
+        startTime = System.currentTimeMillis();     // Start the clock.
         startLatch.countDown();                     // Let the threads start.
 
         endSemaphore.acquire();
@@ -197,7 +197,7 @@ public class RandomlyGeneratedWorkload {
             future.get();
 
         DistributedBenchmarkResult result = new DistributedBenchmarkResult(opId, Constants.OP_PREPARE_GENERATED_WORKLOAD,
-                operationsCompleted.get(), totalTime, startTime, endTime, 0, 0, null,
+                operationsCompleted.get(), totalTime * 1000, startTime, endTime, 0, 0, null,
                 null, tcpLatency, httpLatency);
 
         currentState = WorkloadState.FINISHED;
@@ -300,7 +300,7 @@ public class RandomlyGeneratedWorkload {
                         if (LOG.isDebugEnabled()) {
                             LOG.debug("Generated " + op.getName() + " operation! Completed " + numOperations +
                                     " operations so far. Running average throughput: " +
-                                    (numOperations / (System.currentTimeMillis() - startTime)));
+                                    (numOperations / ((System.currentTimeMillis() - startTime) * 1000)));
                         }
 
                         // Wait for the limiter to allow the operation
@@ -321,8 +321,9 @@ public class RandomlyGeneratedWorkload {
                     }
                 }
 
-                LOG.info("Completed " + numOperations + " operations so far. Time elasped: " +
-                        (System.currentTimeMillis() - startTime) + " ms.");
+                LOG.info("Completed " + numOperations + " operations so far. Time elapsed: " +
+                        (System.currentTimeMillis() - startTime) + " ms. Running average throughput: " +
+                        (numOperations / ((System.currentTimeMillis() - startTime) * 1000)));
             }
         }
 
