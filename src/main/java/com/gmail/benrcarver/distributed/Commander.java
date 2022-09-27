@@ -834,13 +834,17 @@ public class Commander {
 
             DecimalFormat df = new DecimalFormat("#.####");
             try {
+                double avgTcpLatency = localResult.tcpLatencyStatistics.getMean();
+                double avgHttpLatency = localResult.httpLatencyStatistics.getMean();
+                double avgLatency = localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean() / 2.0;
+                double cacheHitRate = ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses));
                 // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
                 metricsString = String.format("%s %d %d %s %s %s %s", df.format(localResult.getOpsPerSecond()),
                         localResult.cacheHits, localResult.cacheMisses,
-                        df.format(((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses))),
-                        df.format(localResult.tcpLatencyStatistics.getMean()),
-                        df.format(localResult.httpLatencyStatistics.getMean()),
-                        df.format((localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean()) / 2.0));
+                        df.format(cacheHitRate),
+                        df.format(avgTcpLatency),
+                        df.format(avgHttpLatency),
+                        df.format(avgLatency));
             } catch (NullPointerException ex) {
                 LOG.warn("Could not generate metrics string due to NPE.");
             }
@@ -1723,12 +1727,17 @@ public class Commander {
 
             try {
                 DecimalFormat df = new DecimalFormat("#.####");
+                double avgTcpLatency = localResult.tcpLatencyStatistics.getMean();
+                double avgHttpLatency = localResult.httpLatencyStatistics.getMean();
+                double avgLatency = localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean() / 2.0;
+                double cacheHitRate = ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses));
+                // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
                 metricsString = String.format("%s %d %d %s %s %s %s", df.format(localResult.getOpsPerSecond()),
                         localResult.cacheHits, localResult.cacheMisses,
-                        df.format(((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses))),
-                        df.format(localResult.tcpLatencyStatistics.getMean()),
-                        df.format(localResult.httpLatencyStatistics.getMean()),
-                        df.format((localResult.tcpLatencyStatistics.getMean() + localResult.httpLatencyStatistics.getMean()) / 2.0));
+                        df.format(cacheHitRate),
+                        df.format(avgTcpLatency),
+                        df.format(avgHttpLatency),
+                        df.format(avgLatency));
             } catch (NullPointerException ex) {
                 LOG.warn("Could not generate metrics string due to NPE.");
             }
@@ -2044,7 +2053,7 @@ public class Commander {
             System.out.printf((formatString) + "%n", cacheHits[i], cacheMisses[i], ((double)cacheHits[i] / (cacheHits[i] + cacheMisses[i])));
         }
 
-        System.out.println("throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
+        System.out.println("\nthroughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString);
     }

@@ -9,6 +9,7 @@ import com.gmail.benrcarver.distributed.coin.InterleavedMultiFaceCoin;
 import com.gmail.benrcarver.distributed.workload.files.FilePool;
 import com.gmail.benrcarver.distributed.workload.files.FilePoolUtils;
 import com.gmail.benrcarver.distributed.workload.limiter.*;
+import javafx.concurrent.Worker;
 import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.slf4j.Logger;
@@ -193,12 +194,11 @@ public class RandomlyGeneratedWorkload {
 
         LOG.info("Finished randomly-generated workload in " + totalTime + " ms.");
 
-        for (Future<Object> future : futures) {
+        for (Future<Object> future : futures)
             future.get();
-        }
 
         DistributedBenchmarkResult result = new DistributedBenchmarkResult(opId, Constants.OP_PREPARE_GENERATED_WORKLOAD,
-                operationsCompleted.get(), totalTime, startTime, endTime, -1, -1, null,
+                operationsCompleted.get(), totalTime, startTime, endTime, 0, 0, null,
                 null, tcpLatency, httpLatency);
 
         currentState = WorkloadState.FINISHED;
@@ -298,8 +298,11 @@ public class RandomlyGeneratedWorkload {
 
                         FSOperation op = opCoin.flip();
 
-                        if (LOG.isDebugEnabled())
-                            LOG.debug("Generated " + op.getName() + " operation!");
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("Generated " + op.getName() + " operation! Completed " + numOperations +
+                                    " operations so far. Running average throughput: " +
+                                    (numOperations / (System.currentTimeMillis() - startTime)));
+                        }
 
                         // Wait for the limiter to allow the operation
                         if (!limiter.checkRate()) {
@@ -313,14 +316,14 @@ public class RandomlyGeneratedWorkload {
                         }
 
                         performOperation(op, dfs);
-
+                        numOperations++;
                     } catch (Exception e) {
                         LOG.error("Exception encountered:", e);
                     }
                 }
 
-                numOperations += 5000;
-                LOG.info("Completed " + numOperations + " operations.");
+                LOG.info("Completed " + numOperations + " operations so far. Time elasped: " +
+                        (System.currentTimeMillis() - startTime) + " ms.");
             }
         }
 
@@ -347,7 +350,9 @@ public class RandomlyGeneratedWorkload {
 
         private void updateStats(FSOperation opType, boolean success, BMOpStats stats) {
             AtomicLong stat = operationsStats.get(opType);
-            if (stat == null) { // this should be synchronized to get accurate stats. However, this will slow down and these stats are just for log messages. Some inconsistencies are OK
+            if (stat == null) {
+                // this should be synchronized to get accurate stats. However, this will slow
+                // down and these stats are just for log messages. Some inconsistencies are OK.
                 stat = new AtomicLong(0);
                 operationsStats.put(opType, stat);
             }
