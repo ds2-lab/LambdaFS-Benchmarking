@@ -156,9 +156,10 @@ public class RandomlyGeneratedWorkload {
             workers.add(workerLimiter);
         }
 
-        LOG.debug("Creating " + bmConf.getThreadsPerWorker() + " threads now...");
+        int numWorkerThreads = bmConf.getThreadsPerWorker();
+        LOG.debug("Creating " + numWorkerThreads + " threads now...");
 
-        for (int i = 0; i < bmConf.getThreadsPerWorker(); i++) {
+        for (int i = 0; i < numWorkerThreads; i++) {
             Callable<Object> worker = new Worker(bmConf);
             workers.add(worker);
         }
@@ -169,15 +170,18 @@ public class RandomlyGeneratedWorkload {
             workerLimiter.setStat("completed", operationsCompleted);
         }
 
+        LOG.debug("workers.size(): " + workers.size());
+
         List<Future<Object>> futures = new ArrayList<>();
         for (Callable<Object> worker : workers) {
             Future<Object> future = executor.submit(worker);
             futures.add(future);
         }
 
+        LOG.debug("Main thread acquiring 'ready' semaphore...");
         readySemaphore.acquire();                   // Will block until all client threads are ready to go.
         startTime = System.currentTimeMillis();     // Start the clock.
-
+        LOG.debug("Main thread acquired 'ready' semaphore!");
         TimeUnit.MILLISECONDS.sleep(250);
         LOG.debug("Starting workload NOW.");
         TimeUnit.MILLISECONDS.sleep(250);
