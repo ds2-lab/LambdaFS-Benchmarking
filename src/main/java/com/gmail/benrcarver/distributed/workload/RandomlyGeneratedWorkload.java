@@ -271,7 +271,7 @@ public class RandomlyGeneratedWorkload {
             startLatch.countDown(); // Wait for the main thread's signal to actually begin.
 
             try {
-                LOG.debug("Awaiting 'start' latch now...")
+                LOG.debug("Awaiting 'start' latch now...");
                 startLatch.await();
             } catch (InterruptedException e) {
                 e.printStackTrace();
