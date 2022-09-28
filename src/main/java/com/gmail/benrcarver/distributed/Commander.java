@@ -1873,7 +1873,10 @@ public class Commander {
         LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
         LOG.info("Cache hits: " + totalCacheHits);
         LOG.info("Cache misses: " + totalCacheMisses);
-        LOG.info("Cache hit percentage: " + (totalCacheHits / (totalCacheHits + totalCacheMisses)));
+        if (totalCacheHits > 0 || totalCacheMisses > 0)
+            LOG.info("Cache hit percentage: " + (totalCacheHits / (totalCacheHits + totalCacheMisses)));
+        else
+            LOG.info("Cache hit percentage: N/A");
         LOG.info("Average TCP latency: " + trialAvgTcpLatency + " ms");
         LOG.info("Average HTTP latency: " + trialAvgHttpLatency + " ms");
         LOG.info("Average combined latency: " + (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0 + " ms");
