@@ -1868,15 +1868,16 @@ public class Commander {
         int totalCacheHits = (int)(cacheHits.getN() > 0 ? cacheHits.getSum() : 0);
         int totalCacheMisses = (int)(cacheMisses.getN() > 0 ? cacheMisses.getSum() : 0);
 
+        double cacheHitRate = 0.0;
+        if (totalCacheHits > 0 || totalCacheMisses > 0)
+            cacheHitRate = ((double)totalCacheHits / ((double)totalCacheHits + (double)totalCacheMisses));
+
         LOG.info("");
         LOG.info("==== AGGREGATED RESULTS ====");
         LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
         LOG.info("Cache hits: " + totalCacheHits);
         LOG.info("Cache misses: " + totalCacheMisses);
-        if (totalCacheHits > 0 || totalCacheMisses > 0)
-            LOG.info("Cache hit percentage: " + (totalCacheHits / (totalCacheHits + totalCacheMisses)));
-        else
-            LOG.info("Cache hit percentage: N/A");
+        LOG.info("Cache hit percentage: " + cacheHitRate);
         LOG.info("Average TCP latency: " + trialAvgTcpLatency + " ms");
         LOG.info("Average HTTP latency: " + trialAvgHttpLatency + " ms");
         LOG.info("Average combined latency: " + (trialAvgTcpLatency + trialAvgHttpLatency) / 2.0 + " ms");
@@ -1885,7 +1886,7 @@ public class Commander {
         DecimalFormat df = new DecimalFormat("#.####");
         String metricsString = String.format("%s %d %d %s %s %s %s", df.format(aggregateThroughput),
                 totalCacheHits, totalCacheMisses,
-                df.format((totalCacheHits/(totalCacheHits + totalCacheMisses))), df.format(trialAvgTcpLatency),
+                df.format(cacheHitRate), df.format(trialAvgTcpLatency),
                 df.format(trialAvgHttpLatency), df.format((trialAvgTcpLatency + trialAvgHttpLatency) / 2.0));
 
         LOG.info(metricsString);
