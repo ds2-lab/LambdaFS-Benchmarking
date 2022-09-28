@@ -161,6 +161,8 @@ public class Follower {
     }
 
     private void handleMessageFromLeader(JsonObject message, DistributedFileSystem hdfs) throws IOException, InterruptedException, ExecutionException {
+        LOG.debug("Message from leader: " + message);
+
         int operation = message.getAsJsonPrimitive(OPERATION).getAsInt();
 
         updateGCMetrics();
@@ -393,10 +395,15 @@ public class Follower {
                         message.getAsJsonPrimitive("filesPerThread").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
                         message.getAsJsonPrimitive("shuffle").getAsBoolean(), OP_WEAK_SCALING_READS_V2);
-                assert result != null;
-                result.setOperationId(operationId);
-                LOG.info("Obtained local result for OP_WEAK_SCALING_READS_V2 benchmark: " + result);
-                sendResultToLeader(result);
+
+                if (result == null) {
+                    sendResultToLeader(DistributedBenchmarkResult.FAILED_RESULT);
+                } else {
+                    result.setOperationId(operationId);
+                    LOG.info("Obtained local result for OP_WEAK_SCALING_READS_V2 benchmark: " + result);
+                    sendResultToLeader(result);
+                }
+
                 break;
             case OP_GET_FILE_STATUS:
                 LOG.info("OP_GET_FILE_STATUS selected!");
@@ -413,10 +420,13 @@ public class Follower {
                         message.getAsJsonPrimitive("listsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
                         message.getAsJsonPrimitive("shuffle").getAsBoolean(), OP_LIST_DIRECTORIES_FROM_FILE);
-
-                result.setOperationId(operationId);
-                LOG.info("Obtained local result for LIST DIRECTORIES FROM FILE benchmark: " + result);
-                sendResultToLeader(result);
+                if (result == null) {
+                    sendResultToLeader(DistributedBenchmarkResult.FAILED_RESULT);
+                } else {
+                    result.setOperationId(operationId);
+                    LOG.info("Obtained local result for LIST DIRECTORIES FROM FILE benchmark: " + result);
+                    sendResultToLeader(result);
+                }
                 break;
             case OP_STAT_FILES_WEAK_SCALING:
                 LOG.info("STAT FILES WEAK SCALING selected!");

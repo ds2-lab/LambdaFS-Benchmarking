@@ -53,6 +53,9 @@ public class DistributedBenchmarkResult implements Serializable {
      */
     public DescriptiveStatistics httpLatencyStatistics;
 
+    public static DistributedBenchmarkResult FAILED_RESULT = new DistributedBenchmarkResult(
+            "FAILED", -1, -1, -1, -1, -1);
+
     public DistributedBenchmarkResult() { }
 
     /**
