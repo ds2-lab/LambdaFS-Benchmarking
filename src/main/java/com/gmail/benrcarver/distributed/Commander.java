@@ -1870,19 +1870,18 @@ public class Commander {
         int totalCacheHits = (int)(cacheHits.getN() > 0 ? cacheHits.getSum() : 0);
         int totalCacheMisses = (int)(cacheMisses.getN() > 0 ? cacheMisses.getSum() : 0);
 
-        double combinedLatency = 0.0;
-        int divisor = 0;
+        double avgCombinedLatency = 0.0;
+        int divisor = 0; // We divide `avgCombinedLatency` by this.
         if (trialAvgTcpLatency > 0) {
-            combinedLatency += trialAvgTcpLatency;
-            divisor++;
+            avgCombinedLatency += trialAvgTcpLatency;
+            divisor++; // TCP latency is non-zero, so we need to account for it when calculating average.
         }
         if (trialAvgHttpLatency > 0) {
-            combinedLatency += trialAvgHttpLatency;
-            divisor++;
+            avgCombinedLatency += trialAvgHttpLatency;
+            divisor++; // HTTP latency is non-zero, so we need to account for it when calculating average.
         }
-
         if (divisor > 0)
-            combinedLatency /= divisor;
+            avgCombinedLatency /= divisor;
 
         double cacheHitRate = 0.0;
         if (totalCacheHits > 0 || totalCacheMisses > 0)
@@ -1896,14 +1895,14 @@ public class Commander {
         LOG.info("Cache hit percentage: " + cacheHitRate);
         LOG.info("Average TCP latency: " + trialAvgTcpLatency + " ms");
         LOG.info("Average HTTP latency: " + trialAvgHttpLatency + " ms");
-        LOG.info("Average combined latency: " + combinedLatency + " ms");
+        LOG.info("Average combined latency: " + avgCombinedLatency + " ms");
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
 
         DecimalFormat df = new DecimalFormat("#.####");
         String metricsString = String.format("%s %d %d %s %s %s %s", df.format(aggregateThroughput),
                 totalCacheHits, totalCacheMisses,
                 df.format(cacheHitRate), df.format(trialAvgTcpLatency),
-                df.format(trialAvgHttpLatency), df.format(combinedLatency));
+                df.format(trialAvgHttpLatency), df.format(avgCombinedLatency));
 
         LOG.info(metricsString);
 
