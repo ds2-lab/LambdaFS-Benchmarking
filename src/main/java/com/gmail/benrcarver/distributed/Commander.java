@@ -655,8 +655,10 @@ public class Commander {
 
         BMConfiguration configuration = new BMConfiguration(workloadConfigFile);
 
+        String operationId = UUID.randomUUID().toString();
         JsonObject payload = new JsonObject();
         payload.addProperty(OPERATION, OP_PREPARE_GENERATED_WORKLOAD);
+        payload.addProperty(OPERATION_ID, operationId);
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream out;
@@ -680,7 +682,6 @@ public class Commander {
 
         final int expectedNumResponses = followers.size();
 
-        String operationId = UUID.randomUUID().toString();
         issueCommandToFollowers("Prepare for Random Workload", operationId, payload, true);
 
         RandomlyGeneratedWorkload workload = new RandomlyGeneratedWorkload(configuration, sharedHdfs);

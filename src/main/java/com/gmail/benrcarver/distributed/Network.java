@@ -2,6 +2,7 @@ package com.gmail.benrcarver.distributed;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.EndPoint;
+import com.gmail.benrcarver.distributed.workload.WorkloadResponse;
 import io.hops.metrics.OperationPerformed;
 import io.hops.metrics.TransactionAttempt;
 import io.hops.metrics.TransactionEvent;
@@ -31,6 +32,7 @@ public class Network {
         kryo.register(java.util.HashMap.class);
         kryo.register(java.util.ArrayList.class);
         kryo.register(java.util.List.class);
+        kryo.register(WorkloadResponse.class);
         kryo.register(byte[].class);
         kryo.register(OperationPerformed[].class);
         kryo.register(java.util.HashMap[].class);
