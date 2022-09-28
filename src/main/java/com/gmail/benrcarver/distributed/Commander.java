@@ -1812,8 +1812,10 @@ public class Commander {
             LOG.info("Cache hit percentage: N/A");
         LOG.info("Throughput          : " + localResult.getOpsPerSecond());
 
-        double trialAvgTcpLatency = localResult.tcpLatencyStatistics.getMean();
-        double trialAvgHttpLatency = localResult.httpLatencyStatistics.getMean();
+        double trialAvgTcpLatency =
+                localResult.tcpLatencyStatistics.getN() > 0 ? localResult.tcpLatencyStatistics.getMean() : 0;
+        double trialAvgHttpLatency =
+                localResult.httpLatencyStatistics.getN() > 0 ? localResult.httpLatencyStatistics.getMean() : 0;
 
         List<Double> allThroughputValues = new ArrayList<>(resultQueue.size() + 1);
         allThroughputValues.add(localResult.getOpsPerSecond());
@@ -1847,7 +1849,7 @@ public class Commander {
                         ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
                         ", N: " + latencyHttp.getN() + "]");
 
-                trialAvgTcpLatency += latencyTcp.getMean();
+                trialAvgTcpLatency += (latencyTcp.getN() > 0 ? latencyTcp.getMean() : 0);
                 trialAvgHttpLatency += (latencyHttp.getN() > 0 ? latencyHttp.getMean() : 0);
             }
 
