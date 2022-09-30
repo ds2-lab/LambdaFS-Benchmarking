@@ -867,7 +867,7 @@ public class Commander {
 
         long unixTs = System.currentTimeMillis() / 1000L;
         try (Writer writer = new BufferedWriter(new OutputStreamWriter(
-                new FileOutputStream("random_workload_" + unixTs + ".txt"), StandardCharsets.UTF_8))) {
+                new FileOutputStream("./random_workload_data/random_workload_" + unixTs + ".txt"), StandardCharsets.UTF_8))) {
             for (OperationPerformed operationPerformed : primaryHdfs.getOperationsPerformed()) {
                 long ts = operationPerformed.getInvokedAtTime();
                 long latency = operationPerformed.getLatency();
