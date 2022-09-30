@@ -337,42 +337,31 @@ public class Commander {
                 LOG.debug("SFTP-ing hadoop-hdfs-3.2.0.3-SNAPSHOT.jar to Follower " + host + ".");
 
                 sftpChannel.put(HADOOP_HDFS_JAR_PATH, HADOOP_HDFS_JAR_PATH);
-                //sftpChannel.disconnect();
                 LOG.debug("SFTP-ing HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + host + ".");
-                //sftpChannel = (ChannelSftp) session.openChannel("sftp");
-                //sftpChannel.connect();
                 sftpChannel.put(BENCHMARK_JAR_PATH, BENCHMARK_JAR_PATH);
-                //sftpChannel.disconnect();
             }
 
             if (scpConfig) {
                 LOG.debug("SFTP-ing hdfs-site.xml to Follower " + host + ".");
-                //ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
-                //sftpChannel.connect();
                 sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
-                //sftpChannel.disconnect();
 
                 LOG.debug("SFTP-ing mkdirWeakScaling to Follower " + host + ".");
-                //sftpChannel = (ChannelSftp) session.openChannel("sftp");
-                //sftpChannel.connect();
                 sftpChannel.put("/home/ubuntu/repos/HopsFS-Benchmarking-Utility/mkdirWeakScaling", "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/mkdirWeakScaling");
-                //sftpChannel.disconnect();
 
                 LOG.debug("SFTP-ing log4j.properties to Follower " + host + " now.");
-                //sftpChannel = (ChannelSftp) session.openChannel("sftp");
-                //sftpChannel.connect();
                 String log4jPath = "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties";
                 sftpChannel.put(log4jPath, log4jPath);
-                //sftpChannel.disconnect();
                 LOG.debug("SFTP'd log4j.properties to Follower " + host + ".");
 
                 LOG.debug("SFTP-ing logback.xml to Follower " + host + " now.");
-                //sftpChannel = (ChannelSftp) session.openChannel("sftp");
-                //sftpChannel.connect();
                 String logbackPath = "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml";
                 sftpChannel.put(logbackPath, logbackPath);
-                //sftpChannel.disconnect();
                 LOG.debug("SFTP'd logback.xml to Follower " + host + ".");
+
+                LOG.debug("SFTP-ing workload.yaml to Follower " + host + " now.");
+                String workloadYamlPath = "/home/ben/repos/HopsFS-Benchmarking-Utility/workload.yaml";
+                sftpChannel.put(workloadYamlPath, workloadYamlPath);
+                LOG.debug("SFTP'd workload.yaml to Follower " + host + ".");
             }
 
             //ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
