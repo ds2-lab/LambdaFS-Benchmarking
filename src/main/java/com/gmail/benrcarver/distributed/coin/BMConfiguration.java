@@ -122,6 +122,14 @@ public class BMConfiguration implements Serializable {
         return getLong(Constants.RAW_MKDIR_PHASE_DURATION_KEY, Constants.RAW_MKDIR_PHASE_DURATION_DEFAULT);
     }
 
+    public int getInterleavedBMIaTUnit() {
+        return getInt(Constants.INTERLEAVED_BM_IAT_UNIT_KEY, Constants.INTERLEAVED_BM_IAT_UNIT_DEFAULT);
+    }
+
+    public int getInterleavedBMIaTSkipUnit() {
+        return getInt(Constants.INTERLEAVED_BM_IAT_SKIPUNIT_KEY, Constants.INTERLEAVED_BM_IAT_SKIPUNIT_DEFAULT);
+    }
+    
     public long getInterleavedBmDuration() {
         return getLong(Constants.INTERLEAVED_BM_DURATION_KEY, Constants.INTERLEAVED_BM_DURATION_DEFAULT);
     }

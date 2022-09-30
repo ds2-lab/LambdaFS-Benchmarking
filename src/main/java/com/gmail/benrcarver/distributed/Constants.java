@@ -125,6 +125,12 @@ public class Constants {
     public static String RAW_MKDIR_PHASE_DURATION_KEY = "raw.mkdir.phase.duration";
     public static long   RAW_MKDIR_PHASE_DURATION_DEFAULT = 0;
 
+    public static String INTERLEAVED_BM_IAT_UNIT_KEY = "interleaved.bm.iat.unit";
+    public static int INTERLEAVED_BM_IAT_UNIT_DEFAULT = 1;
+
+    public static String INTERLEAVED_BM_IAT_SKIPUNIT_KEY = "interleaved.bm.iat.skipunit";
+    public static int INTERLEAVED_BM_IAT_SKIPUNIT_DEFAULT = 0;
+
     public static String INTLVD_MKDIR_PERCENTAGE_KEY = "interleaved.mkdir.percentage";
     public static double INTLVD_MKDIR_PERCENTAGE_DEFAULT = 0;
 
