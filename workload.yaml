@@ -1,14 +1,14 @@
-files.to.create.in.warmup.phase=100
+files.to.create.in.warmup.phase=10
 warmup.phase.wait.time=10000
 
-interleaved.bm.duration=10000
+interleaved.bm.duration=5000
 interleaved.bm.iat.unit=15
 interleaved.bm.iat.skipunit=0
 interleaved.bm.iat.distribution=PARETO
 interleaved.bm.iat.pareto.alpha=2
-interleaved.bm.iat.pareto.location=30000
+interleaved.bm.iat.pareto.location=10000
 
-num.worker.threads=8
+num.worker.threads=4
 
 interleaved.create.files.percentage=0
 interleaved.file.append.percentage=0

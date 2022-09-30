@@ -1823,7 +1823,7 @@ public class Commander {
             LOG.info("Cache hit percentage: " + (localResult.cacheHits/(localResult.cacheHits + localResult.cacheMisses)));
         else
             LOG.info("Cache hit percentage: N/A");
-        LOG.info("Throughput          : " + localResult.getOpsPerSecond());
+        LOG.info("Throughput          : " + localResult.getOpsPerSecond() + "\n");
 
         double trialAvgTcpLatency =
                 localResult.tcpLatencyStatistics.getN() > 0 ? localResult.tcpLatencyStatistics.getMean() : 0;
@@ -2311,7 +2311,8 @@ public class Commander {
 
                 waitingOn.remove(followerName);
 
-                LOG.info("Still waiting on " + StringUtils.join(waitingOn, ", "));
+                LOG.info("Still waiting on " + StringUtils.join(waitingOn, ", ") + " for operation " + opId);
+                LOG.info("resultQueue.size(): " + resultQueue.size());
             }
             else if (object instanceof WorkloadResponse) {
                 WorkloadResponse response = (WorkloadResponse)object;
