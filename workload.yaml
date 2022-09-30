@@ -8,7 +8,7 @@ interleaved.bm.iat.distribution=PARETO
 interleaved.bm.iat.pareto.alpha=2
 interleaved.bm.iat.pareto.location=30000
 
-num.worker.threads=32
+num.worker.threads=8
 
 interleaved.create.files.percentage=0
 interleaved.file.append.percentage=0

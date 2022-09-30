@@ -79,6 +79,8 @@ public class RandomlyGeneratedWorkload {
         readySemaphore = new Semaphore((numThreads * -1) + 1);
         endLatch = new CountDownLatch(numThreads);
         startLatch = new CountDownLatch(numThreads + 1);
+
+        operationsPerformed = new ArrayBlockingQueue<>(bmConf.getThreadsPerWorker());
     }
 
     public void doWarmup() throws InterruptedException {
