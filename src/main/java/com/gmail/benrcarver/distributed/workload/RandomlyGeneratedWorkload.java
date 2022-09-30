@@ -42,8 +42,8 @@ public class RandomlyGeneratedWorkload {
 
     private WorkloadState currentState = WorkloadState.CREATED;
 
-    private SynchronizedDescriptiveStatistics tcpLatency = new SynchronizedDescriptiveStatistics();
-    private SynchronizedDescriptiveStatistics httpLatency = new SynchronizedDescriptiveStatistics();
+    private final SynchronizedDescriptiveStatistics tcpLatency = new SynchronizedDescriptiveStatistics();
+    private final SynchronizedDescriptiveStatistics httpLatency = new SynchronizedDescriptiveStatistics();
 
     // Used to synchronize threads; they each connect to HopsFS and then
     // count down. So, they all cannot start until they are all connected.
@@ -325,9 +325,6 @@ public class RandomlyGeneratedWorkload {
                     LOG.debug("Completed " + numOperations + " operations so far. Time elapsed: " +
                             (System.currentTimeMillis() - startTime) + " ms. Running average throughput: " +
                             (numOperations / ((System.currentTimeMillis() - startTime) / 1.0e3)));
-                else
-                    LOG.info("Completed " + numOperations + " operations so far. Time elapsed: " +
-                        (System.currentTimeMillis() - startTime) + " ms.");
             }
         }
 
@@ -364,9 +361,9 @@ public class RandomlyGeneratedWorkload {
 
             if (success) {
                 operationsCompleted.incrementAndGet();
-                avgLatency.addValue(stats.OpDuration);
+                // avgLatency.addValue(stats.OpDuration);
             } else {
-                operationsFailed.incrementAndGet();
+                // operationsFailed.incrementAndGet();
             }
 
         }

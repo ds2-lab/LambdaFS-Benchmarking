@@ -13,6 +13,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jcraft.jsch.*;
+import io.hops.metrics.OperationPerformed;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -24,6 +25,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.*;
@@ -819,7 +821,7 @@ public class Commander {
 
         AggregatedResult aggregatedResult;
         if (expectedNumResponses < 1) {
-            // LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
+            LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
             String metricsString = "";
 
             DecimalFormat df = new DecimalFormat("#.####");
@@ -847,6 +849,16 @@ public class Commander {
 
         System.out.println("throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
         System.out.println(aggregatedResult.metricsString);
+
+        long unixTs = System.currentTimeMillis() / 1000L;
+        try (Writer writer = new BufferedWriter(new OutputStreamWriter(
+                new FileOutputStream("random_workload_" + unixTs + ".txt"), StandardCharsets.UTF_8))) {
+            for (OperationPerformed operationPerformed : primaryHdfs.getOperationsPerformed()) {
+                long ts = operationPerformed.getInvokedAtTime();
+                long latency = operationPerformed.getLatency();
+                writer.write(ts + "," + latency + "\n");
+            }
+        }
     }
 
     private void mkdirWeakScaling(final DistributedFileSystem sharedHdfs) throws IOException, InterruptedException {
@@ -1806,6 +1818,7 @@ public class Commander {
         double trialAvgHttpLatency =
                 localResult.httpLatencyStatistics.getN() > 0 ? localResult.httpLatencyStatistics.getMean() : 0;
 
+        LOG.debug("Result queue contains " + resultQueue.size() + " distributed results.");
         List<Double> allThroughputValues = new ArrayList<>(resultQueue.size() + 1);
         allThroughputValues.add(localResult.getOpsPerSecond());
         for (DistributedBenchmarkResult res : resultQueue) {
@@ -2166,13 +2179,13 @@ public class Commander {
         LOG.debug("Creating HDFS client now...");
         Configuration hdfsConfiguration;
         hdfsConfiguration = Utils.getConfiguration(hdfsConfigFilePath);
-        LOG.info("Created configuration.");
+        //LOG.info("Created configuration.");
         DistributedFileSystem hdfs = new DistributedFileSystem();
-        LOG.info("Created DistributedFileSystem object.");
+        //LOG.info("Created DistributedFileSystem object.");
 
         try {
             hdfs.initialize(new URI(NAME_NODE_ENDPOINT), hdfsConfiguration);
-            LOG.info("Called initialize() successfully.");
+            //LOG.info("Called initialize() successfully.");
         } catch (URISyntaxException | IOException ex) {
             LOG.error("");
             LOG.error("");

@@ -121,13 +121,13 @@ public class Follower {
         } catch (MalformedURLException ex) {
             ex.printStackTrace();
         }
-        LOG.info("Created configuration.");
+        //LOG.info("Created configuration.");
         DistributedFileSystem hdfs = new DistributedFileSystem();
-        LOG.info("Created DistributedFileSystem object.");
+        //LOG.info("Created DistributedFileSystem object.");
 
         try {
             hdfs.initialize(new URI(nameNodeEndpoint), hdfsConfiguration);
-            LOG.info("Called initialize() successfully.");
+            //LOG.info("Called initialize() successfully.");
         } catch (URISyntaxException | IOException ex) {
             LOG.error("");
             LOG.error("");
