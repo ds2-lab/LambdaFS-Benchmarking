@@ -150,7 +150,7 @@ public class RandomlyGeneratedWorkload {
         currentState = WorkloadState.EXECUTING;
 
         duration = bmConf.getInterleavedBmDuration();
-        LOG.info("Executing randomly-generated workload for duration " + duration + " ms.");
+        LOG.info("Executing randomly-generated workload " + opId + " for duration " + duration + " ms.");
         List<Callable<Object>> workers = new ArrayList<>();
         // Add limiter as a worker if supported
         WorkerRateLimiter workerLimiter = null;
@@ -205,6 +205,8 @@ public class RandomlyGeneratedWorkload {
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
             allOpsPerformed.addAll(opsPerformed);
         }
+
+        LOG.info("Size of opsPerformed list: " + allOpsPerformed.size());
 
         DistributedBenchmarkResult result = new DistributedBenchmarkResult(opId, Constants.OP_PREPARE_GENERATED_WORKLOAD,
                 operationsCompleted.get(), totalTime / 1.0e3, startTime, endTime, 0, 0,

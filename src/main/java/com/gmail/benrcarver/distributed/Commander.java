@@ -673,6 +673,7 @@ public class Commander {
 
         final int expectedNumResponses = followers.size();
 
+        LOG.info("Telling Followers to prepare for Random Workload " + operationId);
         issueCommandToFollowers("Prepare for Random Workload", operationId, payload, true);
 
         RandomlyGeneratedWorkload workload = new RandomlyGeneratedWorkload(configuration, sharedHdfs);
@@ -722,7 +723,7 @@ public class Commander {
             issueCommandToFollowers("Abort Random Workload", operationId, payload, false);
         }
 
-        LOG.info("Continuing to warm-up stage now...");
+        LOG.info("Continuing to warm-up stage for random workload " + operationId + " now...");
         waitingOn.clear();
         workloadResponseQueue.clear();
 
@@ -778,7 +779,7 @@ public class Commander {
         }
 
         // Do the actual workload.
-        LOG.info("Preparing to do random workload...");
+        LOG.info("Preparing to do random workload " + operationId + " now...");
         waitingOn.clear();
         workloadResponseQueue.clear();
 
@@ -821,7 +822,7 @@ public class Commander {
 
         AggregatedResult aggregatedResult;
         if (expectedNumResponses < 1) {
-            LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
+            LOG.info("The number of distributed results is 1. We have nothing to wait for.");
             String metricsString = "";
 
             DecimalFormat df = new DecimalFormat("#.####");
@@ -838,12 +839,13 @@ public class Commander {
                         df.format(avgHttpLatency),
                         df.format(avgLatency));
             } catch (NullPointerException ex) {
-                LOG.warn("Could not generate metrics string due to NPE.");
+                LOG.error("Could not generate metrics string due to NPE:", ex);
             }
 
             aggregatedResult = new AggregatedResult(localResult.getOpsPerSecond(), localResult.cacheHits,
                     localResult.cacheMisses, metricsString);
         } else {
+            LOG.info("Expecting " + expectedNumResponses + " distributed results.");
             aggregatedResult = extractDistributedResultFromQueue(resultQueue, localResult, expectedNumResponses);
         }
 
