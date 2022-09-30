@@ -820,6 +820,16 @@ public class Commander {
             }
         }
 
+        if (localResult.opsPerformed != null)
+            primaryHdfs.addOperationPerformeds(localResult.opsPerformed);
+
+        primaryHdfs.addLatencies(localResult.tcpLatencyStatistics.getValues(),
+                localResult.httpLatencyStatistics.getValues());
+
+        if (localResult.txEvents != null) {
+            primaryHdfs.mergeTransactionEvents(localResult.txEvents, true);
+        }
+
         AggregatedResult aggregatedResult;
         if (expectedNumResponses < 1) {
             LOG.info("The number of distributed results is 1. We have nothing to wait for.");
@@ -2300,6 +2310,8 @@ public class Commander {
                 resultQueue.add(result);
 
                 waitingOn.remove(followerName);
+
+                LOG.info("Still waiting on " + StringUtils.join(waitingOn, ", "));
             }
             else if (object instanceof WorkloadResponse) {
                 WorkloadResponse response = (WorkloadResponse)object;
