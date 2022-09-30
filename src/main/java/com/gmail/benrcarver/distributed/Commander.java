@@ -1818,7 +1818,7 @@ public class Commander {
         double trialAvgHttpLatency =
                 localResult.httpLatencyStatistics.getN() > 0 ? localResult.httpLatencyStatistics.getMean() : 0;
 
-        LOG.debug("Result queue contains " + resultQueue.size() + " distributed results.");
+        LOG.info("Result queue contains " + resultQueue.size() + " distributed results.");
         List<Double> allThroughputValues = new ArrayList<>(resultQueue.size() + 1);
         allThroughputValues.add(localResult.getOpsPerSecond());
         for (DistributedBenchmarkResult res : resultQueue) {
