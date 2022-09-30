@@ -858,7 +858,8 @@ public class Commander {
                     localResult.cacheMisses, metricsString);
         } else {
             LOG.info("Expecting " + expectedNumResponses + " distributed results.");
-            aggregatedResult = extractDistributedResultFromQueue(resultQueue, localResult, expectedNumResponses);
+            aggregatedResult = extractDistributedResultFromQueue(resultQueues.get(operationId), localResult,
+                    expectedNumResponses);
         }
 
         System.out.println("throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
@@ -2313,7 +2314,6 @@ public class Commander {
 
                 waitingOn.remove(followerName);
 
-                LOG.info("Still waiting on " + StringUtils.join(waitingOn, ", ") + " for operation " + opId);
                 LOG.info("resultQueue.size(): " + resultQueue.size());
             }
             else if (object instanceof WorkloadResponse) {
