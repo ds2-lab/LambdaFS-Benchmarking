@@ -721,6 +721,7 @@ public class Commander {
             payload.addProperty(OPERATION, OP_ABORT_RANDOM_WORKLOAD);
             LOG.error("Aborting workload.");
             issueCommandToFollowers("Abort Random Workload", operationId, payload, false);
+            return;
         }
 
         LOG.info("Continuing to warm-up stage for random workload " + operationId + " now...");
@@ -776,6 +777,7 @@ public class Commander {
             payload.addProperty(OPERATION, OP_ABORT_RANDOM_WORKLOAD);
             LOG.error("Aborting workload.");
             issueCommandToFollowers("Abort Random Workload", operationId, payload, false);
+            return;
         }
 
         // Do the actual workload.
