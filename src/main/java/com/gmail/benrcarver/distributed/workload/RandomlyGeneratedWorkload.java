@@ -9,6 +9,7 @@ import com.gmail.benrcarver.distributed.coin.InterleavedMultiFaceCoin;
 import com.gmail.benrcarver.distributed.workload.files.FilePool;
 import com.gmail.benrcarver.distributed.workload.files.FilePoolUtils;
 import com.gmail.benrcarver.distributed.workload.limiter.*;
+import io.hops.metrics.OperationPerformed;
 import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.slf4j.Logger;
@@ -44,6 +45,7 @@ public class RandomlyGeneratedWorkload {
 
     private final SynchronizedDescriptiveStatistics tcpLatency = new SynchronizedDescriptiveStatistics();
     private final SynchronizedDescriptiveStatistics httpLatency = new SynchronizedDescriptiveStatistics();
+    protected BlockingQueue<List<OperationPerformed>> operationsPerformed;
 
     // Used to synchronize threads; they each connect to HopsFS and then
     // count down. So, they all cannot start until they are all connected.
@@ -196,9 +198,15 @@ public class RandomlyGeneratedWorkload {
         for (Future<Object> future : futures)
             future.get();
 
+        List<OperationPerformed> allOpsPerformed = new ArrayList<>();
+
+        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
+            allOpsPerformed.addAll(opsPerformed);
+        }
+
         DistributedBenchmarkResult result = new DistributedBenchmarkResult(opId, Constants.OP_PREPARE_GENERATED_WORKLOAD,
-                operationsCompleted.get(), totalTime / 1.0e3, startTime, endTime, 0, 0, null,
-                null, tcpLatency, httpLatency);
+                operationsCompleted.get(), totalTime / 1.0e3, startTime, endTime, 0, 0,
+                allOpsPerformed.toArray(new OperationPerformed[0]), null, tcpLatency, httpLatency);
 
         currentState = WorkloadState.FINISHED;
         return result;
@@ -237,6 +245,8 @@ public class RandomlyGeneratedWorkload {
             for (double latency : dfs.getLatencyTcpStatistics().getValues()) {
                 tcpLatency.addValue(latency);
             }
+
+            operationsPerformed.add(dfs.getOperationsPerformed());
 
             // Clear the metric data associated with the client and return it to the pool.
             Commands.clearMetricDataNoPrompt(dfs);
