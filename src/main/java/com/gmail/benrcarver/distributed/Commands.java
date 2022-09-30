@@ -79,19 +79,29 @@ public class Commands {
      *
      * @return An HDFS client instance.
      */
-    public static synchronized DistributedFileSystem getHdfsClient(DistributedFileSystem sharedHdfs) {
+    public static synchronized DistributedFileSystem getHdfsClient(
+            DistributedFileSystem sharedHdfs, boolean warmingUp) {
         DistributedFileSystem hdfs;
         hdfs = hdfsClients.poll();
 
         if (hdfs != null) {
             hdfs.setBenchmarkModeEnabled(Commands.BENCHMARKING_MODE);
-            hdfs.setConsistencyProtocolEnabled(sharedHdfs.getConsistencyProtocolEnabled());
             hdfs.setServerlessFunctionLogLevel(sharedHdfs.getServerlessFunctionLogLevel());
+
+            if (warmingUp)
+                hdfs.setConsistencyProtocolEnabled(false);
+            else
+                hdfs.setConsistencyProtocolEnabled(sharedHdfs.getConsistencyProtocolEnabled());
         }
         else {
             LOG.warn("No HDFS client instances available (size = " +
                     hdfsClients.size() + "). Creating a new client now...");
             hdfs = Commander.initDfsClient(sharedHdfs, false);
+
+            if (warmingUp)
+                hdfs.setConsistencyProtocolEnabled(false);
+            else
+                hdfs.setConsistencyProtocolEnabled(sharedHdfs.getConsistencyProtocolEnabled());
         }
         return hdfs;
     }
@@ -156,7 +166,7 @@ public class Commands {
             final String[] filesForCurrentThread = fileBatches[i];
             final int threadId = i;
             Thread thread = new Thread(() -> {
-                DistributedFileSystem hdfs = getHdfsClient(sharedHdfs);
+                DistributedFileSystem hdfs = getHdfsClient(sharedHdfs, false);
 
                 readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
 

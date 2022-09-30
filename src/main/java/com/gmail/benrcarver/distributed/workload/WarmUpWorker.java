@@ -9,11 +9,10 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.concurrent.Callable;
 
-public class WarmUp implements Callable<Boolean> {
-    public static final Logger LOG = LoggerFactory.getLogger(WarmUp.class);
+public class WarmUpWorker implements Callable<Boolean> {
+    public static final Logger LOG = LoggerFactory.getLogger(WarmUpWorker.class);
     
     private DistributedFileSystem dfs;
     private FilePool filePool;
@@ -22,8 +21,8 @@ public class WarmUp implements Callable<Boolean> {
     private final BMConfiguration bmConf;
     private final DistributedFileSystem sharedHdfs;
 
-    public WarmUp(int filesToCreate, BMConfiguration bmConf,
-                      String stage, DistributedFileSystem sharedHdfs) {
+    public WarmUpWorker(int filesToCreate, BMConfiguration bmConf,
+                        String stage, DistributedFileSystem sharedHdfs) {
         this.filesToCreate = filesToCreate;
         this.stage = stage;
         this.bmConf = bmConf;
@@ -42,7 +41,7 @@ public class WarmUp implements Callable<Boolean> {
     }
 
     public boolean callImpl() throws Exception {
-        dfs = Commands.getHdfsClient(sharedHdfs);
+        dfs = Commands.getHdfsClient(sharedHdfs, true);
         filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(), bmConf.getDirPerDir(),
                 bmConf.getFilesPerDir());
         String filePath;

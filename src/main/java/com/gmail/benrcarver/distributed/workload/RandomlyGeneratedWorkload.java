@@ -90,13 +90,13 @@ public class RandomlyGeneratedWorkload {
         currentState = WorkloadState.WARMING_UP;
 
         if (bmConf.getFilesToCreateInWarmUpPhase() > 1) {
-            List workers = new ArrayList<WarmUp>();
+            List workers = new ArrayList<WarmUpWorker>();
 
             int numThreads = 1;
             while (numThreads <= bmConf.getThreadsPerWorker()) {
                 LOG.info("Creating " + numThreads + " workers now...");
                 for (int i = 0; i < numThreads; i++) {
-                    Callable worker = new WarmUp(1, bmConf,
+                    Callable<Boolean> worker = new WarmUpWorker(1, bmConf,
                             "Warming up. Stage0: Warming up clients. ", sharedHdfs);
                     workers.add(worker);
                 }
@@ -118,7 +118,7 @@ public class RandomlyGeneratedWorkload {
             LOG.debug("Creating " + bmConf.getFilesToCreateInWarmUpPhase() + " files/directories.");
 
             for (int i = 0; i < bmConf.getThreadsPerWorker(); i++) {
-                Callable worker = new WarmUp(1, bmConf,
+                Callable worker = new WarmUpWorker(1, bmConf,
                         "Warming up. Stage1: Creating Parent Dirs. ", sharedHdfs);
                 workers.add(worker);
             }
@@ -130,7 +130,7 @@ public class RandomlyGeneratedWorkload {
 
             // Stage 2
             for (int i = 0; i < bmConf.getThreadsPerWorker(); i++) {
-                Callable worker = new WarmUp(bmConf.getFilesToCreateInWarmUpPhase() - 1,
+                Callable worker = new WarmUpWorker(bmConf.getFilesToCreateInWarmUpPhase() - 1,
                         bmConf, "Warming up. Stage2: Creating files/dirs. ", sharedHdfs);
                 workers.add(worker);
             }
@@ -259,7 +259,7 @@ public class RandomlyGeneratedWorkload {
 
         @Override
         public Object call() {
-            DistributedFileSystem dfs = Commands.getHdfsClient(sharedHdfs);
+            DistributedFileSystem dfs = Commands.getHdfsClient(sharedHdfs, false);
             filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(),
                     bmConf.getDirPerDir(), bmConf.getFilesPerDir());
 
