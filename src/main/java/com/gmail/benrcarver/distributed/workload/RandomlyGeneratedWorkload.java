@@ -95,6 +95,10 @@ public class RandomlyGeneratedWorkload {
             int numThreads = 1;
             while (numThreads <= bmConf.getThreadsPerWorker()) {
                 LOG.info("Creating " + numThreads + " workers now...");
+
+                if (numThreads > 128)
+                    throw new IllegalStateException("Attempting to create too many threads: " + numThreads);
+
                 for (int i = 0; i < numThreads; i++) {
                     Callable<Boolean> worker = new WarmUpWorker(1, bmConf,
                             "Warming up. Stage0: Warming up clients. ", sharedHdfs);
@@ -108,9 +112,6 @@ public class RandomlyGeneratedWorkload {
                     numThreads = 8;
                 else
                     numThreads += 8;
-
-                if (numThreads > 128)
-                    throw new IllegalStateException("Attempting to create too many threads: " + numThreads);
             }
 
             LOG.info("Finished initial warm-up. Moving onto Stage 1 of Warm-Up: Creating Parent Dirs.");
