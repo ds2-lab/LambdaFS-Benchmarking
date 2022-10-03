@@ -676,7 +676,11 @@ public class Commander {
             LOG.info("Created " + readerFiles.size() + " files in " + (System.currentTimeMillis() - createStart) + " ms.");
         } else {
             String path = getStringFromUser("Please enter path to existing file.");
+            LOG.info("Reading files from path '" + path + "' now...");
             readerFiles = Utils.getFilePathsFromFile(path);
+
+            if (readerFiles.size() == 0)
+                throw new IllegalStateException("Read 0 paths from file '" + path + "'");
         }
 
         String writePath = getStringFromUser("What directory should the writes target?");
