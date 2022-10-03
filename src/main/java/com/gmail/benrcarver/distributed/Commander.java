@@ -641,42 +641,55 @@ public class Commander {
         }
     }
 
-    private void readerWriterTest1() throws InterruptedException {
+    private void readerWriterTest1() throws InterruptedException, FileNotFoundException {
         int numReaders = getIntFromUser("How many reader threads?");
         int numWriters = getIntFromUser("How many writer threads?");
         int numThreads = numReaders + numWriters;
 
-        String readPath = getStringFromUser("What directory should the readers target?");
+        int choice = getIntFromUser("(1) Create new files for reading? (2) Use existing files?");
+        if (choice < 1 || choice > 2)
+            throw new IllegalStateException("Choice must be 1 or 2.");
+
+        List<String> readerFiles;
+        if (choice == 1) {
+            int numFilesToRead = getIntFromUser("How many files should be in the pool from which the readers read?");
+            String readPath = getStringFromUser("What directory should the readers target?");
+
+            boolean readPathExists = Commands.exists(primaryHdfs, readPath);
+
+            if (!readPathExists) {
+                LOG.info("Creating read directory '" + readPath + "' now...");
+                Commands.mkdir(readPath, primaryHdfs);
+            }
+
+            LOG.info("Creating files to be read by readers now...");
+            String[] fileNames = Utils.getFixedLengthRandomStrings(numFilesToRead, 8);
+            readerFiles = new ArrayList<>(); // Successfully-created files.
+            long createStart = System.currentTimeMillis();
+            for (String fileName : fileNames) {
+                String fullPath = readPath + "/" + fileName;
+                boolean created = FSOperation.CREATE_FILE.call(primaryHdfs, fullPath, "");
+
+                if (created)
+                    readerFiles.add(fullPath);
+            }
+            LOG.info("Created " + readerFiles.size() + " files in " + (System.currentTimeMillis() - createStart) + " ms.");
+        } else {
+            String path = getStringFromUser("Please enter path to existing file.");
+            readerFiles = Utils.getFilePathsFromFile(path);
+        }
+
         String writePath = getStringFromUser("What directory should the writes target?");
 
-        int numFilesToRead = getIntFromUser("How many files should be in the pool from which the readers read?");
         int numOpsToPerform = getIntFromUser("How many individual operations should each reader/writer perform?");
 
-        boolean readPathExists = Commands.exists(primaryHdfs, readPath);
-        boolean writePathExists = Commands.exists(primaryHdfs, writePath);
 
-        if (!readPathExists) {
-            LOG.info("Creating read directory '" + readPath + "' now...");
-            Commands.mkdir(readPath, primaryHdfs);
-        }
+        boolean writePathExists = Commands.exists(primaryHdfs, writePath);
 
         if (!writePathExists) {
             LOG.info("Creating write directory '" + writePath + "' now...");
             Commands.mkdir(writePath, primaryHdfs);
         }
-
-        LOG.info("Creating files to be read by readers now...");
-        String[] fileNames = Utils.getFixedLengthRandomStrings(numFilesToRead, 8);
-        List<String> readerFiles = new ArrayList<>(); // Successfully-created files.
-        long createStart = System.currentTimeMillis();
-        for (String fileName : fileNames) {
-            String fullPath = readPath + "/" + fileName;
-            boolean created = FSOperation.CREATE_FILE.call(primaryHdfs, fullPath, "");
-
-            if (created)
-                readerFiles.add(fullPath);
-        }
-        LOG.info("Created " + readerFiles.size() + " files in " + (System.currentTimeMillis() - createStart) + " ms.");
 
         String[] writerBaseFileNames = Utils.getFixedLengthRandomStrings(numWriters, 8);
         for (int i = 0; i < writerBaseFileNames.length; i++) {
