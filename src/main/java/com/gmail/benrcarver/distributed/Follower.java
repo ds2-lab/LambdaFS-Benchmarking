@@ -61,7 +61,7 @@ public class Follower {
     private String serverlessLogLevel;
     private boolean consistencyEnabled = true;
 
-    public static final int FOLLOWER_TCP_BUFFER_SIZES = (int)128e6;
+    public static final int FOLLOWER_TCP_BUFFER_SIZES = (int)1024e6;
 
     public synchronized void waitUntilDone() throws InterruptedException {
         this.wait();

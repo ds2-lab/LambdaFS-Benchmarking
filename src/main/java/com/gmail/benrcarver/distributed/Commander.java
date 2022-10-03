@@ -51,7 +51,7 @@ public class Commander {
 
     private final List<FollowerConnection> followers;
 
-    private static final int COMMANDER_TCP_BUFFER_SIZES = Follower.FOLLOWER_TCP_BUFFER_SIZES * 4;
+    private static final int COMMANDER_TCP_BUFFER_SIZES = Follower.FOLLOWER_TCP_BUFFER_SIZES;
 
     private static final String LEADER_PREFIX = "[LEADER TCP SERVER]";
 
