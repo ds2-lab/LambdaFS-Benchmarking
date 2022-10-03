@@ -745,12 +745,18 @@ public class Commander {
                 Random random = new Random();
                 long start = System.currentTimeMillis();
                 while (System.currentTimeMillis() - start < durationMilliseconds) {
-                    int idx = random.nextInt(readerFiles.size());
-                    LOG.info("Reading file '" + readerFiles.get(idx) + "' now...");
-                    boolean success = FSOperation.READ_FILE.call(hdfs, readerFiles.get(idx), null);
-                    if (success)
-                        numSuccessfulOpsCurrentThread++;
-                    numOpsCurrentThread++;
+                    for (int k = 0; k < 5000; k++) {
+                        int idx = random.nextInt(readerFiles.size());
+                        boolean success = FSOperation.READ_FILE.call(hdfs, readerFiles.get(idx), null);
+                        if (success)
+                            numSuccessfulOpsCurrentThread++;
+                        numOpsCurrentThread++;
+
+                        if (System.currentTimeMillis() - start >= durationMilliseconds)
+                            break;
+                    }
+
+                    LOG.info("Reader " + threadId + " has completed " + numOpsCurrentThread + " ops.");
                 }
 
                 // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
@@ -828,11 +834,18 @@ public class Commander {
 
                 long start = System.currentTimeMillis();
                 while (System.currentTimeMillis() - start < durationMilliseconds) {
-                    String filePath = baseFileName + "-" + numFilesCreated++;
-                    boolean success = FSOperation.CREATE_FILE.call(hdfs, filePath, "");
-                    if (success)
-                        numSuccessfulOpsCurrentThread++;
-                    numOpsCurrentThread++;
+                    for (int k = 0; k < 5000; k++) {
+                        String filePath = baseFileName + "-" + numFilesCreated++;
+                        boolean success = FSOperation.CREATE_FILE.call(hdfs, filePath, "");
+                        if (success)
+                            numSuccessfulOpsCurrentThread++;
+                        numOpsCurrentThread++;
+
+                        if (System.currentTimeMillis() - start >= durationMilliseconds)
+                            break;
+                    }
+
+                    LOG.info("Writer " + threadId + " has completed " + numOpsCurrentThread + " ops.");
                 }
 
                 // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
