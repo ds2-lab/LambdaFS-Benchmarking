@@ -671,7 +671,8 @@ public class Commander {
                 " files/directories in " + (System.currentTimeMillis() - start) + " ms.");
     }
 
-    private void randomlyGeneratedWorkload(final DistributedFileSystem sharedHdfs) throws SQLException, IOException, InterruptedException, ExecutionException {
+    private void randomlyGeneratedWorkload(final DistributedFileSystem sharedHdfs)
+            throws IOException, InterruptedException, ExecutionException {
         System.out.print("Please enter location of workload config file (enter nothing to default to ./workload.yaml):\n> ");
         String workloadConfigFile = scanner.nextLine();
 
@@ -687,6 +688,7 @@ public class Commander {
         JsonObject payload = new JsonObject();
         payload.addProperty(OPERATION, OP_PREPARE_GENERATED_WORKLOAD);
         payload.addProperty(OPERATION_ID, operationId);
+        payload.addProperty("NUM_FOLLOWERS", followers.size());
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream out;
@@ -713,7 +715,7 @@ public class Commander {
         LOG.info("Telling Followers to prepare for Random Workload " + operationId);
         issueCommandToFollowers("Prepare for Random Workload", operationId, payload, true);
 
-        RandomlyGeneratedWorkload workload = new RandomlyGeneratedWorkload(configuration, sharedHdfs);
+        RandomlyGeneratedWorkload workload = new RandomlyGeneratedWorkload(configuration, sharedHdfs, followers.size());
 
         int counter = 0;
         long time = System.currentTimeMillis();

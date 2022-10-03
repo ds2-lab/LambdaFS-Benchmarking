@@ -59,12 +59,12 @@ public class RandomlyGeneratedWorkload {
 
     private final DistributedFileSystem sharedHdfs;
 
-    public RandomlyGeneratedWorkload(BMConfiguration bmConf, DistributedFileSystem sharedHdfs) {
+    public RandomlyGeneratedWorkload(BMConfiguration bmConf, DistributedFileSystem sharedHdfs, int numWorkers) {
         BenchmarkDistribution distribution = bmConf.getInterleavedBMIaTDistribution();
         if (distribution == BenchmarkDistribution.POISSON) {
-            limiter = new DistributionRateLimiter(bmConf, new PoissonGenerator(bmConf));
+            limiter = new DistributionRateLimiter(bmConf, new PoissonGenerator(bmConf), numWorkers);
         } else if (distribution == BenchmarkDistribution.PARETO) {
-            limiter = new DistributionRateLimiter(bmConf, new ParetoGenerator(bmConf));
+            limiter = new DistributionRateLimiter(bmConf, new ParetoGenerator(bmConf), numWorkers);
         } else {
             limiter = new RateNoLimiter();
         }

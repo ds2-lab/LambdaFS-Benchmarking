@@ -479,11 +479,13 @@ public class Follower {
                     }
                 }
 
+                int numFollowers = message.getAsJsonPrimitive("NUM_FOLLOWERS").getAsInt();
+
                 if (configuration == null) {
                     LOG.error("ERROR: Could not deserialize BMConfiguration object.");
                     sendResultToLeader(new WorkloadResponse(true, null), operationId);
                 } else {
-                    activeWorkload = new RandomlyGeneratedWorkload(configuration, hdfs);
+                    activeWorkload = new RandomlyGeneratedWorkload(configuration, hdfs, numFollowers);
                     sendResultToLeader(new WorkloadResponse(false, null), operationId);
                 }
                 break;

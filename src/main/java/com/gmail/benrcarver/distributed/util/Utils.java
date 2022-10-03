@@ -111,13 +111,13 @@ public class Utils {
      * @return An array of size `n` containing randomly-generated strings of length `stringLength`.
      */
     public static String[] getFixedLengthRandomStrings(int n, int l) {
-        String[] fileContents = new String[n];
+        String[] strings = new String[n];
 
         for (int i = 0; i < n; i++) {
-            fileContents[i] = RandomStringUtils.randomAlphabetic(l);
+            strings[i] = RandomStringUtils.randomAlphabetic(l);
         }
 
-        return fileContents;
+        return strings;
     }
 
     /**

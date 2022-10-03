@@ -57,21 +57,17 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
   /**
    * DistributionRateLimiter constructor
    */
-  public DistributionRateLimiter(BMConfiguration bmConf, DistributionGenerator distGenerator) {
+  public DistributionRateLimiter(BMConfiguration bmConf, DistributionGenerator distGenerator, int numWorkers) {
     try {
-      this.lenSlave = 8; // bmConf.getWork().size();
+      this.lenSlave = numWorkers; // bmConf.getWork().size();
     } catch (Exception e) {
       // Ignore
     }
     this.generator = distGenerator;
     this.duration = bmConf.getInterleavedBmDuration();
-    this.lastInterval = startTime - RPS_INTERVAL;
+    this.lastInterval = startTime - OPS_INTERVAL;
     this.opsUnit = bmConf.getInterleavedBMIaTUnit();
     this.opsUnitSkiped = bmConf.getInterleavedBMIaTSkipUnit();
-  }
-
-  public int getRPS() {
-    return (int) (generator.get());
   }
 
   public int getOPS() {
