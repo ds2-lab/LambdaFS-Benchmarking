@@ -681,8 +681,8 @@ public class Commander {
 
         String writePath = getStringFromUser("What directory should the writes target?");
 
-        int numOpsToPerform = getIntFromUser("How many individual operations should each reader/writer perform?");
-
+        int durSec = getIntFromUser("How long should operations be performed (in seconds)?");
+        int durationMilliseconds = durSec * 1000;
 
         boolean writePathExists = Commands.exists(primaryHdfs, writePath);
 
@@ -737,7 +737,8 @@ public class Commander {
                 int numOpsCurrentThread = 0;
 
                 Random random = new Random();
-                for (int j = 0; j < numOpsToPerform; j++) {
+                long start = System.currentTimeMillis();
+                while (System.currentTimeMillis() - start < durationMilliseconds) {
                     int idx = random.nextInt(readerFiles.size());
                     boolean success = FSOperation.READ_FILE.call(hdfs, readerFiles.get(idx), null);
                     if (success)
@@ -816,7 +817,8 @@ public class Commander {
                 int numSuccessfulOpsCurrentThread = 0;
                 int numOpsCurrentThread = 0;
 
-                for (int j = 0; j < numOpsToPerform; j++) {
+                long start = System.currentTimeMillis();
+                while (System.currentTimeMillis() - start < durationMilliseconds) {
                     String filePath = baseFileName + "-" + numFilesCreated++;
                     boolean success = FSOperation.CREATE_FILE.call(hdfs, filePath, "");
                     if (success)
