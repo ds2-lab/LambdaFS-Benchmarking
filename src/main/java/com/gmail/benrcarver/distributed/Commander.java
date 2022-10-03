@@ -720,7 +720,9 @@ public class Commander {
         AtomicInteger numOps = new AtomicInteger(0);
 
         for (int i = 0; i < numReaders; i++) {
+            int threadId = i;
             Thread readerThread = new Thread(() -> {
+                LOG.info("Reader thread " + threadId + " started.");
                 DistributedFileSystem hdfs = Commands.getHdfsClient(primaryHdfs, false);
 
                 readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
@@ -740,6 +742,7 @@ public class Commander {
                 long start = System.currentTimeMillis();
                 while (System.currentTimeMillis() - start < durationMilliseconds) {
                     int idx = random.nextInt(readerFiles.size());
+                    LOG.info("Reading file '" + readerFiles.get(idx) + "' now...");
                     boolean success = FSOperation.READ_FILE.call(hdfs, readerFiles.get(idx), null);
                     if (success)
                         numSuccessfulOpsCurrentThread++;
@@ -799,8 +802,10 @@ public class Commander {
         }
 
         for (int i = 0; i < numWriters; i++) {
+            int threadId = i;
             String baseFileName = writerBaseFileNames[i];
             Thread writerThread = new Thread(() -> {
+                LOG.info("Writer thread " + threadId + " started.");
                 int numFilesCreated = 0;
                 DistributedFileSystem hdfs = Commands.getHdfsClient(primaryHdfs, false);
 
