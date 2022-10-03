@@ -343,24 +343,30 @@ public class RandomlyGeneratedWorkload {
             }
         }
 
-        private void performOperation(FSOperation opType, DistributedFileSystem dfs) {
+        private void performOperation(FSOperation operation, DistributedFileSystem dfs) {
             if (LOG.isDebugEnabled())
-                LOG.debug("Performing operation: " + opType.getName());
-            String path = FilePoolUtils.getPath(opType, filePool);
+                LOG.debug("Performing operation: " + operation.getName());
+            String path = FilePoolUtils.getPath(operation, filePool);
             if (path != null) {
                 boolean retVal = false;
-                long opExeTime = 0;
-                long opStartTime = System.nanoTime();
+                // long opExeTime = 0;
+                // long opStartTime = System.nanoTime();
                 try {
-                    opType.call(dfs, path, "");
-                    opExeTime = System.nanoTime() - opStartTime;
-                    retVal = true;
+                    retVal = operation.call(dfs, path, "");
+                    // opExeTime = System.nanoTime() - opStartTime;
                 } catch (Exception e) {
                     LOG.error("Exception encountered:", e);
                 }
-                updateStats(opType, retVal, new BMOpStats(opStartTime, opExeTime));
+
+                if (retVal) {
+                    operationsCompleted.incrementAndGet();
+                    if (operation == FSOperation.CREATE_FILE)
+                        filePool.fileCreationSucceeded(path);
+                }
+
+                // updateStats(opType, retVal, new BMOpStats(opStartTime, opExeTime));
             } else {
-                LOG.debug("Could not perform operation " + opType + ". Got Null from the file pool");
+                LOG.debug("Could not perform operation " + operation + ". Got Null from the file pool");
             }
         }
 
@@ -376,9 +382,9 @@ public class RandomlyGeneratedWorkload {
 
             if (success) {
                 operationsCompleted.incrementAndGet();
-                // avgLatency.addValue(stats.OpDuration);
+                avgLatency.addValue(stats.OpDuration);
             } else {
-                // operationsFailed.incrementAndGet();
+                operationsFailed.incrementAndGet();
             }
 
         }
