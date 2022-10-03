@@ -1806,7 +1806,7 @@ public class Commander {
         System.out.print(prompt + "\n> ");
         String input = scanner.nextLine();
         checkForExit(input);
-        return prompt;
+        return input;
     }
 
     public void strongScalingWriteOperation(final DistributedFileSystem sharedHdfs)
