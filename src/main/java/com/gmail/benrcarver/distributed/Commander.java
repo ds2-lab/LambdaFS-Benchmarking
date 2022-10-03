@@ -834,7 +834,7 @@ public class Commander {
 
                 long start = System.currentTimeMillis();
                 while (System.currentTimeMillis() - start < durationMilliseconds) {
-                    for (int k = 0; k < 5000; k++) {
+                    for (int k = 0; k < 1000; k++) {
                         String filePath = baseFileName + "-" + numFilesCreated++;
                         boolean success = FSOperation.CREATE_FILE.call(hdfs, filePath, "");
                         if (success)
@@ -1005,23 +1005,16 @@ public class Commander {
         JsonObject payload = new JsonObject();
         payload.addProperty(OPERATION, OP_PREPARE_GENERATED_WORKLOAD);
         payload.addProperty(OPERATION_ID, operationId);
-        payload.addProperty("NUM_FOLLOWERS", followers.size());
+        payload.addProperty("NUM_FOLLOWERS", followers.size() + 1); // Add one to include self.
 
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream out;
-        try {
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            ObjectOutputStream out;
             out = new ObjectOutputStream(bos);
             out.writeObject(configuration);
             out.flush();
             byte[] configAsBytes = bos.toByteArray();
             String base64 = Base64.getEncoder().encodeToString(configAsBytes);
             payload.addProperty("configuration", base64);
-        } finally {
-            try {
-                bos.close();
-            } catch (IOException ex) {
-                // ignore close exception
-            }
         }
 
         waitingOn.clear();
@@ -1032,7 +1025,9 @@ public class Commander {
         LOG.info("Telling Followers to prepare for Random Workload " + operationId);
         issueCommandToFollowers("Prepare for Random Workload", operationId, payload, true);
 
-        RandomlyGeneratedWorkload workload = new RandomlyGeneratedWorkload(configuration, sharedHdfs, followers.size());
+        RandomlyGeneratedWorkload workload =
+                new RandomlyGeneratedWorkload(configuration,
+                        sharedHdfs, followers.size() + 1); // Add one to include self.
 
         int counter = 0;
         long time = System.currentTimeMillis();
@@ -1118,7 +1113,6 @@ public class Commander {
         if (workloadResponseQueue.size() < expectedNumResponses)
             LOG.error("Expected " + expectedNumResponses + " response(s). Got " + workloadResponseQueue.size());
 
-        errorOccurred = false;
         for (WorkloadResponse resp : workloadResponseQueue) {
             if (resp.erred) {
                 LOG.error("Follower encountered error while warming-up workload...");
