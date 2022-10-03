@@ -655,14 +655,20 @@ public class Commander {
         boolean readPathExists = Commands.exists(primaryHdfs, readPath);
         boolean writePathExists = Commands.exists(primaryHdfs, writePath);
 
-        if (!readPathExists)
+        if (!readPathExists) {
+            LOG.info("Creating read directory '" + readPath + "' now...");
             Commands.mkdir(readPath, primaryHdfs);
+        }
 
-        if (!writePathExists)
+        if (!writePathExists) {
+            LOG.info("Creating write directory '" + writePath + "' now...");
             Commands.mkdir(writePath, primaryHdfs);
+        }
 
+        LOG.info("Creating files to be read by readers now...");
         String[] fileNames = Utils.getFixedLengthRandomStrings(numFilesToRead, 8);
         List<String> readerFiles = new ArrayList<>(); // Successfully-created files.
+        long createStart = System.currentTimeMillis();
         for (String fileName : fileNames) {
             String fullPath = readPath + "/" + fileName;
             boolean created = FSOperation.CREATE_FILE.call(primaryHdfs, fullPath, "");
@@ -670,6 +676,7 @@ public class Commander {
             if (created)
                 readerFiles.add(fullPath);
         }
+        LOG.info("Created " + readerFiles.size() + " files in " + (System.currentTimeMillis() - createStart) + " ms.");
 
         String[] writerBaseFileNames = Utils.getFixedLengthRandomStrings(numWriters, 8);
         for (int i = 0; i < writerBaseFileNames.length; i++) {
@@ -862,6 +869,7 @@ public class Commander {
         for (Thread writer : writers)
             writer.start();
 
+        LOG.info("Starting Reader-Writer test now...");
         readySemaphore.acquire();                   // Will block until all client threads are ready to go.
         long start = System.currentTimeMillis();    // Start the clock.
         startLatch.countDown();                     // Let the threads start.
