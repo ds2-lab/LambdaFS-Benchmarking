@@ -663,8 +663,8 @@ public class Commander {
 
         String[] fileNames = Utils.getFixedLengthRandomStrings(numFilesToRead, 8);
         List<String> readerFiles = new ArrayList<>(); // Successfully-created files.
-        for (int i = 0; i < fileNames.length; i++) {
-            String fullPath = readPath + "/" + fileNames[i];
+        for (String fileName : fileNames) {
+            String fullPath = readPath + "/" + fileName;
             boolean created = FSOperation.CREATE_FILE.call(primaryHdfs, fullPath, "");
 
             if (created)
@@ -698,7 +698,6 @@ public class Commander {
         // Keep track of number of successful operations.
         AtomicInteger numSuccessfulOps = new AtomicInteger(0);
         AtomicInteger numOps = new AtomicInteger(0);
-        AtomicInteger numThreadsFinished = new AtomicInteger(0);
 
         for (int i = 0; i < numReaders; i++) {
             Thread readerThread = new Thread(() -> {
@@ -1765,7 +1764,10 @@ public class Commander {
     }
 
     private int getIntFromUser(String prompt) {
-        return Integer.parseInt(getStringFromUser(prompt));
+        System.out.print(prompt + "\n> ");
+        String input = scanner.nextLine();
+        checkForExit(input);
+        return Integer.parseInt(input);
     }
 
     private String getStringFromUser(String prompt) {
