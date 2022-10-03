@@ -1073,7 +1073,7 @@ public class Commands {
         return false;
     }
 
-    public static void createDirectories(DistributedFileSystem hdfs) {
+    public static void createNDirectories(DistributedFileSystem hdfs) {
         System.out.print("Base name for the directories:\n> ");
         String baseDirName = scanner.nextLine();
 

@@ -57,6 +57,7 @@ public class Constants {
     public static final int OP_DO_WARMUP_FOR_PREPARED_WORKLOAD = 27;
     public static final int OP_DO_RANDOM_WORKLOAD= 28;
     public static final int OP_ABORT_RANDOM_WORKLOAD = 29;
+    public static final int OP_CREATE_DIRS_FROM_FILE = 30;
 
     public static String INTLVD_CREATE_FILES_PERCENTAGE_KEY = "interleaved.create.files.percentage";
     public static double INTLVD_CREATE_FILES_PERCENTAGE_DEFAULT = 0;

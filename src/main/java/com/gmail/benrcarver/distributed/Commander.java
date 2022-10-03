@@ -14,7 +14,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jcraft.jsch.*;
 import io.hops.metrics.OperationPerformed;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -589,8 +588,8 @@ public class Commander {
                         strongScalingWriteOperation(primaryHdfs);
                         break;
                     case OP_CREATE_DIRECTORIES:
-                        LOG.info("CREATE DIRECTORIES selected!");
-                        Commands.createDirectories(primaryHdfs);
+                        LOG.info("CREATE N DIRECTORIES ONE-AFTER-ANOTHER selected!");
+                        Commands.createNDirectories(primaryHdfs);
                         break;
                     case OP_WEAK_SCALING_READS_V2:
                         LOG.info("WeakScalingReadsV2 Selected!");
@@ -616,8 +615,12 @@ public class Commander {
                         LOG.info("Randomly-Generated Workload selected!");
                         randomlyGeneratedWorkload(primaryHdfs);
                         break;
+                    case OP_CREATE_DIRS_FROM_FILE:
+                        LOG.info("CREATE DIRECTORIES FROM FILE selected!");
+                        break;
                     default:
                         LOG.info("ERROR: Unknown or invalid operation specified: " + op);
+                        createDirectoriesFromFile();
                         break;
                 }
             } catch (Exception ex) {
@@ -632,6 +635,28 @@ public class Commander {
             if (numGCsPerformedDuringLastOp > 0)
                 LOG.debug("Spent " + timeSpentInGCDuringLastOp + " ms garbage collecting during the last operation.");
         }
+    }
+
+    private void createDirectoriesFromFile() throws FileNotFoundException {
+        System.out.print("Please specify path to file containing fully-qualified paths of dirs to be created:\n> ");
+        String path = scanner.nextLine();
+
+        checkForExit(path);
+
+        List<String> directoriesToBeCreated = Utils.getFilePathsFromFile(path);
+
+        int numDirsCreated = 0;
+        long start = System.currentTimeMillis();
+
+        for (String dir : directoriesToBeCreated) {
+            boolean success = Commands.mkdir(dir, primaryHdfs);
+
+            if (success)
+                numDirsCreated++;
+        }
+
+        LOG.debug("Successfully created " + numDirsCreated + "/" + directoriesToBeCreated.size() + " directories in " +
+                (System.currentTimeMillis() - start) + " milliseconds.");
     }
 
     private void randomlyGeneratedWorkload(final DistributedFileSystem sharedHdfs) throws SQLException, IOException, InterruptedException, ExecutionException {
@@ -2369,9 +2394,9 @@ public class Commander {
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
                 "\n(15) Read n Files with n Threads (Weak Scaling - Read)\n(16) Read n Files y Times with z Threads (Strong Scaling - Read)" +
                 "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)" +
-                "\n(19) Create directories.\n(20) Weak Scaling Reads v2\n(21) File Stat Benchmark" +
+                "\n(19) Create n directories one-after-another.\n(20) Weak Scaling Reads v2\n(21) File Stat Benchmark" +
                 "\n(22) Unavailable.\n(23) List Directories from File (Weak Scaling)\n(24) Stat File (Weak Scaling)" +
-                "\n(25) Weak Scaling (MKDIR).\n(26) Randomly-generated workload.\n");
+                "\n(25) Weak Scaling (MKDIR).\n(26) Randomly-generated workload.\n(30) Create dir from file.\n");
         System.out.println("==================\n");
         System.out.println("What would you like to do?");
         System.out.print("> ");
