@@ -110,6 +110,17 @@ public class Commands {
         hdfsClients.add(hdfs);
     }
 
+    public static boolean exists(DistributedFileSystem hdfs, String targetPath) {
+        Path filePath = new Path(Commander.NAME_NODE_ENDPOINT + targetPath);
+
+        try {
+            return hdfs.exists(filePath);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            return false;
+        }
+    }
+
     /**
      * Generic driver used to execute all/most benchmarks.
      *
@@ -148,10 +159,6 @@ public class Commands {
 
         final BlockingQueue<List<OperationPerformed>> operationsPerformed =
                 new java.util.concurrent.ArrayBlockingQueue<>(numThreads);
-//        final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages
-//                = new ArrayBlockingQueue<>(numThreads);
-//        final BlockingQueue<HashMap<String, List<TransactionEvent>>> transactionEvents
-//                = new ArrayBlockingQueue<>(numThreads);
 
         // Keep track of number of successful operations.
         AtomicInteger numSuccessfulOps = new AtomicInteger(0);
@@ -545,7 +552,7 @@ public class Commands {
      * @return A {@link Pair<Long, Long>} containing the total cache hits as the first element and the total cache
      * misses as the second element.
      */
-    private static Pair<Integer, Integer> mergeMetricInformation(
+    protected static Pair<Integer, Integer> mergeMetricInformation(
             final DistributedFileSystem sharedHdfs,
             final BlockingQueue<List<OperationPerformed>> operationsPerformed,
 //            final BlockingQueue<HashMap<String, TransactionsStats.ServerlessStatisticsPackage>> statisticsPackages,
@@ -714,9 +721,9 @@ public class Commands {
      * @param latencyTcp Contains latencies for just TCP requests.
      * @param latencyHttp Contains latencies for just HTTP requests.
      */
-    private static void printLatencyStatistics(DescriptiveStatistics latencyBoth,
-                                               DescriptiveStatistics latencyTcp,
-                                               DescriptiveStatistics latencyHttp) {
+    static void printLatencyStatistics(DescriptiveStatistics latencyBoth,
+                                       DescriptiveStatistics latencyTcp,
+                                       DescriptiveStatistics latencyHttp) {
         LOG.info("Latency TCP & HTTP (ms) [min: " + latencyBoth.getMin() + ", max: " + latencyBoth.getMax() +
                 ", avg: " + latencyBoth.getMean() + ", std dev: " + latencyBoth.getStandardDeviation() +
                 ", N: " + latencyBoth.getN() + "]");

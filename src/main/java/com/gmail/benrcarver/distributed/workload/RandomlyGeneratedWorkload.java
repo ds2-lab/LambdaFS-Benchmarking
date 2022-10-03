@@ -90,7 +90,7 @@ public class RandomlyGeneratedWorkload {
         currentState = WorkloadState.WARMING_UP;
 
         if (bmConf.getFilesToCreateInWarmUpPhase() > 1) {
-            List workers = new ArrayList<WarmUpWorker>();
+            List<Callable<Boolean>> workers = new ArrayList<>();
 
             int numThreads = 1;
             while (numThreads <= bmConf.getThreadsPerWorker()) {
@@ -119,7 +119,7 @@ public class RandomlyGeneratedWorkload {
             LOG.debug("Creating " + bmConf.getFilesToCreateInWarmUpPhase() + " files/directories.");
 
             for (int i = 0; i < bmConf.getThreadsPerWorker(); i++) {
-                Callable worker = new WarmUpWorker(1, bmConf,
+                Callable<Boolean> worker = new WarmUpWorker(1, bmConf,
                         "Warming up. Stage1: Creating Parent Dirs. ", sharedHdfs);
                 workers.add(worker);
             }
@@ -131,7 +131,7 @@ public class RandomlyGeneratedWorkload {
 
             // Stage 2
             for (int i = 0; i < bmConf.getThreadsPerWorker(); i++) {
-                Callable worker = new WarmUpWorker(bmConf.getFilesToCreateInWarmUpPhase() - 1,
+                Callable<Boolean> worker = new WarmUpWorker(bmConf.getFilesToCreateInWarmUpPhase() - 1,
                         bmConf, "Warming up. Stage2: Creating files/dirs. ", sharedHdfs);
                 workers.add(worker);
             }
@@ -226,8 +226,7 @@ public class RandomlyGeneratedWorkload {
 
     public class Worker implements Callable<Object> {
         private FilePool filePool;
-        private InterleavedMultiFaceCoin opCoin;
-        private BMConfiguration config;
+        private final BMConfiguration config;
 
         public Worker(BMConfiguration config) {
             this.config = config;
@@ -264,7 +263,7 @@ public class RandomlyGeneratedWorkload {
             filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(),
                     bmConf.getDirPerDir(), bmConf.getFilesPerDir());
 
-            opCoin = new InterleavedMultiFaceCoin(config.getInterleavedBmCreateFilesPercentage(),
+            InterleavedMultiFaceCoin opCoin = new InterleavedMultiFaceCoin(config.getInterleavedBmCreateFilesPercentage(),
                     config.getInterleavedBmAppendFilePercentage(),
                     config.getInterleavedBmReadFilesPercentage(),
                     config.getInterleavedBmRenameFilesPercentage(),
