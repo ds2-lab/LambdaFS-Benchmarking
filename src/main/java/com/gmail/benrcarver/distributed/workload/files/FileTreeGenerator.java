@@ -122,7 +122,10 @@ public class FileTreeGenerator implements FilePool {
 
         currIndex = allThreadFiles.size()-1;
         String fileToDelete = allThreadFiles.remove(currIndex);
-        LOG.info("Returning file '" + fileToDelete + "' to be deleted. Size of file pool: " + allThreadFiles.size());
+
+        if (LOG.isDebugEnabled())
+            LOG.debug("Returning file '" + fileToDelete + "' for deletion. File pool size: " + allThreadFiles.size());
+
         return fileToDelete;
 
     }
