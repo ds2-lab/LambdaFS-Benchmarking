@@ -1310,9 +1310,7 @@ public class Commands {
                 BufferedWriter br = new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
                 br.write(contents);
                 br.close();
-                // LOG.info("\t Successfully created non-empty file '" + filePath + "'");
             } else {
-                // LOG.info("\t Successfully created empty file '" + filePath + "'");
                 outputStream.close();
             }
 

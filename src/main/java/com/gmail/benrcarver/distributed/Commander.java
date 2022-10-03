@@ -615,12 +615,12 @@ public class Commander {
                         LOG.info("Randomly-Generated Workload selected!");
                         randomlyGeneratedWorkload(primaryHdfs);
                         break;
-                    case OP_CREATE_DIRS_FROM_FILE:
-                        LOG.info("CREATE DIRECTORIES FROM FILE selected!");
+                    case OP_CREATE_FROM_FILE:
+                        LOG.info("CREATE FROM FILE selected!");
+                        createFromFile();
                         break;
                     default:
                         LOG.info("ERROR: Unknown or invalid operation specified: " + op);
-                        createDirectoriesFromFile();
                         break;
                 }
             } catch (Exception ex) {
@@ -637,26 +637,38 @@ public class Commander {
         }
     }
 
-    private void createDirectoriesFromFile() throws FileNotFoundException {
+    /**
+     * Create files and directories that are listed in a file.
+     *
+     * Directories should end with '/' in the specified file; otherwise, they will be treated as files.
+     *
+     * The directories along the path of a file should probably already be created before the file is created,
+     * so make sure that the order of the paths in the specified file satisfies this requirement.
+     */
+    private void createFromFile() throws FileNotFoundException {
         System.out.print("Please specify path to file containing fully-qualified paths of dirs to be created:\n> ");
         String path = scanner.nextLine();
 
         checkForExit(path);
 
-        List<String> directoriesToBeCreated = Utils.getFilePathsFromFile(path);
+        List<String> filesAndDirectories = Utils.getFilePathsFromFile(path);
 
         int numDirsCreated = 0;
         long start = System.currentTimeMillis();
 
-        for (String dir : directoriesToBeCreated) {
-            boolean success = Commands.mkdir(dir, primaryHdfs);
+        for (String fileOrDir : filesAndDirectories) {
+            boolean success;
+            if (fileOrDir.endsWith("/"))
+                success = Commands.mkdir(fileOrDir, primaryHdfs);
+            else
+                success = Commands.createFile(fileOrDir, "", primaryHdfs);
 
             if (success)
                 numDirsCreated++;
         }
 
-        LOG.debug("Successfully created " + numDirsCreated + "/" + directoriesToBeCreated.size() + " directories in " +
-                (System.currentTimeMillis() - start) + " milliseconds.");
+        LOG.debug("Successfully created " + numDirsCreated + "/" + filesAndDirectories.size() +
+                " files/directories in " + (System.currentTimeMillis() - start) + " ms.");
     }
 
     private void randomlyGeneratedWorkload(final DistributedFileSystem sharedHdfs) throws SQLException, IOException, InterruptedException, ExecutionException {
@@ -2396,7 +2408,7 @@ public class Commander {
                 "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)" +
                 "\n(19) Create n directories one-after-another.\n(20) Weak Scaling Reads v2\n(21) File Stat Benchmark" +
                 "\n(22) Unavailable.\n(23) List Directories from File (Weak Scaling)\n(24) Stat File (Weak Scaling)" +
-                "\n(25) Weak Scaling (MKDIR).\n(26) Randomly-generated workload.\n(30) Create dir from file.\n");
+                "\n(25) Weak Scaling (MKDIR).\n(26) Randomly-generated workload.\n(30) Create from file.\n");
         System.out.println("==================\n");
         System.out.println("What would you like to do?");
         System.out.print("> ");
