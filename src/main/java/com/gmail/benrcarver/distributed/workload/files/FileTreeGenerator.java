@@ -99,7 +99,6 @@ public class FileTreeGenerator implements FilePool {
             if (getPathLength(path) < THRESHOLD) {
                 continue;
             }
-            //System.out.println("Rename path "+path);
             return path;
         }
 
@@ -107,13 +106,12 @@ public class FileTreeGenerator implements FilePool {
     }
 
     @Override
-    public void fileRenamed(String from, String to) {
-        String curr = allThreadFiles.get(currIndex);
-        if(curr != from){
-            IllegalStateException up = new IllegalStateException("File name did not match.");
-            throw up;
-        }
-        allThreadFiles.set(currIndex, to);
+    public void fileRenamed(String previousName, String newName) {
+        String currentFile = allThreadFiles.get(currIndex);
+        if (!currentFile.equals(previousName))
+            throw new IllegalStateException("Renamed file with old name '" + previousName +
+                    "' not found. New name is '" + newName + "'. Current name is: '" + currentFile + "'");
+        allThreadFiles.set(currIndex, newName);
     }
 
     @Override
@@ -121,24 +119,12 @@ public class FileTreeGenerator implements FilePool {
         if (allThreadFiles.isEmpty()) {
             return null;
         }
-        if(allThreadFiles.size()>0){
-            currIndex = allThreadFiles.size()-1;
-            String file = allThreadFiles.remove(currIndex);
-            return file;
-        }
 
-        return null;
+        currIndex = allThreadFiles.size()-1;
+        String fileToDelete = allThreadFiles.remove(currIndex);
+        LOG.info("Returning file '" + fileToDelete + "' to be deleted. Size of file pool: " + allThreadFiles.size());
+        return fileToDelete;
 
-//    currIndex = allThreadFiles.size();
-//    for (int i = 0; i < allThreadFiles.size(); i++) {
-//      String file = allThreadFiles.remove(currIndex);
-//      if(getPathLength(file) < THRESHOLD){
-//        continue;
-//      }
-//      System.out.println("Delete Path "+file);
-//      return file;
-//    }
-//    return null;
     }
 
     @Override
