@@ -710,6 +710,7 @@ public class Commander {
         // Used to synchronize threads; they block when they finish executing to avoid using CPU cycles
         // by aggregating their results. Once all the threads have finished, they aggregate their results.
         final CountDownLatch endLatch = new CountDownLatch(numThreads);
+        final Semaphore readerReadySemaphore = new Semaphore((numReaders * -1) + 1);
         final Semaphore readySemaphore = new Semaphore((numThreads * -1) + 1);
         final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
 
@@ -729,6 +730,7 @@ public class Commander {
                 LOG.info("Reader thread " + threadId + " started.");
                 DistributedFileSystem hdfs = Commands.getHdfsClient(primaryHdfs, false);
 
+                readerReadySemaphore.release();
                 readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
 
                 startLatch.countDown(); // Wait for the main thread's signal to actually begin.
@@ -810,6 +812,13 @@ public class Commander {
             });
             readers.add(readerThread);
         }
+
+        for (Thread reader : readers)
+            reader.start();
+
+        LOG.info("Started READER threads.");
+        readerReadySemaphore.acquire();
+        LOG.info("All READER threads have started. Next, starting the WRITER threads.");
 
         for (int i = 0; i < numWriters; i++) {
             int threadId = i;
@@ -899,9 +908,6 @@ public class Commander {
             });
             writers.add(writerThread);
         }
-
-        for (Thread reader : readers)
-            reader.start();
 
         for (Thread writer : writers)
             writer.start();
