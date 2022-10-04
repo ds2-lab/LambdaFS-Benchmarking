@@ -826,6 +826,9 @@ public class Commander {
             LOG.info("All READER threads have started (first). Next, starting the WRITER threads.");
         }
 
+        // Sleep to give readers a chance to be assigned to TCP servers.
+        TimeUnit.MILLISECONDS.sleep(2500);
+
         for (int i = 0; i < numWriters; i++) {
             int threadId = i;
             String baseFileName = writerBaseFileNames[i];
