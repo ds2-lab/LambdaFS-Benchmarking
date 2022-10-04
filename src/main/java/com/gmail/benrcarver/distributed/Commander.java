@@ -646,6 +646,8 @@ public class Commander {
         int numWriters = getIntFromUser("How many writer threads?");
         int numThreads = numReaders + numWriters;
 
+        boolean startReadersFirst = getBooleanFromUser("Start readers first?");
+
         int choice = getIntFromUser("(1) Create new files for reading? (2) Use existing files?");
         if (choice < 1 || choice > 2)
             throw new IllegalStateException("Choice must be 1 or 2.");
@@ -730,7 +732,9 @@ public class Commander {
                 LOG.info("Reader thread " + threadId + " started.");
                 DistributedFileSystem hdfs = Commands.getHdfsClient(primaryHdfs, false);
 
-                readerReadySemaphore.release();
+                if (startReadersFirst)
+                    readerReadySemaphore.release();
+
                 readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
 
                 startLatch.countDown(); // Wait for the main thread's signal to actually begin.
@@ -813,12 +817,14 @@ public class Commander {
             readers.add(readerThread);
         }
 
-        for (Thread reader : readers)
-            reader.start();
+        if (startReadersFirst) {
+            for (Thread reader : readers)
+                reader.start();
 
-        LOG.info("Started READER threads.");
-        readerReadySemaphore.acquire();
-        LOG.info("All READER threads have started. Next, starting the WRITER threads.");
+            LOG.info("Starting READER threads first.");
+            readerReadySemaphore.acquire();
+            LOG.info("All READER threads have started (first). Next, starting the WRITER threads.");
+        }
 
         for (int i = 0; i < numWriters; i++) {
             int threadId = i;
@@ -909,9 +915,33 @@ public class Commander {
             writers.add(writerThread);
         }
 
-        for (Thread writer : writers)
-            writer.start();
+        if (startReadersFirst) {
+            // If we started the readers first, then just start the writers.
+            for (Thread writer : writers)
+                writer.start();
 
+            LOG.info("Started all WRITER threads (after READER threads).");
+        } else {
+            // Otherwise, start them in an interleaved fashion (reader, writer, reader, writer).
+            // If there are an unequal number of readers and writers, then they are started in an
+            // interleaved fashion until only one type of thread remains to be started, at which
+            // point all remaining threads of that type are started.
+            int readerIdx = 0;
+            int writerIdx = 0;
+            while (readerIdx < numReaders || writerIdx < numWriters) {
+                if (readerIdx < numReaders) {
+                    readers.get(readerIdx).start();
+                }
+                if (writerIdx < numWriters) {
+                    writers.get(writerIdx).start();
+                }
+
+                readerIdx++;
+                writerIdx++;
+            }
+
+            LOG.info("Started READER and WRITER threads in an interleaved fashion.");
+        }
         LOG.info("Starting Reader-Writer test now...");
         readySemaphore.acquire();                   // Will block until all client threads are ready to go.
         long start = System.currentTimeMillis();    // Start the clock.
