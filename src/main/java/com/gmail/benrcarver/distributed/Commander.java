@@ -1215,13 +1215,35 @@ public class Commander {
         System.out.println("throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
         System.out.println(aggregatedResult.metricsString);
 
+        HashMap<String, List<Pair<Long, Long>>> perOpLatencies = new HashMap<>();
+
         long unixTs = System.currentTimeMillis() / 1000L;
+        File dir = new File("./random_workload_data/random_workload_" + unixTs);
+        dir.mkdirs();
         try (Writer writer = new BufferedWriter(new OutputStreamWriter(
-                new FileOutputStream("./random_workload_data/random_workload_" + unixTs + ".txt"), StandardCharsets.UTF_8))) {
+                new FileOutputStream(dir + "/ALL_OPS.txt"), StandardCharsets.UTF_8))) {
             for (OperationPerformed operationPerformed : primaryHdfs.getOperationsPerformed()) {
                 long ts = operationPerformed.getInvokedAtTime();
                 long latency = operationPerformed.getLatency();
                 writer.write(ts + "," + latency + "\n");
+
+                List<Pair<Long, Long>> opData = perOpLatencies.computeIfAbsent(operationPerformed.getOperationName(),
+                        k -> new ArrayList<>());
+                opData.add(new Pair<>(operationPerformed.getInvokedAtTime(), operationPerformed.getLatency()));
+            }
+        }
+
+        for (Map.Entry<String, List<Pair<Long, Long>>> entry : perOpLatencies.entrySet()) {
+            String opName = entry.getKey();
+            List<Pair<Long, Long>> latencyData = entry.getValue();
+
+            try (Writer writer = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(dir + "/" + opName + ".txt"), StandardCharsets.UTF_8))) {
+                for (Pair<Long, Long> datum : latencyData) {
+                    long ts = datum.getFirst();
+                    long latency = datum.getSecond();
+                    writer.write(ts + "," + latency + "\n");
+                }
             }
         }
     }
