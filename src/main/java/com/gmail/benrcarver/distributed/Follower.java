@@ -251,11 +251,11 @@ public class Follower {
                 break;
             case OP_WRITE_FILES_TO_DIR:
                 LOG.info("WRITE FILES TO DIRECTORY selected!");
-                Commands.writeFilesToDirectory(hdfsConfiguration, nameNodeEndpoint);
+                Commands.writeFilesToDirectory(nameNodeEndpoint);
                 break;
             case OP_READ_FILES:
                 LOG.info("READ FILES selected!");
-                Commands.readFilesOperation(hdfsConfiguration, nameNodeEndpoint, OP_READ_FILES);
+                Commands.readFilesOperation(OP_READ_FILES);
                 break;
             case OP_DELETE_FILES:
                 LOG.info("DELETE FILES selected!");
@@ -263,11 +263,11 @@ public class Follower {
                 break;
             case OP_WRITE_FILES_TO_DIRS:
                 LOG.info("WRITE FILES TO DIRECTORIES selected!");
-                Commands.writeFilesToDirectories(hdfsConfiguration, nameNodeEndpoint);
+                Commands.writeFilesToDirectories(nameNodeEndpoint);
                 break;
             case OP_WEAK_SCALING_READS:
                 LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");
-                DistributedBenchmarkResult result = Commands.weakScalingReadsV1(hdfsConfiguration, nameNodeEndpoint,
+                DistributedBenchmarkResult result = Commands.weakScalingReadsV1(
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
@@ -279,7 +279,7 @@ public class Follower {
                 break;
             case OP_STRONG_SCALING_READS:
                 LOG.info("'Read n Files y Times with z Threads (Strong Scaling - Read)' selected!");
-                result = Commands.strongScalingBenchmarkOld(hdfsConfiguration, nameNodeEndpoint,
+                result = Commands.strongScalingBenchmarkOld(
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("readsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
@@ -298,7 +298,7 @@ public class Follower {
                 result = Commands.writeFilesInternal(
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("numberOfThreads").getAsInt(),
-                        directories, OP_WEAK_SCALING_WRITES, hdfsConfiguration, nameNodeEndpoint,
+                        directories, OP_WEAK_SCALING_WRITES,
                         message.getAsJsonPrimitive("randomWrites").getAsBoolean(),
                         operationId,
                         message.getAsJsonPrimitive("writePathsToFile").getAsBoolean());
@@ -317,34 +317,34 @@ public class Follower {
                 result = Commands.writeFilesInternal(
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
-                        directories, OP_STRONG_SCALING_WRITES, hdfsConfiguration,
-                        nameNodeEndpoint, false, operationId, false);
+                        directories, OP_STRONG_SCALING_WRITES,
+                        false, operationId, false);
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for STRONG SCALING (WRITE) benchmark: " + result);
                 sendResultToLeader(result);
                 break;
             case OP_WEAK_SCALING_READS_V2:
                 LOG.info("OP_WEAK_SCALING_READS_V2 selected!");
-                result = Commands.weakScalingBenchmarkV2(hdfsConfiguration, nameNodeEndpoint,
+                result = Commands.weakScalingBenchmarkV2(
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
                         message.getAsJsonPrimitive("filesPerThread").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
-                        message.getAsJsonPrimitive("shuffle").getAsBoolean(), OP_WEAK_SCALING_READS_V2,
-                        operationId);
+                        message.getAsJsonPrimitive("shuffle").getAsBoolean(), OP_WEAK_SCALING_READS_V2
+                );
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for OP_WEAK_SCALING_READS_V2 benchmark: " + result);
                 sendResultToLeader(result);
                 break;
             case OP_GET_FILE_STATUS:
                 LOG.info("OP_GET_FILE_STATUS selected!");
-                result = Commands.getFileStatusOperation(hdfsConfiguration, nameNodeEndpoint);
+                result = Commands.getFileStatusOperation();
                 result.setOperationId(operationId);
                 LOG.info("Obtained local result for OP_GET_FILE_DIR_INFO benchmark: " + result);
                 sendResultToLeader(result);
                 break;
             case OP_LIST_DIRECTORIES_FROM_FILE:
                 LOG.info("LIST DIRECTORIES FROM FILE selected!");
-                result = Commands.listDirectoryWeakScaling(hdfsConfiguration, nameNodeEndpoint,
+                result = Commands.listDirectoryWeakScaling(
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("listsPerFile").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
@@ -356,7 +356,7 @@ public class Follower {
                 break;
             case OP_STAT_FILES_WEAK_SCALING:
                 LOG.info("STAT FILES WEAK SCALING selected!");
-                result = Commands.statFilesWeakScaling(hdfsConfiguration, nameNodeEndpoint,
+                result = Commands.statFilesWeakScaling(
                         message.getAsJsonPrimitive("numThreads").getAsInt(),
                         message.getAsJsonPrimitive("filesPerThread").getAsInt(),
                         message.getAsJsonPrimitive("inputPath").getAsString(),
@@ -375,7 +375,7 @@ public class Follower {
                 result = Commands.mkdirWeakScaling(
                         message.getAsJsonPrimitive("n").getAsInt(),
                         message.getAsJsonPrimitive("numberOfThreads").getAsInt(),
-                        directories, OP_MKDIR_WEAK_SCALING, hdfsConfiguration, nameNodeEndpoint,
+                        directories, OP_MKDIR_WEAK_SCALING,
                         message.getAsJsonPrimitive("randomMkdirs").getAsBoolean(),
                         operationId,
                         message.getAsJsonPrimitive("writePathsToFile").getAsBoolean());
