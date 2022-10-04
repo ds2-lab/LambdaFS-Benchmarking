@@ -1,7 +1,7 @@
-files.to.create.in.warmup.phase=10
+files.to.create.in.warmup.phase=128
 warmup.phase.wait.time=10000
 
-interleaved.bm.duration=5000
+interleaved.bm.duration=60000
 interleaved.bm.iat.unit=15
 interleaved.bm.iat.skipunit=0
 interleaved.bm.iat.distribution=PARETO
@@ -10,18 +10,18 @@ interleaved.bm.iat.pareto.location=10000
 
 num.worker.threads=4
 
-interleaved.create.files.percentage=0
-interleaved.file.append.percentage=0
-interleaved.read.files.percentage=73.99
-interleaved.rename.files.percentage=0
-interleaved.ls.dirs.percentage=8.52
-interleaved.ls.files.percentage=0.49
-interleaved.delete.files.percentage=0
+interleaved.create.files.percentage=1.09
+interleaved.rename.files.percentage=0.55
+interleaved.delete.files.percentage=0.34
+interleaved.mkdir.percentage=0.02
+interleaved.read.files.percentage=71.84
+interleaved.ls.dirs.percentage=8.17
+interleaved.ls.files.percentage=0.68
+interleaved.file.getInfo.percentage=13.54
+interleaved.dir.getInfo.percentage=3.77
+interleaved.file.change.user.percentage=0.00
+interleaved.dir.change.user.percentage=0.00
+interleaved.file.append.percentage=0.00
+interleaved.file.setReplication.percentage=0.00
 interleaved.chmod.files.percentage=0.00
 interleaved.chmod.dirs.percentage=0.00
-interleaved.mkdir.percentage=0
-interleaved.file.setReplication.percentage=0.00
-interleaved.file.getInfo.percentage=13.04
-interleaved.dir.getInfo.percentage=3.96
-interleaved.file.change.user.percentage=0.0
-interleaved.dir.change.user.percentage=0.00
