@@ -213,35 +213,35 @@ public class Follower {
                 System.exit(0);
             case OP_CREATE_FILE:
                 LOG.info("CREATE FILE selected!");
-                Commands.createFileOperation(hdfs, nameNodeEndpoint);
+                Commands.createFileOperation(hdfs);
                 break;
             case OP_MKDIR:
                 LOG.info("MAKE DIRECTORY selected!");
-                Commands.mkdirOperation(hdfs, nameNodeEndpoint);;
+                Commands.mkdirOperation(hdfs);
                 break;
             case OP_READ_FILE:
                 LOG.info("READ FILE selected!");
-                Commands.readOperation(hdfs, nameNodeEndpoint);
+                Commands.readOperation(hdfs);
                 break;
             case OP_RENAME:
                 LOG.info("RENAME selected!");
-                Commands.renameOperation(hdfs, nameNodeEndpoint);
+                Commands.renameOperation(hdfs);
                 break;
             case OP_DELETE:
                 LOG.info("DELETE selected!");
-                Commands.deleteOperation(hdfs, nameNodeEndpoint);
+                Commands.deleteOperation(hdfs);
                 break;
             case OP_LIST:
                 LOG.info("LIST selected!");
-                Commands.listOperation(hdfs, nameNodeEndpoint);
+                Commands.listOperation(hdfs);
                 break;
             case OP_APPEND:
                 LOG.info("APPEND selected!");
-                Commands.appendOperation(hdfs, nameNodeEndpoint);
+                Commands.appendOperation(hdfs);
                 break;
             case OP_CREATE_SUBTREE:
                 LOG.info("CREATE SUBTREE selected!");
-                Commands.createSubtree(hdfs, nameNodeEndpoint);
+                Commands.createSubtree(hdfs);
                 break;
             case OP_PING:
                 LOG.warn("PING operation is not supported for Vanilla HopsFS.");
@@ -251,19 +251,19 @@ public class Follower {
                 break;
             case OP_WRITE_FILES_TO_DIR:
                 LOG.info("WRITE FILES TO DIRECTORY selected!");
-                Commands.writeFilesToDirectory(nameNodeEndpoint);
+                Commands.writeFilesToDirectory();
                 break;
             case OP_READ_FILES:
                 LOG.info("READ FILES selected!");
-                Commands.readFilesOperation(OP_READ_FILES);
+                Commands.readFilesOperation();
                 break;
             case OP_DELETE_FILES:
                 LOG.info("DELETE FILES selected!");
-                Commands.deleteFilesOperation(hdfs, nameNodeEndpoint);
+                Commands.deleteFilesOperation(hdfs);
                 break;
             case OP_WRITE_FILES_TO_DIRS:
                 LOG.info("WRITE FILES TO DIRECTORIES selected!");
-                Commands.writeFilesToDirectories(nameNodeEndpoint);
+                Commands.writeFilesToDirectories();
                 break;
             case OP_WEAK_SCALING_READS:
                 LOG.info("'Read n Files with n Threads (Weak Scaling - Read)' selected!");

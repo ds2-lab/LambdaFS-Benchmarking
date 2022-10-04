@@ -4,13 +4,19 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.FrameworkMessage;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
+import com.gmail.benrcarver.distributed.coin.BMConfiguration;
 import com.gmail.benrcarver.distributed.util.Utils;
+import com.gmail.benrcarver.distributed.workload.RandomlyGeneratedWorkload;
+import com.gmail.benrcarver.distributed.workload.WorkloadResponse;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jcraft.jsch.*;
+import io.hops.metrics.OperationPerformed;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
+import org.apache.commons.math3.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
@@ -20,19 +26,20 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.Random;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.gmail.benrcarver.distributed.Commands.*;
 import static com.gmail.benrcarver.distributed.Constants.*;
 
 /**
@@ -168,6 +175,8 @@ public class Commander {
      */
     private final Set<String> waitingOn = ConcurrentHashMap.newKeySet();
 
+    private final BlockingQueue<WorkloadResponse> workloadResponseQueue;
+
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
                                                  int numFollowers, boolean scpJars, boolean scpConfig,
                                                  boolean manuallyLaunchFollowers) throws IOException, JSchException {
@@ -192,6 +201,7 @@ public class Commander {
         this.scpJars = scpJars;
         this.scpConfig = scpConfig;
         this.manuallyLaunchFollowers = manuallyLaunchFollowers;
+        this.workloadResponseQueue = new ArrayBlockingQueue<>(16);
 
         tcpServer = new Server(COMMANDER_TCP_BUFFER_SIZES, COMMANDER_TCP_BUFFER_SIZES) {
             @Override
@@ -635,6 +645,18 @@ public class Commander {
                         LOG.info("MKDIR WEAK SCALING selected!");
                         mkdirWeakScaling(hdfsConfiguration);
                         break;
+                    case OP_PREPARE_GENERATED_WORKLOAD:
+                        LOG.info("Randomly-Generated Workload selected!");
+                        randomlyGeneratedWorkload(PRIMARY_HDFS);
+                        break;
+                    case OP_CREATE_FROM_FILE:
+                        LOG.info("CREATE FROM FILE selected!");
+                        createFromFile();
+                        break;
+                    case OP_READER_WRITER_TEST_1:
+                        LOG.info("READER WRITER TEST #1 selected!");
+                        readerWriterTest1();
+                        break;
                     default:
                         LOG.info("ERROR: Unknown or invalid operation specified: " + op);
                         break;
@@ -651,6 +673,700 @@ public class Commander {
             if (numGCsPerformedDuringLastOp > 0)
                 LOG.debug("Spent " + timeSpentInGCDuringLastOp + " ms garbage collecting during the last operation.");
         }
+    }
+
+    private void randomlyGeneratedWorkload(final DistributedFileSystem sharedHdfs)
+            throws IOException, InterruptedException, ExecutionException {
+        System.out.print("Please enter location of workload config file (enter nothing to default to ./workload.yaml):\n> ");
+        String workloadConfigFile = scanner.nextLine();
+
+        // Default to "./workload.yaml"
+        if (workloadConfigFile.equals(""))
+            workloadConfigFile = "./workload.yaml";
+
+        System.out.println("Attempting to load workload from file: '" + workloadConfigFile + "'");
+
+        BMConfiguration configuration = new BMConfiguration(workloadConfigFile);
+
+        String operationId = UUID.randomUUID().toString();
+        JsonObject payload = new JsonObject();
+        payload.addProperty(OPERATION, OP_PREPARE_GENERATED_WORKLOAD);
+        payload.addProperty(OPERATION_ID, operationId);
+        payload.addProperty("NUM_FOLLOWERS", followers.size() + 1); // Add one to include self.
+
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            ObjectOutputStream out;
+            out = new ObjectOutputStream(bos);
+            out.writeObject(configuration);
+            out.flush();
+            byte[] configAsBytes = bos.toByteArray();
+            String base64 = Base64.getEncoder().encodeToString(configAsBytes);
+            payload.addProperty("configuration", base64);
+        }
+
+        waitingOn.clear();
+        workloadResponseQueue.clear();
+
+        final int expectedNumResponses = followers.size();
+
+        LOG.info("Telling Followers to prepare for Random Workload " + operationId);
+        issueCommandToFollowers("Prepare for Random Workload", operationId, payload, true);
+
+        RandomlyGeneratedWorkload workload =
+                new RandomlyGeneratedWorkload(configuration,
+                        sharedHdfs, followers.size() + 1); // Add one to include self.
+
+        int counter = 0;
+        long time = System.currentTimeMillis();
+
+        while (waitingOn.size() > 0) {
+            LOG.debug("Still waiting on the following Followers: " + StringUtils.join(waitingOn, ", "));
+            Thread.sleep(1000);
+
+            int numDisconnects = numDisconnections.getAndSet(0);
+
+            if (numDisconnects > 0) {
+                LOG.warn("There has been at least one disconnection.");
+            }
+
+            counter += (System.currentTimeMillis() - time);
+            time = System.currentTimeMillis();
+            if (counter >= 60000) {
+                boolean decision = getBooleanFromUser("Stop waiting early?");
+
+                if (decision)
+                    break;
+
+                counter = 0;
+            }
+        }
+
+        if (workloadResponseQueue.size() < expectedNumResponses)
+            LOG.error("Expected " + expectedNumResponses + " response(s). Got " + workloadResponseQueue.size());
+
+        boolean errorOccurred = false;
+        for (WorkloadResponse resp : workloadResponseQueue) {
+            if (resp.erred) {
+                LOG.error("Follower encountered error while creating workload...");
+                errorOccurred = true;
+                break;
+            }
+        }
+
+        if (errorOccurred) {
+            payload = new JsonObject();
+            payload.addProperty(OPERATION_ID, operationId);
+            payload.addProperty(OPERATION, OP_ABORT_RANDOM_WORKLOAD);
+            LOG.error("Aborting workload.");
+            issueCommandToFollowers("Abort Random Workload", operationId, payload, false);
+            return;
+        }
+
+        LOG.info("Continuing to warm-up stage for random workload " + operationId + " now...");
+        waitingOn.clear();
+        workloadResponseQueue.clear();
+
+        payload = new JsonObject();
+        payload.addProperty(OPERATION_ID, operationId);
+        payload.addProperty(OPERATION, OP_DO_WARMUP_FOR_PREPARED_WORKLOAD);
+        issueCommandToFollowers("Abort Random Workload", operationId, payload, true);
+
+        workload.doWarmup();
+
+        counter = 0;
+        time = System.currentTimeMillis();
+        while (waitingOn.size() > 0) {
+            LOG.debug("Still waiting on the following Followers: " + StringUtils.join(waitingOn, ", "));
+            Thread.sleep(1000);
+
+            int numDisconnects = numDisconnections.getAndSet(0);
+
+            if (numDisconnects > 0) {
+                LOG.warn("There has been at least one disconnection.");
+            }
+
+            counter += (System.currentTimeMillis() - time);
+            time = System.currentTimeMillis();
+            if (counter >= 60000) {
+                boolean decision = getBooleanFromUser("Stop waiting early?");
+
+                if (decision)
+                    break;
+
+                counter = 0;
+            }
+        }
+
+        if (workloadResponseQueue.size() < expectedNumResponses)
+            LOG.error("Expected " + expectedNumResponses + " response(s). Got " + workloadResponseQueue.size());
+
+        for (WorkloadResponse resp : workloadResponseQueue) {
+            if (resp.erred) {
+                LOG.error("Follower encountered error while warming-up workload...");
+                errorOccurred = true;
+                break;
+            }
+        }
+
+        if (errorOccurred) {
+            payload = new JsonObject();
+            payload.addProperty(OPERATION_ID, operationId);
+            payload.addProperty(OPERATION, OP_ABORT_RANDOM_WORKLOAD);
+            LOG.error("Aborting workload.");
+            issueCommandToFollowers("Abort Random Workload", operationId, payload, false);
+            return;
+        }
+
+        // Do the actual workload.
+        LOG.info("Preparing to do random workload " + operationId + " now...");
+        waitingOn.clear();
+        workloadResponseQueue.clear();
+
+        BlockingQueue<DistributedBenchmarkResult> resultQueue = null;
+        if (expectedNumResponses > 0) {
+            resultQueue = new ArrayBlockingQueue<>(expectedNumResponses);
+            resultQueues.put(operationId, resultQueue);
+        }
+
+        payload = new JsonObject();
+        payload.addProperty(OPERATION_ID, operationId);
+        payload.addProperty(OPERATION, OP_DO_RANDOM_WORKLOAD);
+        issueCommandToFollowers("Execute Random Workload", operationId, payload, true);
+
+        DistributedBenchmarkResult localResult = workload.doWorkload(operationId);
+
+        counter = 0;
+        time = System.currentTimeMillis();
+        while (waitingOn.size() > 0) {
+            LOG.debug("Still waiting on the following Followers: " + StringUtils.join(waitingOn, ", "));
+            Thread.sleep(1000);
+
+            int numDisconnects = numDisconnections.getAndSet(0);
+
+            if (numDisconnects > 0) {
+                LOG.warn("There has been at least one disconnection.");
+            }
+
+            counter += (System.currentTimeMillis() - time);
+            time = System.currentTimeMillis();
+            if (counter >= 60000) {
+                boolean decision = getBooleanFromUser("Stop waiting early?");
+
+                if (decision)
+                    break;
+
+                counter = 0;
+            }
+        }
+
+        DescriptiveStatistics latencyStatistics = localResult.latencyStatistics;
+        if (PRIMARY_HDFS != null)
+            PRIMARY_HDFS.addLatencyValues(latencyStatistics.getValues());
+
+        AggregatedResult aggregatedResult;
+        if (expectedNumResponses < 1) {
+            LOG.info("The number of distributed results is 1. We have nothing to wait for.");
+
+            String metricsString;
+            try {
+                metricsString = String.format("%f %f", localResult.getOpsPerSecond(), localResult.latencyStatistics.getMean());
+            } catch (NullPointerException ex) {
+                LOG.warn("Could not generate metrics string due to NPE.");
+                metricsString = "";
+            }
+
+            double avgLatency = 0.0;
+
+            if (localResult.latencyStatistics != null)
+                avgLatency = localResult.latencyStatistics.getMean();
+
+            aggregatedResult = new AggregatedResult(localResult.getOpsPerSecond(), avgLatency, metricsString);
+        } else {
+            LOG.info("Expecting " + expectedNumResponses + " distributed results.");
+            aggregatedResult = extractDistributedResultFromQueue(resultQueues.get(operationId), localResult,
+                    expectedNumResponses);
+        }
+
+        System.out.println("throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
+        System.out.println(aggregatedResult.metricsString);
+
+        HashMap<String, List<Pair<Long, Long>>> perOpLatencies = new HashMap<>();
+
+        long unixTs = System.currentTimeMillis() / 1000L;
+        File dir = new File("./random_workload_data/random_workload_" + unixTs);
+        dir.mkdirs();
+        // TODO: Implement this for Vanilla.
+//        try (Writer writer = new BufferedWriter(new OutputStreamWriter(
+//                new FileOutputStream(dir + "/ALL_OPS.txt"), StandardCharsets.UTF_8))) {
+//            for (OperationPerformed operationPerformed : primaryHdfs.getOperationsPerformed()) {
+//                long ts = operationPerformed.getInvokedAtTime();
+//                long latency = operationPerformed.getLatency();
+//                writer.write(ts + "," + latency + "\n");
+//
+//                List<Pair<Long, Long>> opData = perOpLatencies.computeIfAbsent(operationPerformed.getOperationName(),
+//                        k -> new ArrayList<>());
+//                opData.add(new Pair<>(operationPerformed.getInvokedAtTime(), operationPerformed.getLatency()));
+//            }
+//        }
+//
+//        for (Map.Entry<String, List<Pair<Long, Long>>> entry : perOpLatencies.entrySet()) {
+//            String opName = entry.getKey();
+//            List<Pair<Long, Long>> latencyData = entry.getValue();
+//
+//            try (Writer writer = new BufferedWriter(new OutputStreamWriter(
+//                    new FileOutputStream(dir + "/" + opName + ".txt"), StandardCharsets.UTF_8))) {
+//                for (Pair<Long, Long> datum : latencyData) {
+//                    long ts = datum.getFirst();
+//                    long latency = datum.getSecond();
+//                    writer.write(ts + "," + latency + "\n");
+//                }
+//            }
+//        }
+    }
+
+    /**
+     * Extract results from queue and aggregate them together. Return the aggregated result.
+     *
+     * @param resultQueue The queue from which to extract results.
+     * @param localResult The result from local execution.
+     * @param numDistributedResults Expected number of results from queue.
+     */
+    private AggregatedResult extractDistributedResultFromQueue(
+            BlockingQueue<DistributedBenchmarkResult> resultQueue,
+            DistributedBenchmarkResult localResult,
+            int numDistributedResults) {
+        DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
+        DescriptiveStatistics duration = new DescriptiveStatistics();
+        DescriptiveStatistics throughput = new DescriptiveStatistics();
+
+        opsPerformed.addValue(localResult.numOpsPerformed);
+        duration.addValue(localResult.durationSeconds);
+        throughput.addValue(localResult.getOpsPerSecond());
+
+        LOG.info("========== LOCAL RESULT ==========");
+        LOG.info("Num Ops Performed   : " + localResult.numOpsPerformed);
+        LOG.info("Duration (sec)      : " + localResult.durationSeconds);
+        LOG.info("Throughput          : " + localResult.getOpsPerSecond() + "\n");
+
+        double trialAvgTcpLatency =
+                localResult.latencyStatistics.getN() > 0 ? localResult.latencyStatistics.getMean() : 0;
+
+        LOG.info("Result queue contains " + resultQueue.size() + " distributed results.");
+        List<Double> allThroughputValues = new ArrayList<>(resultQueue.size() + 1);
+        allThroughputValues.add(localResult.getOpsPerSecond());
+        for (DistributedBenchmarkResult res : resultQueue) {
+            LOG.info("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");
+            LOG.info("Num Ops Performed   : " + res.numOpsPerformed);
+            LOG.info("Duration (sec)      : " + res.durationSeconds);
+            LOG.info("Throughput          : " + res.getOpsPerSecond());
+
+            opsPerformed.addValue(res.numOpsPerformed);
+            duration.addValue(res.durationSeconds);
+            throughput.addValue(res.getOpsPerSecond());
+
+            if (res.latencyStatistics != null) {
+                DescriptiveStatistics latencyTcp = res.latencyStatistics;
+                PRIMARY_HDFS.addLatencyValues(latencyTcp.getValues());
+
+                LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
+                        ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
+                        ", N: " + latencyTcp.getN() + "]");
+
+                trialAvgTcpLatency += (latencyTcp.getN() > 0 ? latencyTcp.getMean() : 0);
+            }
+
+            allThroughputValues.add(res.getOpsPerSecond());
+        }
+
+        trialAvgTcpLatency = trialAvgTcpLatency / (1 + numDistributedResults);   // Add 1 to account for local result
+        double aggregateThroughput = (opsPerformed.getSum() / duration.getMean());
+
+        double avgCombinedLatency = 0.0;
+        int divisor = 0; // We divide `avgCombinedLatency` by this.
+        if (trialAvgTcpLatency > 0) {
+            avgCombinedLatency += trialAvgTcpLatency;
+            divisor++; // TCP latency is non-zero, so we need to account for it when calculating average.
+        }
+        if (divisor > 0)
+            avgCombinedLatency /= divisor;
+
+        LOG.info("");
+        LOG.info("==== AGGREGATED RESULTS ====");
+        LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
+        LOG.info("Average TCP latency: " + trialAvgTcpLatency + " ms");
+        LOG.info("Average combined latency: " + avgCombinedLatency + " ms");
+        LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
+
+        DecimalFormat df = new DecimalFormat("#.####");
+        String metricsString = String.format("%s %s", df.format(aggregateThroughput), df.format(trialAvgTcpLatency));
+
+        LOG.info(metricsString);
+
+        // Create a copy and sort it so the estimated results are ordered by largest to smallest throughput.
+        Collections.sort(allThroughputValues);
+        System.out.println("\n['Estimated' Throughput]");
+        String format = "%10.2f --> %10.2f";
+        for (double throughputResult : allThroughputValues) {
+            String formatted = String.format(format, throughputResult, throughputResult * allThroughputValues.size());
+            System.out.println(formatted);
+        }
+
+        return new AggregatedResult(aggregateThroughput, avgCombinedLatency, metricsString);
+    }
+
+    /**
+     * Create files and directories that are listed in a file.
+     *
+     * Directories should end with '/' in the specified file; otherwise, they will be treated as files.
+     *
+     * The directories along the path of a file should probably already be created before the file is created,
+     * so make sure that the order of the paths in the specified file satisfies this requirement.
+     */
+    private void createFromFile() throws FileNotFoundException {
+        System.out.print("Please specify path to file containing fully-qualified paths of dirs to be created:\n> ");
+        String path = scanner.nextLine();
+
+        checkForExit(path);
+
+        List<String> filesAndDirectories = Utils.getFilePathsFromFile(path);
+
+        int numDirsCreated = 0;
+        long start = System.currentTimeMillis();
+
+        for (String fileOrDir : filesAndDirectories) {
+            boolean success;
+            if (fileOrDir.endsWith("/"))
+                success = Commands.mkdir(fileOrDir, PRIMARY_HDFS);
+            else
+                success = Commands.createFile(fileOrDir, "", PRIMARY_HDFS);
+
+            if (success)
+                numDirsCreated++;
+        }
+
+        LOG.debug("Successfully created " + numDirsCreated + "/" + filesAndDirectories.size() +
+                " files/directories in " + (System.currentTimeMillis() - start) + " ms.");
+    }
+
+    private String getStringFromUser(String prompt) {
+        System.out.print(prompt + "\n> ");
+        String input = scanner.nextLine();
+        checkForExit(input);
+        return input;
+    }
+
+    private void readerWriterTest1() throws InterruptedException, FileNotFoundException {
+        int numReaders = getIntFromUser("How many reader threads?");
+        int numWriters = getIntFromUser("How many writer threads?");
+        int numThreads = numReaders + numWriters;
+
+        boolean startReadersFirst = getBooleanFromUser("Start readers first?");
+
+        int choice = getIntFromUser("(1) Create new files for reading? (2) Use existing files?");
+        if (choice < 1 || choice > 2)
+            throw new IllegalStateException("Choice must be 1 or 2.");
+
+        List<String> readerFiles;
+        if (choice == 1) {
+            int numFilesToRead = getIntFromUser("How many files should be in the pool from which the readers read?");
+            String readPath = getStringFromUser("What directory should the readers target?");
+
+            boolean readPathExists = Commands.exists(PRIMARY_HDFS, readPath);
+
+            if (!readPathExists) {
+                LOG.info("Creating read directory '" + readPath + "' now...");
+                Commands.mkdir(readPath, PRIMARY_HDFS);
+            }
+
+            LOG.info("Creating files to be read by readers now...");
+            String[] fileNames = Utils.getFixedLengthRandomStrings(numFilesToRead, 8);
+            readerFiles = new ArrayList<>(); // Successfully-created files.
+            long createStart = System.currentTimeMillis();
+            for (String fileName : fileNames) {
+                String fullPath = readPath + "/" + fileName;
+                boolean created = FSOperation.CREATE_FILE.call(PRIMARY_HDFS, fullPath, "");
+
+                if (created)
+                    readerFiles.add(fullPath);
+            }
+            LOG.info("Created " + readerFiles.size() + " files in " + (System.currentTimeMillis() - createStart) + " ms.");
+        } else {
+            String path = getStringFromUser("Please enter path to existing file.");
+            LOG.info("Reading files from path '" + path + "' now...");
+            readerFiles = Utils.getFilePathsFromFile(path);
+
+            if (readerFiles.size() == 0)
+                throw new IllegalStateException("Read 0 paths from file '" + path + "'");
+        }
+
+        String writePath = getStringFromUser("What directory should the writes target?");
+
+        int durSec = getIntFromUser("How long should operations be performed (in seconds)?");
+        int durationMilliseconds = durSec * 1000;
+
+        boolean writePathExists = Commands.exists(PRIMARY_HDFS, writePath);
+
+        if (!writePathExists) {
+            LOG.info("Creating write directory '" + writePath + "' now...");
+            Commands.mkdir(writePath, PRIMARY_HDFS);
+        }
+
+        String[] writerBaseFileNames = Utils.getFixedLengthRandomStrings(numWriters, 8);
+        for (int i = 0; i < writerBaseFileNames.length; i++) {
+            writerBaseFileNames[i] = writePath + "/" + writerBaseFileNames[i];
+        }
+
+        List<Thread> readers = new ArrayList<>();
+        List<Thread> writers = new ArrayList<>();
+
+        // Used to synchronize threads; they each connect to HopsFS and then
+        // count down. So, they all cannot start until they are all connected.
+        final CountDownLatch startLatch = new CountDownLatch(numThreads + 1);
+
+        // Used to synchronize threads; they block when they finish executing to avoid using CPU cycles
+        // by aggregating their results. Once all the threads have finished, they aggregate their results.
+        final CountDownLatch endLatch = new CountDownLatch(numThreads);
+        final Semaphore readerReadySemaphore = new Semaphore((numReaders * -1) + 1);
+        final Semaphore readySemaphore = new Semaphore((numThreads * -1) + 1);
+        final Semaphore endSemaphore = new Semaphore((numThreads * -1) + 1);
+
+        // Keep track of number of successful operations.
+        AtomicInteger numSuccessfulOps = new AtomicInteger(0);
+        AtomicInteger numOps = new AtomicInteger(0);
+
+        for (int i = 0; i < numReaders; i++) {
+            int threadId = i;
+            Thread readerThread = new Thread(() -> {
+                LOG.info("Reader thread " + threadId + " started.");
+                DistributedFileSystem hdfs = Commands.getHdfsClient();
+
+                if (startReadersFirst)
+                    readerReadySemaphore.release();
+
+                readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
+
+                startLatch.countDown(); // Wait for the main thread's signal to actually begin.
+
+                try {
+                    startLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                int numSuccessfulOpsCurrentThread = 0;
+                int numOpsCurrentThread = 0;
+
+                Random random = new Random();
+                long start = System.currentTimeMillis();
+                while (System.currentTimeMillis() - start < durationMilliseconds) {
+                    for (int k = 0; k < 5000; k++) {
+                        int idx = random.nextInt(readerFiles.size());
+                        boolean success = FSOperation.READ_FILE.call(hdfs, readerFiles.get(idx), null);
+                        if (success)
+                            numSuccessfulOpsCurrentThread++;
+                        numOpsCurrentThread++;
+
+                        if (System.currentTimeMillis() - start >= durationMilliseconds)
+                            break;
+                    }
+
+                    LOG.info("Reader " + threadId + " has completed " + numOpsCurrentThread + " ops.");
+                }
+
+                // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+                // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+                // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+                // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+                endSemaphore.release();
+
+                endLatch.countDown();
+
+                try {
+                    endLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                numSuccessfulOps.addAndGet(numSuccessfulOpsCurrentThread);
+                numOps.addAndGet(numOpsCurrentThread);
+
+                DescriptiveStatistics latencyStatistics = hdfs.getLatencyStatistics();
+
+                if (Commander.PRIMARY_HDFS != null)
+                    Commander.PRIMARY_HDFS.addLatencyValues(latencyStatistics.getValues());
+
+                // First clear the metric data associated with the client.
+                Commands.clearMetricDataNoPrompt(hdfs);
+
+                try {
+                    // Now return the client to the pool so that it can be used again in the future.
+                    Commands.returnHdfsClient(hdfs);
+                } catch (InterruptedException e) {
+                    LOG.error("Encountered error when trying to return HDFS client. Closing it instead.");
+                    e.printStackTrace();
+
+                    try {
+                        hdfs.close();
+
+                    } catch (IOException ex) {
+                        LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+                    }
+                }
+            });
+            readers.add(readerThread);
+        }
+
+        if (startReadersFirst) {
+            for (Thread reader : readers)
+                reader.start();
+
+            LOG.info("Starting READER threads first.");
+            readerReadySemaphore.acquire();
+            LOG.info("All READER threads have started (first). Next, starting the WRITER threads.");
+        }
+
+        for (int i = 0; i < numWriters; i++) {
+            int threadId = i;
+            String baseFileName = writerBaseFileNames[i];
+            Thread writerThread = new Thread(() -> {
+                LOG.info("Writer thread " + threadId + " started.");
+                int numFilesCreated = 0;
+                DistributedFileSystem hdfs = Commands.getHdfsClient();
+
+                readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
+
+                startLatch.countDown(); // Wait for the main thread's signal to actually begin.
+
+                try {
+                    startLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                int numSuccessfulOpsCurrentThread = 0;
+                int numOpsCurrentThread = 0;
+
+                long start = System.currentTimeMillis();
+                while (System.currentTimeMillis() - start < durationMilliseconds) {
+                    for (int k = 0; k < 1000; k++) {
+                        String filePath = baseFileName + "-" + numFilesCreated++;
+                        boolean success = FSOperation.CREATE_FILE.call(hdfs, filePath, "");
+                        if (success)
+                            numSuccessfulOpsCurrentThread++;
+                        numOpsCurrentThread++;
+
+                        if (System.currentTimeMillis() - start >= durationMilliseconds)
+                            break;
+                    }
+
+                    LOG.info("Writer " + threadId + " has completed " + numOpsCurrentThread + " ops.");
+                }
+
+                // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+                // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+                // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+                // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+                endSemaphore.release();
+
+                endLatch.countDown();
+
+                try {
+                    endLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                numSuccessfulOps.addAndGet(numSuccessfulOpsCurrentThread);
+                numOps.addAndGet(numOpsCurrentThread);
+
+                DescriptiveStatistics latencyStatistics = hdfs.getLatencyStatistics();
+
+                if (Commander.PRIMARY_HDFS != null)
+                    Commander.PRIMARY_HDFS.addLatencyValues(latencyStatistics.getValues());
+
+                // First clear the metric data associated with the client.
+                Commands.clearMetricDataNoPrompt(hdfs);
+
+                try {
+                    // Now return the client to the pool so that it can be used again in the future.
+                    Commands.returnHdfsClient(hdfs);
+                } catch (InterruptedException e) {
+                    LOG.error("Encountered error when trying to return HDFS client. Closing it instead.");
+                    e.printStackTrace();
+
+                    try {
+                        hdfs.close();
+
+                    } catch (IOException ex) {
+                        LOG.error("Encountered IOException while closing DistributedFileSystem object:", ex);
+                    }
+                }
+            });
+            writers.add(writerThread);
+        }
+
+        if (startReadersFirst) {
+            // If we started the readers first, then just start the writers.
+            for (Thread writer : writers)
+                writer.start();
+
+            LOG.info("Started all WRITER threads (after READER threads).");
+        } else {
+            // Otherwise, start them in an interleaved fashion (reader, writer, reader, writer).
+            // If there are an unequal number of readers and writers, then they are started in an
+            // interleaved fashion until only one type of thread remains to be started, at which
+            // point all remaining threads of that type are started.
+            int readerIdx = 0;
+            int writerIdx = 0;
+            while (readerIdx < numReaders || writerIdx < numWriters) {
+                if (readerIdx < numReaders) {
+                    readers.get(readerIdx).start();
+                }
+                if (writerIdx < numWriters) {
+                    writers.get(writerIdx).start();
+                }
+
+                readerIdx++;
+                writerIdx++;
+            }
+
+            LOG.info("Started READER and WRITER threads in an interleaved fashion.");
+        }
+        LOG.info("Starting Reader-Writer test now...");
+        readySemaphore.acquire();                   // Will block until all client threads are ready to go.
+        long start = System.currentTimeMillis();    // Start the clock.
+        startLatch.countDown();                     // Let the threads start.
+
+        // This way, we don't have to wait for all the statistics to be added to lists and whatnot.
+        // As soon as the threads finish, they call release() on the endSemaphore. Once all threads have
+        // done this, we designate the benchmark as ended and record the stop time. Then we join the threads
+        // so that all the statistics are placed into the appropriate collections where we can aggregate them.
+        endSemaphore.acquire();
+        long end = System.currentTimeMillis();
+
+        LOG.info("Benchmark completed in " + (end - start) + "ms. Joining the " +
+                (readers.size() + writers.size()) + " threads now...");
+        for (Thread thread : readers)
+            thread.join();
+        for (Thread thread : writers)
+            thread.join();
+
+        double durationSeconds = (end - start) / 1.0e3;
+
+        // TODO: Verify that I've calculated the total number of operations correctly.
+        int numSuccess = numSuccessfulOps.get();
+        double totalOperations = numOps.get();
+        LOG.info("Finished performing all " + totalOperations + " operations in " + durationSeconds + " sec.");
+        double totalThroughput = totalOperations / durationSeconds;
+        double successThroughput = numSuccess / durationSeconds;
+        LOG.info("Number of successful operations: " + numSuccess);
+        LOG.info("Number of failed operations: " + (totalOperations - numSuccess));
+
+        LOG.info("Total Throughput: " + totalThroughput + " ops/sec.");
+        LOG.info("Successful Throughput: " + successThroughput + " ops/sec.");
+
+        if (LOG.isDebugEnabled())
+            LOG.debug("At end of benchmark, the HDFS Clients Cache has " + hdfsClients.size() + " clients.");
     }
 
     private void mkdirWeakScaling(final Configuration configuration) throws InterruptedException, IOException {
@@ -989,7 +1705,7 @@ public class Commander {
      * @param operationId Unique ID of this operation.
      * @param payload Contains the command and necessary arguments.
      */
-    private void issueCommandToFollowers(String opName, String operationId, JsonObject payload) {
+    private void issueCommandToFollowers(String opName, String operationId, JsonObject payload, boolean addToWaiting) {
         int numFollowers = followers.size();
         if (numFollowers == 0) {
             LOG.warn("We have no followers (though we are in distributed mode).");
@@ -1009,8 +1725,19 @@ public class Commander {
                     followerConnection.getRemoteAddressTCP());
             followerConnection.sendTCP(payloadStr);
 
-            waitingOn.add(followerConnection.name);
+            if (addToWaiting)
+                waitingOn.add(followerConnection.name);
         }
+    }
+
+    /**
+     * Issue a command to all our followers.
+     * @param opName The name of the command.
+     * @param operationId Unique ID of this operation.
+     * @param payload Contains the command and necessary arguments.
+     */
+    private void issueCommandToFollowers(String opName, String operationId, JsonObject payload) {
+        issueCommandToFollowers(opName, operationId, payload, true);
     }
 
     /**
@@ -1828,6 +2555,13 @@ public class Commander {
                 resultQueue.add(result);
 
                 waitingOn.remove(followerName);
+
+                LOG.info("resultQueue.size(): " + resultQueue.size());
+            }
+            else if (object instanceof WorkloadResponse) {
+                WorkloadResponse response = (WorkloadResponse)object;
+                workloadResponseQueue.add(response);
+                waitingOn.remove(followerName);
             }
             else if (object instanceof FrameworkMessage.KeepAlive) {
                 // Do nothing...
@@ -1865,7 +2599,8 @@ public class Commander {
                 "\n(17) Write n Files with n Threads (Weak Scaling - Write)\n(18) Write n Files y Times with z Threads (Strong Scaling - Write)" +
                 "\n(19) Create directories\n(20) Weak Scaling Reads v2\n(21) File Stat Benchmark" +
                 "\n(22) Unavailable.\n(23) List Dir Weak Scaling\n(24) Stat File Weak Scaling." +
-                "\n(25) MKDIR Weak Scaling\n");
+                "\n(25) MKDIR Weak Scaling\n(26) Randomly-generated workload.\n(30) Create from file." +
+                "\n(31) Reader-Writer Test #1.\n");
         System.out.println("==================\n");
         System.out.println("What would you like to do?");
         System.out.print("> ");

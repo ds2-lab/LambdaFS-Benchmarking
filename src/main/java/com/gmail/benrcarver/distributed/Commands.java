@@ -69,7 +69,7 @@ public class Commands {
      *
      * @return An HDFS client instance.
      */
-    private static synchronized DistributedFileSystem getHdfsClient() {
+    static synchronized DistributedFileSystem getHdfsClient() {
         DistributedFileSystem hdfs;
         hdfs = hdfsClients.poll();
 
@@ -81,7 +81,7 @@ public class Commands {
         return hdfs;
     }
 
-    private static void returnHdfsClient(DistributedFileSystem hdfs) throws InterruptedException {
+    static void returnHdfsClient(DistributedFileSystem hdfs) throws InterruptedException {
         hdfsClients.add(hdfs);
     }
 
@@ -1183,6 +1183,17 @@ public class Commands {
         }
 
         return false;
+    }
+
+    public static boolean exists(DistributedFileSystem hdfs, String targetPath) {
+        Path filePath = new Path(Commander.NAME_NODE_ENDPOINT + targetPath);
+
+        try {
+            return hdfs.exists(filePath);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            return false;
+        }
     }
 
     public static void mkdirOperation(DistributedFileSystem hdfs) {
