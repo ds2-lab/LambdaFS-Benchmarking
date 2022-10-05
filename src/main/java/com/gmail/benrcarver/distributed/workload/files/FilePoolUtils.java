@@ -4,6 +4,7 @@ import com.gmail.benrcarver.distributed.FSOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class FilePoolUtils {
@@ -38,10 +39,20 @@ public class FilePoolUtils {
         return path;
     }
 
-    public static FilePool getFilePool(String baseDir, int dirsPerDir, int filesPerDir) {
+    public static FilePool getFilePool(String baseDir, int dirsPerDir, int filesPerDir, int treeDepth,
+                                       boolean fixedDepthTree, boolean isExistingSubtree, String existingSubtreePath)
+            throws FileNotFoundException {
         FilePool filePool = filePools.get();
         if (filePool == null) {
-            filePool = new FileTreeGenerator(baseDir, filesPerDir, dirsPerDir, 0);
+            if (fixedDepthTree) {
+                filePool = new FixeDepthFileTreeGenerator(baseDir, treeDepth);
+            }
+            else if (isExistingSubtree) {
+                filePool = new ExistingSubtreeFileGenerator(existingSubtreePath);
+            }
+            else {
+                filePool = new FileTreeGenerator(baseDir, filesPerDir, dirsPerDir, 0);
+            }
             filePools.set(filePool);
             LOG.debug("New FilePool " +filePool+" created. Total :"+ filePoolCount.incrementAndGet());
         }else{

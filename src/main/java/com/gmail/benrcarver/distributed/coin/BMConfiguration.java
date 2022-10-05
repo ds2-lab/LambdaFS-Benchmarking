@@ -3,14 +3,13 @@ package com.gmail.benrcarver.distributed.coin;
 import com.gmail.benrcarver.distributed.Constants;
 import com.gmail.benrcarver.distributed.workload.BenchmarkDistribution;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Serializable;
+import java.io.*;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
-import java.util.Properties;
+import java.util.*;
+
+import static com.gmail.benrcarver.distributed.coin.FileSizeMultiFaceCoin.isTwoDecimalPlace;
 
 /**
  * Originally written by Salman Niazi, the author of HopsFS.
@@ -39,6 +38,21 @@ public class BMConfiguration implements Serializable {
         InputStream input = new FileInputStream(file);
         props.load(input);
         return props;
+    }
+
+    public boolean isExistingSubtree() {
+        return getBoolean(Constants.ENABLE_EXISTING_SUBTREE_KEY, Constants.ENABLE_EXISTING_SUBTREE_DEFAULT);
+    }
+
+    public boolean isFixedDepthTree() {
+        return getBoolean(Constants.ENABLE_FIXED_DEPTH_TREE_KEY, Constants.ENABLE_FIXED_DEPTH_TREE_DEFAULT);
+    }
+
+    /**
+     * Return the path to the file containing list of HopsFS file paths (for the existing subtree).
+     */
+    public String getExistingSubtreePath() {
+        return getString(Constants.EXISTING_SUBTREE_PATH_KEY, Constants.EXISTING_SUBTREE_PATH_DEFAULT);
     }
 
     public int getThreadsPerWorker() {
@@ -274,12 +288,12 @@ public class BMConfiguration implements Serializable {
     }
 
     private BigDecimal getBigDecimal(String key, double defaultVal) {
-        if (!FileSizeMultiFaceCoin.isTwoDecimalPlace(defaultVal)) {
+        if (!isTwoDecimalPlace(defaultVal)) {
             throw new IllegalArgumentException("Wrong default Value. Only one decimal place is supported. Value " + defaultVal + " key: " + key);
         }
 
         double userVal = Double.parseDouble(props.getProperty(key, Double.toString(defaultVal)));
-        if (!FileSizeMultiFaceCoin.isTwoDecimalPlace(userVal)) {
+        if (!isTwoDecimalPlace(userVal)) {
             throw new IllegalArgumentException("Wrong user value. Only one decimal place is supported. Value " + userVal + " key: " + key);
         }
 

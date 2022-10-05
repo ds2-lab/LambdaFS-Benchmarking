@@ -42,8 +42,8 @@ public class WarmUpWorker implements Callable<Boolean> {
 
     public boolean callImpl() throws Exception {
         dfs = Commands.getHdfsClient();
-        filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(), bmConf.getDirPerDir(),
-                bmConf.getFilesPerDir());
+        filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(), bmConf.getDirPerDir(), bmConf.getFilesPerDir(),
+                bmConf.getTreeDepth(), bmConf.isFixedDepthTree(), bmConf.isExistingSubtree(), bmConf.getExistingSubtreePath());
         String filePath;
 
         LOG.debug("Attempting to create a total of " + filesToCreate + " file(s).");
