@@ -274,12 +274,12 @@ public class BMConfiguration implements Serializable {
     }
 
     private BigDecimal getBigDecimal(String key, double defaultVal) {
-        if (!isTwoDecimalPlace(defaultVal)) {
+        if (!FileSizeMultiFaceCoin.isTwoDecimalPlace(defaultVal)) {
             throw new IllegalArgumentException("Wrong default Value. Only one decimal place is supported. Value " + defaultVal + " key: " + key);
         }
 
         double userVal = Double.parseDouble(props.getProperty(key, Double.toString(defaultVal)));
-        if (!isTwoDecimalPlace(userVal)) {
+        if (!FileSizeMultiFaceCoin.isTwoDecimalPlace(userVal)) {
             throw new IllegalArgumentException("Wrong user value. Only one decimal place is supported. Value " + userVal + " key: " + key);
         }
 
