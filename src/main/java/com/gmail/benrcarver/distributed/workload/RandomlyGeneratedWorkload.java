@@ -36,7 +36,7 @@ public class RandomlyGeneratedWorkload {
     AtomicInteger operationsCompleted = new AtomicInteger(0);
     AtomicLong operationsFailed = new AtomicLong(0);
     // Map<String, AtomicLong> operationsStats = new HashMap<>();
-    final Map<String, ArrayList<BMOpStats>> opsStats = new HashMap<>();
+    final Map<String, List<BMOpStats>> opsStats = new HashMap<>();
     SynchronizedDescriptiveStatistics avgLatency = new SynchronizedDescriptiveStatistics();
     private final RateLimiter limiter;
     private final ExecutorService executor;
@@ -198,7 +198,7 @@ public class RandomlyGeneratedWorkload {
             future.get();
 
         DistributedBenchmarkResult result = new DistributedBenchmarkResult(opId, Constants.OP_PREPARE_GENERATED_WORKLOAD,
-                operationsCompleted.get(), totalTime / 1.0e3, startTime, endTime, tcpLatency);
+                operationsCompleted.get(), totalTime / 1.0e3, startTime, endTime, tcpLatency, opsStats);
 
         currentState = WorkloadState.FINISHED;
         return result;
