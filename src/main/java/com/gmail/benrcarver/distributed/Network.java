@@ -3,6 +3,7 @@ package com.gmail.benrcarver.distributed;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.EndPoint;
 import com.gmail.benrcarver.distributed.workload.BMOpStats;
+import com.gmail.benrcarver.distributed.workload.WorkloadResponse;
 
 public class Network {
     public static void register (EndPoint endPoint) {
@@ -11,7 +12,7 @@ public class Network {
         kryo.setReferences(true);
         // kryo.setRegistrationRequired(true);
         kryo.setWarnUnregisteredClasses(true);
-
+        kryo.register(WorkloadResponse.class);
         kryo.register(String[].class);
         kryo.register(DistributedBenchmarkResult.class);
         kryo.register(java.util.HashMap.class);
