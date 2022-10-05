@@ -6,8 +6,10 @@ import java.io.Serializable;
  * @author Tianium
  */
 public class BMOpStats implements Serializable {
-    public final long OpStart;
-    public final long OpDuration;
+    public long OpStart;
+    public long OpDuration;
+
+    public BMOpStats() { }
 
     public BMOpStats(long start, long duration) {
         this.OpStart = start;
