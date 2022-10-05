@@ -17,7 +17,7 @@ public enum BenchmarkDistribution {
     }
 
     public boolean equals(BenchmarkDistribution otherName){
-        return (otherName == null)? false:distribution.equals(otherName.toString());
+        return otherName != null && distribution.equals(otherName.toString());
     }
 
     public String toString(){
