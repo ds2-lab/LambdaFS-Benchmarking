@@ -6,6 +6,7 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import com.gmail.benrcarver.distributed.coin.BMConfiguration;
 import com.gmail.benrcarver.distributed.util.Utils;
+import com.gmail.benrcarver.distributed.workload.BMOpStats;
 import com.gmail.benrcarver.distributed.workload.RandomlyGeneratedWorkload;
 import com.gmail.benrcarver.distributed.workload.WorkloadResponse;
 import com.google.gson.Gson;
@@ -13,6 +14,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jcraft.jsch.*;
+import io.hops.metrics.OperationPerformed;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.util.Pair;
 import org.slf4j.Logger;
@@ -24,6 +26,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.*;
@@ -872,7 +875,8 @@ public class Commander {
             if (localResult.latencyStatistics != null)
                 avgLatency = localResult.latencyStatistics.getMean();
 
-            aggregatedResult = new AggregatedResult(localResult.getOpsPerSecond(), avgLatency, metricsString);
+            aggregatedResult = new AggregatedResult(localResult.getOpsPerSecond(), avgLatency,
+                    metricsString, localResult.opsStats);
         } else {
             LOG.info("Expecting " + expectedNumResponses + " distributed results.");
             aggregatedResult = extractDistributedResultFromQueue(resultQueues.get(operationId), localResult,
@@ -882,38 +886,23 @@ public class Commander {
         System.out.println("throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
         System.out.println(aggregatedResult.metricsString);
 
-        HashMap<String, List<Pair<Long, Long>>> perOpLatencies = new HashMap<>();
-
         long unixTs = System.currentTimeMillis() / 1000L;
         File dir = new File("./random_workload_data/random_workload_" + unixTs);
         dir.mkdirs();
-        // TODO: Implement this for Vanilla.
-//        try (Writer writer = new BufferedWriter(new OutputStreamWriter(
-//                new FileOutputStream(dir + "/ALL_OPS.txt"), StandardCharsets.UTF_8))) {
-//            for (OperationPerformed operationPerformed : primaryHdfs.getOperationsPerformed()) {
-//                long ts = operationPerformed.getInvokedAtTime();
-//                long latency = operationPerformed.getLatency();
-//                writer.write(ts + "," + latency + "\n");
-//
-//                List<Pair<Long, Long>> opData = perOpLatencies.computeIfAbsent(operationPerformed.getOperationName(),
-//                        k -> new ArrayList<>());
-//                opData.add(new Pair<>(operationPerformed.getInvokedAtTime(), operationPerformed.getLatency()));
-//            }
-//        }
-//
-//        for (Map.Entry<String, List<Pair<Long, Long>>> entry : perOpLatencies.entrySet()) {
-//            String opName = entry.getKey();
-//            List<Pair<Long, Long>> latencyData = entry.getValue();
-//
-//            try (Writer writer = new BufferedWriter(new OutputStreamWriter(
-//                    new FileOutputStream(dir + "/" + opName + ".txt"), StandardCharsets.UTF_8))) {
-//                for (Pair<Long, Long> datum : latencyData) {
-//                    long ts = datum.getFirst();
-//                    long latency = datum.getSecond();
-//                    writer.write(ts + "," + latency + "\n");
-//                }
-//            }
-//        }
+
+        for (Map.Entry<String, List<BMOpStats>> entry : aggregatedResult.opsStats.entrySet()) {
+            String opName = entry.getKey();
+            List<BMOpStats> stats = entry.getValue();
+
+            try (Writer writer = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(dir + "/" + opName + ".txt"), StandardCharsets.UTF_8))) {
+                for (BMOpStats stat : stats) {
+                    long ts = stat.OpStart;
+                    long latency = stat.OpDuration;
+                    writer.write(ts + "," + latency + "\n");
+                }
+            }
+        }
     }
 
     /**
@@ -943,6 +932,8 @@ public class Commander {
         double trialAvgTcpLatency =
                 localResult.latencyStatistics.getN() > 0 ? localResult.latencyStatistics.getMean() : 0;
 
+        Map<String, List<BMOpStats>> opStats = new HashMap<>();
+
         LOG.info("Result queue contains " + resultQueue.size() + " distributed results.");
         List<Double> allThroughputValues = new ArrayList<>(resultQueue.size() + 1);
         allThroughputValues.add(localResult.getOpsPerSecond());
@@ -968,6 +959,16 @@ public class Commander {
             }
 
             allThroughputValues.add(res.getOpsPerSecond());
+
+            if (res.opsStats != null) {
+                for (Map.Entry<String, List<BMOpStats>> entry : res.opsStats.entrySet()) {
+                    String key = entry.getKey(); // op name
+                    List<BMOpStats> remoteStats = entry.getValue();
+
+                    List<BMOpStats> localStats = opStats.computeIfAbsent(key, k -> new ArrayList<>());
+                    localStats.addAll(remoteStats);
+                }
+            }
         }
 
         trialAvgTcpLatency = trialAvgTcpLatency / (1 + numDistributedResults);   // Add 1 to account for local result
@@ -1003,7 +1004,7 @@ public class Commander {
             System.out.println(formatted);
         }
 
-        return new AggregatedResult(aggregateThroughput, avgCombinedLatency, metricsString);
+        return new AggregatedResult(aggregateThroughput, avgCombinedLatency, metricsString, opStats);
     }
 
     /**
@@ -2153,7 +2154,8 @@ public class Commander {
                 LOG.warn("Could not generate metrics string due to NPE.");
             }
 
-            return new AggregatedResult(localResult.getOpsPerSecond(), localResult.latencyStatistics.getMean(), metricsString);
+            return new AggregatedResult(localResult.getOpsPerSecond(), localResult.latencyStatistics.getMean(),
+                    metricsString, localResult.opsStats);
         }
 
         LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
@@ -2539,18 +2541,18 @@ public class Commander {
         public double throughput;
         public double averageLatency;
         public String metricsString; // All the metrics I'd want formatted so that I can copy & paste into Excel.
-        public List<String> followerIds;
+        public Map<String, List<BMOpStats>> opsStats;
 
         public AggregatedResult(double throughput, double averageLatency,
-                                String metricsString, List<String> followerIds) {
+                                String metricsString, Map<String, List<BMOpStats>> opsStats) {
             this.throughput = throughput;
             this.averageLatency = averageLatency;
             this.metricsString = metricsString;
-            this.followerIds = followerIds;
+            this.opsStats = opsStats;
         }
 
         public AggregatedResult(double throughput, double averageLatency, String metricsString) {
-            this(throughput, averageLatency, metricsString, new ArrayList<>());
+            this(throughput, averageLatency, metricsString, new HashMap<>());
         }
     }
 }

@@ -35,7 +35,8 @@ public class RandomlyGeneratedWorkload {
     private volatile long startTime = 0;
     AtomicInteger operationsCompleted = new AtomicInteger(0);
     AtomicLong operationsFailed = new AtomicLong(0);
-    Map<FSOperation, AtomicLong> operationsStats = new HashMap<>();
+    // Map<String, AtomicLong> operationsStats = new HashMap<>();
+    final Map<String, ArrayList<BMOpStats>> opsStats = new HashMap<>();
     SynchronizedDescriptiveStatistics avgLatency = new SynchronizedDescriptiveStatistics();
     private final RateLimiter limiter;
     private final ExecutorService executor;
@@ -327,11 +328,11 @@ public class RandomlyGeneratedWorkload {
             String path = FilePoolUtils.getPath(operation, filePool);
             if (path != null) {
                 boolean retVal = false;
-                // long opExeTime = 0;
-                // long opStartTime = System.nanoTime();
+                long opExeTime = 0;
+                long opStartTime = System.currentTimeMillis();
                 try {
                     retVal = operation.call(dfs, path, "");
-                    // opExeTime = System.nanoTime() - opStartTime;
+                    opExeTime = System.currentTimeMillis() - opStartTime;
                 } catch (Exception e) {
                     LOG.error("Exception encountered:", e);
                 }
@@ -342,21 +343,26 @@ public class RandomlyGeneratedWorkload {
                         filePool.fileCreationSucceeded(path);
                 }
 
-                // updateStats(opType, retVal, new BMOpStats(opStartTime, opExeTime));
+                updateStats(operation, retVal, new BMOpStats(opStartTime, opExeTime));
             } else {
                 LOG.debug("Could not perform operation " + operation + ". Got Null from the file pool");
             }
         }
 
         private void updateStats(FSOperation opType, boolean success, BMOpStats stats) {
-            AtomicLong stat = operationsStats.get(opType);
-            if (stat == null) {
+            // AtomicLong stat = operationsStats.get(opType.getName());
+            // if (stat == null) {
                 // this should be synchronized to get accurate stats. However, this will slow
                 // down and these stats are just for log messages. Some inconsistencies are OK.
-                stat = new AtomicLong(0);
-                operationsStats.put(opType, stat);
+                // stat = new AtomicLong(0);
+                // /operationsStats.put(opType.getName(), stat);
+            // }
+            // stat.incrementAndGet();
+
+            synchronized (opsStats) {
+                ArrayList<BMOpStats> times = opsStats.computeIfAbsent(opType.getName(), k -> new ArrayList<>());
+                times.add(stats);
             }
-            stat.incrementAndGet();
 
             if (success) {
                 operationsCompleted.incrementAndGet();
