@@ -2,7 +2,6 @@ package com.gmail.benrcarver.distributed.workload.files;
 
 import com.gmail.benrcarver.distributed.Commander;
 import com.gmail.benrcarver.distributed.coin.FileSizeMultiFaceCoin;
-import io.hops.metadata.ndb.dalimpl.hdfs.PathUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +25,40 @@ public class FileTreeGenerator implements FilePool {
     private int currIndex = -1;
     private long currentFileSize = -1;
     private long currentFileDataRead = -1;
+
+    public static String[] getPathNames(String path) {
+        if (path != null && path.startsWith("/")) {
+            return split(path, '/');
+        } else {
+            throw new AssertionError("Absolute path required");
+        }
+    }
+
+    public static String[] split(String str, char separator) {
+        if (str.isEmpty()) {
+            return new String[]{""};
+        } else {
+            ArrayList<String> strList = new ArrayList();
+            int startIndex = 0;
+
+            int nextIndex;
+            for(boolean var4 = false; (nextIndex = str.indexOf(separator, startIndex)) != -1; startIndex = nextIndex + 1) {
+                strList.add(str.substring(startIndex, nextIndex));
+            }
+
+            strList.add(str.substring(startIndex));
+            int last = strList.size();
+
+            while(true) {
+                --last;
+                if (last < 0 || !"".equals(strList.get(last))) {
+                    return (String[])strList.toArray(new String[strList.size()]);
+                }
+
+                strList.remove(last);
+            }
+        }
+    }
 
     public FileTreeGenerator(String baseDir, int filesPerDir,
                              int dirPerDir, int initialTreeDepth) {
@@ -53,7 +86,7 @@ public class FileTreeGenerator implements FilePool {
             threadDir = baseDir + machineName+"/"+ uuid;
         }
 
-        String[] comp = PathUtils.getPathNames(threadDir);
+        String[] comp = getPathNames(threadDir);
 
         if (initialTreeDepth - comp.length > 0) {
             for (int i = comp.length; i < (initialTreeDepth); i++) {
