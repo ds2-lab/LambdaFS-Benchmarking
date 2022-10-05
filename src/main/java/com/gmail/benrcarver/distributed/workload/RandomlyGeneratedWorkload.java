@@ -199,7 +199,7 @@ public class RandomlyGeneratedWorkload {
             future.get();
 
         DistributedBenchmarkResult result = new DistributedBenchmarkResult(opId, Constants.OP_PREPARE_GENERATED_WORKLOAD,
-                operationsCompleted.get(), totalTime / 1.0e3, startTime, endTime, tcpLatency, opsStats);
+                operationsCompleted.get(), totalTime / 1.0e3, startTime, endTime, tcpLatency.getValues(), opsStats);
 
         currentState = WorkloadState.FINISHED;
         return result;

@@ -242,7 +242,7 @@ public class Commands {
             LOG.debug("At end of benchmark, the HDFS Clients Cache has " + hdfsClients.size() + " clients.");
 
         return new DistributedBenchmarkResult(null, opCode, numSuccess,
-                durationSeconds, start, end, totalLatencyStatistics);
+                durationSeconds, start, end, totalLatencyStatistics.getValues());
     }
 
     public static DistributedBenchmarkResult writeFilesToDirectories()
@@ -662,7 +662,7 @@ public class Commands {
         for (double latency : latencies.getValues())
             System.out.println(latency);
 
-        return new DistributedBenchmarkResult(null, OP_DELETE_FILES, paths.size(), durationSeconds, s, t, latencies);
+        return new DistributedBenchmarkResult(null, OP_DELETE_FILES, paths.size(), durationSeconds, s, t, latencies.getValues());
     }
 
     /**

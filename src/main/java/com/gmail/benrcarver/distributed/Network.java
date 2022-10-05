@@ -13,9 +13,11 @@ public class Network {
 
         kryo.setReferences(true);
         kryo.setRegistrationRequired(false);
+        kryo.setWarnUnregisteredClasses(true);
 
         kryo.register(WorkloadResponse.class);
         kryo.register(String[].class);
+        kryo.register(double[].class);
         kryo.register(DistributedBenchmarkResult.class);
         kryo.register(java.util.HashMap.class);
         kryo.register(BMOpStats.class);

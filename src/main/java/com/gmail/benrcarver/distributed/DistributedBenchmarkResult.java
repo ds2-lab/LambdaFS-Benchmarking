@@ -38,7 +38,7 @@ public class DistributedBenchmarkResult implements Serializable {
      */
     public long stopTime;
 
-    public SynchronizedDescriptiveStatistics latencyStatistics;
+    public double[] latencyStatistics;
 
     public DistributedBenchmarkResult() { }
 
@@ -57,7 +57,7 @@ public class DistributedBenchmarkResult implements Serializable {
      */
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed,
                                       double duration, long startTime, long stopTime,
-                                      SynchronizedDescriptiveStatistics latencyStatistics,
+                                      double[] latencyStatistics,
                                       Map<String, List<BMOpStats>> opsStats) {
         this.opId = opId;
         this.operation = operation;
@@ -85,7 +85,7 @@ public class DistributedBenchmarkResult implements Serializable {
      */
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed,
                                       double duration, long startTime, long stopTime,
-                                      SynchronizedDescriptiveStatistics latencyStatistics) {
+                                      double[] latencyStatistics) {
         this(opId, operation, numOpsPerformed, duration, startTime, stopTime, latencyStatistics, new HashMap<>());
     }
 

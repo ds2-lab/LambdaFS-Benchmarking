@@ -263,7 +263,7 @@ public class Commander {
         LOG.info("Throughput          : " + res.getOpsPerSecond());
 
         if (res.latencyStatistics != null) {
-            DescriptiveStatistics latency = res.latencyStatistics;
+            DescriptiveStatistics latency = new DescriptiveStatistics(res.latencyStatistics);
 
             LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
                     ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
@@ -318,7 +318,7 @@ public class Commander {
         LOG.info("Throughput          : " + res.getOpsPerSecond());
 
         if (res.latencyStatistics != null) {
-            DescriptiveStatistics latency = res.latencyStatistics;
+            DescriptiveStatistics latency = new DescriptiveStatistics(res.latencyStatistics);
 
             LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
                     ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
@@ -854,7 +854,7 @@ public class Commander {
             }
         }
 
-        DescriptiveStatistics latencyStatistics = localResult.latencyStatistics;
+        DescriptiveStatistics latencyStatistics = new DescriptiveStatistics(localResult.latencyStatistics);
         if (PRIMARY_HDFS != null)
             PRIMARY_HDFS.addLatencyValues(latencyStatistics.getValues());
 
@@ -864,7 +864,8 @@ public class Commander {
 
             String metricsString;
             try {
-                metricsString = String.format("%f %f", localResult.getOpsPerSecond(), localResult.latencyStatistics.getMean());
+                metricsString = String.format("%f %f", localResult.getOpsPerSecond(),
+                        new DescriptiveStatistics(localResult.latencyStatistics).getMean());
             } catch (NullPointerException ex) {
                 LOG.warn("Could not generate metrics string due to NPE.");
                 metricsString = "";
@@ -873,7 +874,7 @@ public class Commander {
             double avgLatency = 0.0;
 
             if (localResult.latencyStatistics != null)
-                avgLatency = localResult.latencyStatistics.getMean();
+                avgLatency = new DescriptiveStatistics(localResult.latencyStatistics).getMean();
 
             aggregatedResult = new AggregatedResult(localResult.getOpsPerSecond(), avgLatency,
                     metricsString, localResult.opsStats);
@@ -935,8 +936,9 @@ public class Commander {
         LOG.info("Duration (sec)      : " + localResult.durationSeconds);
         LOG.info("Throughput          : " + localResult.getOpsPerSecond() + "\n");
 
+        DescriptiveStatistics statistics = new DescriptiveStatistics(localResult.latencyStatistics);
         double trialAvgTcpLatency =
-                localResult.latencyStatistics.getN() > 0 ? localResult.latencyStatistics.getMean() : 0;
+                statistics.getN() > 0 ? statistics.getMean() : 0;
 
         Map<String, List<BMOpStats>> opStats = new HashMap<>();
 
@@ -954,7 +956,7 @@ public class Commander {
             throughput.addValue(res.getOpsPerSecond());
 
             if (res.latencyStatistics != null) {
-                DescriptiveStatistics latencyTcp = res.latencyStatistics;
+                DescriptiveStatistics latencyTcp = new DescriptiveStatistics(res.latencyStatistics);
                 PRIMARY_HDFS.addLatencyValues(latencyTcp.getValues());
 
                 LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
@@ -2151,16 +2153,17 @@ public class Commander {
             // LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
             String metricsString = "";
 
+            DescriptiveStatistics statistics = new DescriptiveStatistics(localResult.latencyStatistics);
             try {
                 DecimalFormat df = new DecimalFormat("#.####");
-                double avgTcpLatency = localResult.latencyStatistics.getMean();
+                double avgTcpLatency = statistics.getMean();
                 // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
                 metricsString = String.format("%s %s", df.format(localResult.getOpsPerSecond()), df.format(avgTcpLatency));
             } catch (NullPointerException ex) {
                 LOG.warn("Could not generate metrics string due to NPE.");
             }
 
-            return new AggregatedResult(localResult.getOpsPerSecond(), localResult.latencyStatistics.getMean(),
+            return new AggregatedResult(localResult.getOpsPerSecond(), statistics.getMean(),
                     metricsString, localResult.opsStats);
         }
 
