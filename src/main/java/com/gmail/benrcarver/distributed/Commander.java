@@ -890,6 +890,12 @@ public class Commander {
         File dir = new File("./random_workload_data/random_workload_" + unixTs);
         dir.mkdirs();
 
+        // Write workload summary to a file.
+        try (Writer writer = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(dir + "/summary.dat"), StandardCharsets.UTF_8))) {
+            writer.write(aggregatedResult.toString());
+        }
+
         for (Map.Entry<String, List<BMOpStats>> entry : aggregatedResult.opsStats.entrySet()) {
             String opName = entry.getKey();
             List<BMOpStats> stats = entry.getValue();
@@ -2553,6 +2559,12 @@ public class Commander {
 
         public AggregatedResult(double throughput, double averageLatency, String metricsString) {
             this(throughput, averageLatency, metricsString, new HashMap<>());
+        }
+
+        @Override
+        public String toString() {
+            return "Throughput (ops/sec): " + throughput + ", Average Latency: " + averageLatency;
+
         }
     }
 }
