@@ -26,6 +26,4 @@ public interface FilePool {
     public String getFileToDelete();
 
     public boolean hasMoreFilesToWrite();
-
-    public Object clone() throws CloneNotSupportedException;
 }

@@ -40,6 +40,21 @@ public class BMConfiguration implements Serializable {
         return props;
     }
 
+    public boolean isExistingSubtree() {
+        return getBoolean(Constants.ENABLE_EXISTING_SUBTREE_KEY, Constants.ENABLE_EXISTING_SUBTREE_DEFAULT);
+    }
+
+    public boolean isFixedDepthTree() {
+        return getBoolean(Constants.ENABLE_FIXED_DEPTH_TREE_KEY, Constants.ENABLE_FIXED_DEPTH_TREE_DEFAULT);
+    }
+
+    /**
+     * Return the path to the file containing list of HopsFS file paths (for the existing subtree).
+     */
+    public String getExistingSubtreePath() {
+        return getString(Constants.EXISTING_SUBTREE_PATH_KEY, Constants.EXISTING_SUBTREE_PATH_DEFAULT);
+    }
+    
     public int getThreadsPerWorker() {
         return getInt(Constants.NUM_WORKER_THREADS_KEY, Constants.NUM_WORKER_THREADS_DEFAULT);
     }

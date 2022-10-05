@@ -15,6 +15,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -258,10 +259,10 @@ public class RandomlyGeneratedWorkload {
         }
 
         @Override
-        public Object call() {
+        public Object call() throws FileNotFoundException {
             DistributedFileSystem dfs = Commands.getHdfsClient(sharedHdfs, false);
-            filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(),
-                    bmConf.getDirPerDir(), bmConf.getFilesPerDir());
+            filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(), bmConf.getDirPerDir(), bmConf.getFilesPerDir(),
+                    bmConf.getTreeDepth(), bmConf.isFixedDepthTree(), bmConf.isExistingSubtree(), bmConf.getExistingSubtreePath());
 
             InterleavedMultiFaceCoin opCoin = new InterleavedMultiFaceCoin(config.getInterleavedBmCreateFilesPercentage(),
                     config.getInterleavedBmAppendFilePercentage(),

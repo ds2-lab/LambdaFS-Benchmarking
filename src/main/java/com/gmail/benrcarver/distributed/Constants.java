@@ -181,6 +181,27 @@ public class Constants {
     public static String NUM_WORKER_THREADS_KEY = "num.worker.threads";
     public static int    NUM_WORKER_THREADS_DEFAULT = 1;
 
+    public static String  ENABLE_FIXED_DEPTH_TREE_KEY = "enable.fixed.depth.tree";
+    public static boolean ENABLE_FIXED_DEPTH_TREE_DEFAULT = false;
+
+    public static String   ENABLE_EXISTING_SUBTREE_KEY       = "enable.existing.subtree";
+    public static boolean  ENABLE_EXISTING_SUBTREE_DEFAULT   = false;
+
+    /**
+     * Path to file containing list of HopsFS file paths (for the existing subtree).
+     */
+    public static String    EXISTING_SUBTREE_PATH_KEY = "existing.subtree.path";
+    public static String    EXISTING_SUBTREE_PATH_DEFAULT = "./existing_subtree.txt";
+
+    /**
+     * The root directory of the existing subtree.
+     */
+    public static String    EXISTING_SUBTREE_ROOT_DIR_KEY       = "existing.subtree.root.directory";
+    public static String    EXISTING_SUBTREE_ROOT_DIR_DEFAULT   = "/existing_subtree/";
+
+    public static String  TREE_DEPTH_KEY = "tree.depth";
+    public static int     TREE_DEPTH_DEFAULT = 3;
+
     public static String BASE_DIR_KEY = "base.dir";
     public static String BASE_DIR_DEFAULT = "/generatedWorkload";
 
@@ -201,9 +222,6 @@ public class Constants {
 
     public static String DISK_FILES_PATH="disk.files.path";
     public static String DISK_FILES_PATH_DEFAULT="~";
-
-    public static String  TREE_DEPTH_KEY = "tree.depth";
-    public static int     TREE_DEPTH_DEFAULT = 3;
 
     public static final String LEADER_WORKER_WARMUP_DELAY_KEY= "leader.worker.warmup.delay";
     public static final int    LEADER_WORKER_WARMUP_DELAY_KEY_DEFAULT = 0;

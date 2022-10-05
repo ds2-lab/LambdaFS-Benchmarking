@@ -239,11 +239,6 @@ public class ExistingSubtreeFileGenerator implements FilePool {
     }
 
     @Override
-    public Object clone() throws CloneNotSupportedException {
-        return null;
-    }
-
-    @Override
     public String toString() {
         return "ExistingSubtreeFileGenerator(numBaseDirs=" + baseDirectories.size() + ", numGenDirs=" +
                 directoriesInPool.size() + ", numGenFiles=" + filesInPool.size() + ")";

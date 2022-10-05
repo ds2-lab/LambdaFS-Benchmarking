@@ -21,21 +21,18 @@ public class FileTreeGenerator implements FilePool {
     protected List<String> allThreadFiles;
     protected List<String> allThreadDirs;
     protected String threadDir;
-    private NameSpaceGenerator nameSpaceGenerator;
+    private final NameSpaceGenerator nameSpaceGenerator;
     private final int THRESHOLD = 3;
     private int currIndex = -1;
-    private long currentFileSize = -1;
-    private long currentFileDataRead = -1;
 
     public FileTreeGenerator(String baseDir, int filesPerDir,
                              int dirPerDir, int initialTreeDepth) {
-
-        this.allThreadFiles = new ArrayList<String>(10000);
-        this.allThreadDirs = new ArrayList<String>(10000);
+        this.allThreadFiles = new ArrayList<>(10000);
+        this.allThreadDirs = new ArrayList<>(10000);
         this.rand1 = new Random(System.currentTimeMillis());
         UUID uuid = UUID.randomUUID();
 
-        String machineName = "";
+        String machineName;
         try {
             machineName = InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
@@ -73,8 +70,7 @@ public class FileTreeGenerator implements FilePool {
 
     @Override
     public String getFileToCreate() {
-        String path = nameSpaceGenerator.getFileToCreate();
-        return path;
+        return nameSpaceGenerator.getFileToCreate();
     }
 
     @Override
@@ -153,11 +149,6 @@ public class FileTreeGenerator implements FilePool {
     @Override
     public boolean hasMoreFilesToWrite(){
         return true;
-    }
-
-    @Override
-    public Object clone() throws CloneNotSupportedException {
-        return null;
     }
 
 
