@@ -3,7 +3,10 @@ package com.gmail.benrcarver.distributed;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
+import com.gmail.benrcarver.distributed.coin.BMConfiguration;
 import com.gmail.benrcarver.distributed.util.Utils;
+import com.gmail.benrcarver.distributed.workload.RandomlyGeneratedWorkload;
+import com.gmail.benrcarver.distributed.workload.WorkloadResponse;
 import com.google.gson.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,13 +14,14 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import static com.gmail.benrcarver.distributed.Constants.*;
 
@@ -32,6 +36,8 @@ public class Follower {
     private String nameNodeEndpoint;
 
     private final Client client;
+
+    private RandomlyGeneratedWorkload activeWorkload;
 
     private final String masterIp;
     private final int masterPort;
@@ -148,7 +154,7 @@ public class Follower {
         }
     }
 
-    private void handleMessageFromLeader(JsonObject message, DistributedFileSystem hdfs) throws IOException, InterruptedException {
+    private void handleMessageFromLeader(JsonObject message, DistributedFileSystem hdfs) throws IOException, InterruptedException, ExecutionException {
         int operation = message.getAsJsonPrimitive(OPERATION).getAsInt();
 
         updateGCMetrics();
@@ -168,7 +174,7 @@ public class Follower {
                 boolean benchmarkModeEnabled = message.getAsJsonPrimitive(BENCHMARK_MODE).getAsBoolean();
 
                 if (benchmarkModeEnabled)
-                    LOG.debug("ENABLING Benchmark Mode (and thus disabling OperationPerformed tracking).");
+                    LOG.debug("ENABLING Benchmark Mode");
                 else
                     LOG.debug("DISABLING Benchmark Mode.");
 
@@ -383,6 +389,87 @@ public class Follower {
                 LOG.info("Obtained local result for WEAK SCALING (MKDIR) benchmark: " + result);
                 sendResultToLeader(result);
                 break;
+            case OP_PREPARE_GENERATED_WORKLOAD:
+                LOG.info("RANDOMLY-GENERATED WORKLOAD selected!");
+
+                String base64Config = message.getAsJsonPrimitive("configuration").getAsString();
+                byte[] configBytes = Base64.getDecoder().decode(base64Config);
+
+                ByteArrayInputStream bis = new ByteArrayInputStream(configBytes);
+                ObjectInput in = null;
+                BMConfiguration configuration = null;
+                try {
+                    in = new ObjectInputStream(bis);
+                    configuration = (BMConfiguration) in.readObject();
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        if (in != null) {
+                            in.close();
+                        }
+                    } catch (IOException ex) {
+                        // ignore close exception
+                    }
+                }
+
+                int numFollowers = message.getAsJsonPrimitive("NUM_FOLLOWERS").getAsInt();
+
+                if (configuration == null) {
+                    LOG.error("ERROR: Could not deserialize BMConfiguration object.");
+                    sendResultToLeader(new WorkloadResponse(true, null), operationId);
+                } else {
+                    activeWorkload = new RandomlyGeneratedWorkload(configuration, hdfs, numFollowers);
+                    sendResultToLeader(new WorkloadResponse(false, null), operationId);
+                }
+                break;
+            case OP_DO_WARMUP_FOR_PREPARED_WORKLOAD:
+                if (activeWorkload == null || activeWorkload.getCurrentState() != RandomlyGeneratedWorkload.WorkloadState.CREATED) {
+                    LOG.error("We do not have an already-created workload.");
+                    sendResultToLeader(new WorkloadResponse(true, null), operationId);
+                } else {
+                    activeWorkload.doWarmup();
+
+                    if (activeWorkload.getCurrentState() == RandomlyGeneratedWorkload.WorkloadState.READY) {
+                        LOG.debug("Successfully warmed-up random workload.");
+                        sendResultToLeader(new WorkloadResponse(false, null), operationId);
+                    }
+                    else {
+                        LOG.error("Failed to warm-up random workload.");
+                        sendResultToLeader(new WorkloadResponse(true, null), operationId);
+                    }
+                }
+                break;
+            case OP_DO_RANDOM_WORKLOAD:
+                if (activeWorkload == null || activeWorkload.getCurrentState() != RandomlyGeneratedWorkload.WorkloadState.READY) {
+                    LOG.error("We do not have an already-created workload.");
+
+                    sendResultToLeader(new WorkloadResponse(true, null), operationId);
+                } else {
+                    result = activeWorkload.doWorkload(operationId);
+
+                    if (activeWorkload.getCurrentState() == RandomlyGeneratedWorkload.WorkloadState.FINISHED) {
+                        LOG.debug("Successfully executed random workload.");
+                        sendResultToLeader(result);
+                    }
+                    else {
+                        LOG.error("Failed to execute random workload.");
+                        sendResultToLeader(new WorkloadResponse(true, null), operationId);
+                    }
+                }
+
+                break;
+            case OP_ABORT_RANDOM_WORKLOAD:
+                if (activeWorkload == null) {
+                    LOG.error("We do not have a random workload to abort.");
+
+                    sendResultToLeader(new WorkloadResponse(true, null), operationId);
+                } else {
+                    LOG.warn("Aborting randomly-generated workload.");
+                    activeWorkload = null;
+                    sendResultToLeader(new WorkloadResponse(false, null), operationId);
+                }
+                break;
             default:
                 LOG.info("ERROR: Unknown or invalid operation specified: " + operation);
                 break;
@@ -395,6 +482,12 @@ public class Follower {
         LOG.debug("Performed " + numGCsPerformedDuringLastOp + " garbage collection(s) during last operation.");
         if (numGCsPerformedDuringLastOp > 0)
             LOG.debug("Spent " + timeSpentInGCDuringLastOp + " ms garbage collecting during the last operation.");
+    }
+
+    private void sendResultToLeader(WorkloadResponse resp, String opId) {
+        LOG.debug("Sending result for operation " + opId + " now...");
+        int bytesSent = this.client.sendTCP(resp);
+        LOG.debug("Successfully sent " + bytesSent + " byte(s) to leader.");
     }
 
     private void sendResultToLeader(DistributedBenchmarkResult result) {

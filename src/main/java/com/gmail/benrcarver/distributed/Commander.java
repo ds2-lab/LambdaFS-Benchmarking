@@ -13,9 +13,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jcraft.jsch.*;
-import io.hops.metrics.OperationPerformed;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
 import org.apache.commons.math3.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +24,6 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.*;
@@ -2148,20 +2145,18 @@ public class Commander {
             String metricsString = "";
 
             try {
-                metricsString = String.format("%f %f", localResult.getOpsPerSecond(), localResult.latencyStatistics.getMean());
+                DecimalFormat df = new DecimalFormat("#.####");
+                double avgTcpLatency = localResult.latencyStatistics.getMean();
+                // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
+                metricsString = String.format("%s %s", df.format(localResult.getOpsPerSecond()), df.format(avgTcpLatency));
             } catch (NullPointerException ex) {
                 LOG.warn("Could not generate metrics string due to NPE.");
             }
 
-            double avgLatency = 0.0;
-
-            if (localResult.latencyStatistics != null)
-                avgLatency = localResult.latencyStatistics.getMean();
-
-            return new AggregatedResult(localResult.getOpsPerSecond(), avgLatency, metricsString);
+            return new AggregatedResult(localResult.getOpsPerSecond(), localResult.latencyStatistics.getMean(), metricsString);
         }
 
-        LOG.info("Waiting for " + numDistributedResults + " distributed result(s).");
+        LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
         BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
         assert(resultQueue != null);
 
@@ -2190,68 +2185,7 @@ public class Commander {
             }
         }
 
-        DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
-        DescriptiveStatistics duration = new DescriptiveStatistics();
-        DescriptiveStatistics throughput = new DescriptiveStatistics();
-
-        opsPerformed.addValue(localResult.numOpsPerformed);
-        duration.addValue(localResult.durationSeconds);
-        throughput.addValue(localResult.getOpsPerSecond());
-
-        LOG.info("========== LOCAL RESULT ==========");
-        LOG.info("Num Ops Performed   : " + localResult.numOpsPerformed);
-        LOG.info("Duration (sec)      : " + localResult.durationSeconds);
-        LOG.info("Throughput          : " + localResult.getOpsPerSecond());
-
-        double trialAvgLatency = 0.0;
-        if (localResult.latencyStatistics != null) {
-            DescriptiveStatistics latency = localResult.latencyStatistics;
-
-            LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
-                    ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
-                    ", N: " + latency.getN() + "]");
-
-            trialAvgLatency += latency.getMean();
-        }
-
-        ArrayList<String> followerIds = new ArrayList<>();
-        for (DistributedBenchmarkResult res : resultQueue) {
-            LOG.info("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");
-            LOG.info("Num Ops Performed   : " + res.numOpsPerformed);
-            LOG.info("Duration (sec)      : " + res.durationSeconds);
-            LOG.info("Throughput          : " + res.getOpsPerSecond());
-
-            opsPerformed.addValue(res.numOpsPerformed);
-            duration.addValue(res.durationSeconds);
-            throughput.addValue(res.getOpsPerSecond());
-            followerIds.add(res.jvmId);
-
-            if (res.latencyStatistics != null) {
-                DescriptiveStatistics latency = res.latencyStatistics;
-
-                LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
-                        ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
-                        ", N: " + latency.getN() + "]");
-
-                trialAvgLatency += latency.getMean();
-
-                PRIMARY_HDFS.addLatencyValues(latency.getValues());
-            }
-        }
-
-        trialAvgLatency = trialAvgLatency / (1 + numDistributedResults);   // Add 1 to account for local result.
-        double aggregateThroughput = (opsPerformed.getSum() / duration.getMean());
-
-        LOG.info("==== AGGREGATED RESULTS ====");
-        LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
-        LOG.info("Average latency: " + trialAvgLatency + " ms");
-        LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
-
-        String metricsString = String.format("%f %f", aggregateThroughput, trialAvgLatency);
-
-        LOG.info(metricsString);
-
-        return new AggregatedResult(aggregateThroughput, trialAvgLatency, metricsString, followerIds);
+        return extractDistributedResultFromQueue(resultQueue, localResult, numDistributedResults);
     }
 
     /**
