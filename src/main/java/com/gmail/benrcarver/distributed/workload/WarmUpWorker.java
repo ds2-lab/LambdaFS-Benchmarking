@@ -41,7 +41,7 @@ public class WarmUpWorker implements Callable<Boolean> {
     }
 
     public boolean callImpl() throws Exception {
-        dfs = Commands.getHdfsClient(sharedHdfs, true);
+        dfs = Commands.getHdfsClient();
         filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(), bmConf.getDirPerDir(),
                 bmConf.getFilesPerDir());
         String filePath;

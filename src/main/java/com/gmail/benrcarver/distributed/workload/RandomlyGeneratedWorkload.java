@@ -44,8 +44,6 @@ public class RandomlyGeneratedWorkload {
     private WorkloadState currentState = WorkloadState.CREATED;
 
     private final SynchronizedDescriptiveStatistics tcpLatency = new SynchronizedDescriptiveStatistics();
-    private final SynchronizedDescriptiveStatistics httpLatency = new SynchronizedDescriptiveStatistics();
-    protected BlockingQueue<List<OperationPerformed>> operationsPerformed;
 
     // Used to synchronize threads; they each connect to HopsFS and then
     // count down. So, they all cannot start until they are all connected.
@@ -79,8 +77,6 @@ public class RandomlyGeneratedWorkload {
         readySemaphore = new Semaphore((numThreads * -1) + 1);
         endLatch = new CountDownLatch(numThreads);
         startLatch = new CountDownLatch(numThreads + 1);
-
-        operationsPerformed = new ArrayBlockingQueue<>(bmConf.getThreadsPerWorker());
     }
 
     public void doWarmup() throws InterruptedException {
@@ -201,17 +197,8 @@ public class RandomlyGeneratedWorkload {
         for (Future<Object> future : futures)
             future.get();
 
-        List<OperationPerformed> allOpsPerformed = new ArrayList<>();
-
-        for (List<OperationPerformed> opsPerformed : operationsPerformed) {
-            allOpsPerformed.addAll(opsPerformed);
-        }
-
-        LOG.info("Size of opsPerformed list: " + allOpsPerformed.size());
-
         DistributedBenchmarkResult result = new DistributedBenchmarkResult(opId, Constants.OP_PREPARE_GENERATED_WORKLOAD,
-                operationsCompleted.get(), totalTime / 1.0e3, startTime, endTime, 0, 0,
-                allOpsPerformed.toArray(new OperationPerformed[0]), null, tcpLatency, httpLatency);
+                operationsCompleted.get(), totalTime / 1.0e3, startTime, endTime, tcpLatency);
 
         currentState = WorkloadState.FINISHED;
         return result;
@@ -241,16 +228,9 @@ public class RandomlyGeneratedWorkload {
                 e.printStackTrace();
             }
 
-            for (double latency : dfs.getLatencyHttpStatistics().getValues()) {
-                httpLatency.addValue(latency);
-            }
-
-            //if (LOG.isDebugEnabled()) LOG.debug("[THREAD " + threadId + "] Collecting TCP latencies.");
-            for (double latency : dfs.getLatencyTcpStatistics().getValues()) {
+            for (double latency : dfs.getLatencyStatistics().getValues()) {
                 tcpLatency.addValue(latency);
             }
-
-            operationsPerformed.add(dfs.getOperationsPerformed());
 
             // Clear the metric data associated with the client and return it to the pool.
             Commands.clearMetricDataNoPrompt(dfs);
@@ -259,7 +239,7 @@ public class RandomlyGeneratedWorkload {
 
         @Override
         public Object call() {
-            DistributedFileSystem dfs = Commands.getHdfsClient(sharedHdfs, false);
+            DistributedFileSystem dfs = Commands.getHdfsClient();
             filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(),
                     bmConf.getDirPerDir(), bmConf.getFilesPerDir());
 

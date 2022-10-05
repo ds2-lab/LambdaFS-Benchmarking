@@ -110,11 +110,6 @@ public class Commander {
     private final ConcurrentHashMap<String, BlockingQueue<DistributedBenchmarkResult>> resultQueues;
 
     /**
-     * The hdfs-site.xml configuration file.
-     */
-    private Configuration hdfsConfiguration;
-
-    /**
      * The {@link Commander} class uses a singleton pattern.
      */
     private static Commander instance;
@@ -631,7 +626,7 @@ public class Commander {
                         break;
                     case OP_WEAK_SCALING_READS_V2:
                         LOG.info("WeakScalingReadsV2 Selected!");
-                        weakScalingReadOperationV2(hdfsConfiguration);
+                        weakScalingReadOperationV2();
                         break;
                     case OP_LIST_DIRECTORIES_FROM_FILE:
                         LOG.info("LIST DIRECTORIES FROM FILE selected!");
@@ -639,11 +634,11 @@ public class Commander {
                         break;
                     case OP_STAT_FILES_WEAK_SCALING:
                         LOG.info("STAT FILES WEAK SCALING selected!");
-                        statFilesWeakScaling(hdfsConfiguration);
+                        statFilesWeakScaling();
                         break;
                     case OP_MKDIR_WEAK_SCALING:
                         LOG.info("MKDIR WEAK SCALING selected!");
-                        mkdirWeakScaling(hdfsConfiguration);
+                        mkdirWeakScaling();
                         break;
                     case OP_PREPARE_GENERATED_WORKLOAD:
                         LOG.info("Randomly-Generated Workload selected!");
@@ -1369,7 +1364,7 @@ public class Commander {
             LOG.debug("At end of benchmark, the HDFS Clients Cache has " + hdfsClients.size() + " clients.");
     }
 
-    private void mkdirWeakScaling(final Configuration configuration) throws InterruptedException, IOException {
+    private void mkdirWeakScaling() throws InterruptedException, IOException {
         int directoryChoice = getIntFromUser("Should the threads create directories within the " +
                 "SAME DIRECTORY [1], DIFFERENT DIRECTORIES [2], or \"RANDOM MKDIRs\" [3]?");
 
@@ -1533,7 +1528,7 @@ public class Commander {
         }
     }
 
-    private void statFilesWeakScaling(final Configuration configuration) throws InterruptedException, FileNotFoundException {
+    private void statFilesWeakScaling() throws InterruptedException, FileNotFoundException {
         System.out.print("How many threads should be used?\n> ");
         String inputN = scanner.nextLine();
         int numThreads = Integer.parseInt(inputN);
@@ -2267,7 +2262,7 @@ public class Commander {
      *  - The path to a local file containing HopsFS file paths.
      *  - The number of files each thread should read.
      */
-    private void weakScalingReadOperationV2(final Configuration configuration)
+    private void weakScalingReadOperationV2()
             throws InterruptedException, FileNotFoundException {
         System.out.print("How many threads should be used?\n> ");
         String inputN = scanner.nextLine();

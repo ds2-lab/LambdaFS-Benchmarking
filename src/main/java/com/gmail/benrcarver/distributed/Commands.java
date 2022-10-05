@@ -69,7 +69,7 @@ public class Commands {
      *
      * @return An HDFS client instance.
      */
-    static synchronized DistributedFileSystem getHdfsClient() {
+    public static synchronized DistributedFileSystem getHdfsClient() {
         DistributedFileSystem hdfs;
         hdfs = hdfsClients.poll();
 
@@ -81,7 +81,7 @@ public class Commands {
         return hdfs;
     }
 
-    static void returnHdfsClient(DistributedFileSystem hdfs) throws InterruptedException {
+    public static void returnHdfsClient(DistributedFileSystem hdfs) throws InterruptedException {
         hdfsClients.add(hdfs);
     }
 
