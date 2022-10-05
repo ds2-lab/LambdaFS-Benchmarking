@@ -13,7 +13,6 @@ public class Network {
 
         kryo.setReferences(true);
         kryo.setRegistrationRequired(false);
-        kryo.setWarnUnregisteredClasses(true);
 
         kryo.register(WorkloadResponse.class);
         kryo.register(String[].class);
