@@ -98,7 +98,7 @@ public class InteractiveTest {
             LOG.info("Throughput          : " + filesResult.getOpsPerSecond());
 
             if (filesResult.latencyStatistics != null) {
-                DescriptiveStatistics latency = filesResult.latencyStatistics;
+                DescriptiveStatistics latency = new DescriptiveStatistics(filesResult.latencyStatistics);
 
                 LOG.info("Latency (ms) [min: " + latency.getMin() + ", max: " + latency.getMax() +
                         ", avg: " + latency.getMean() + ", std dev: " + latency.getStandardDeviation() +
