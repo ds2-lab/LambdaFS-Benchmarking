@@ -1257,7 +1257,8 @@ public class Commander {
         System.out.println("throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
         System.out.println(aggregatedResult.metricsString);
 
-        System.out.println(aggregatedResult.toString());
+        DecimalFormat df = new DecimalFormat("#.####");
+        System.out.println(aggregatedResult.toString(df));
 
         HashMap<String, List<Pair<Long, Long>>> perOpLatencies = new HashMap<>();
 
@@ -2853,6 +2854,17 @@ public class Commander {
             return "Throughput (ops/sec): " + throughput + ", Cache Hits: " + cacheHits + ", Cache Misses: " +
                     cacheMisses + ", Cache Hit Rate: " + getCacheHitRate() + ", Average TCP Latency: " + avgTcpLatency +
                     ", Average HTTP Latency: " + avgHttpLatency + ", Average Combined Latency: " + avgCombinedLatency;
+
+        }
+
+        public String toString(DecimalFormat df) {
+            if (df == null)
+                throw new IllegalArgumentException("DecimalFormat parameter cannot be null.");
+
+            return "Throughput (ops/sec): " + df.format(throughput) + ", Cache Hits: " + cacheHits + ", Cache Misses: " +
+                    cacheMisses + ", Cache Hit Rate: " + getCacheHitRate() + ", Average TCP Latency: " +
+                    df.format(avgTcpLatency) + ", Average HTTP Latency: " + df.format(avgHttpLatency) +
+                    ", Average Combined Latency: " + df.format(avgCombinedLatency);
 
         }
     }
