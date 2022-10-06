@@ -164,7 +164,12 @@ public class RandomlyGeneratedWorkload {
         int numWorkerThreads = bmConf.getThreadsPerWorker();
         LOG.debug("Creating " + numWorkerThreads + " threads now...");
 
-        for (int i = 0; i < numWorkerThreads; i++) {
+        for (int i = 0; i < numWorkerThreads / 2; i++) {
+            Callable<Object> worker = new Worker(bmConf);
+            workers.add(worker);
+        }
+
+        for (int i = 0; i < numWorkerThreads / 2; i++) {
             Callable<Object> worker = new Worker(bmConf);
             workers.add(worker);
         }
@@ -228,9 +233,15 @@ public class RandomlyGeneratedWorkload {
     public class Worker implements Callable<Object> {
         private FilePool filePool;
         private final BMConfiguration config;
+        private final boolean canWrite;
 
         public Worker(BMConfiguration config) {
+            this(config, true);
+        }
+
+        public Worker(BMConfiguration config, boolean canWrite) {
             this.config = config;
+            this.canWrite = canWrite;
         }
 
         private void extractMetrics(DistributedFileSystem dfs) throws InterruptedException {
@@ -311,6 +322,9 @@ public class RandomlyGeneratedWorkload {
                         }
 
                         FSOperation op = opCoin.flip();
+
+                        if (!canWrite && op.isWrite())
+                            op = FSOperation.READ_FILE;
 
                         if (LOG.isDebugEnabled()) {
                             LOG.debug("Generated " + op.getName() + " operation! Completed " + numOperations +

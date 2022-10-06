@@ -14,12 +14,20 @@ import static com.gmail.benrcarver.distributed.Commands.*;
  */
 public abstract class FSOperation {
     private final String name;
+    private final boolean isWrite;
+
+    public FSOperation(String name, boolean isWrite) {
+        this.name = name;
+        this.isWrite = isWrite;
+    }
 
     public FSOperation(String name) {
-        this.name = name;
+        this(name, false);
     }
 
     public String getName() { return this.name; }
+
+    public boolean isWrite() { return this.isWrite; }
 
     /**
      * Implement this to run whatever the thread is supposed to do for the benchmark.
@@ -27,14 +35,14 @@ public abstract class FSOperation {
      */
     public abstract boolean call(final DistributedFileSystem hdfs, String path, String content);
 
-    public static FSOperation NOT_SUPPORTED = new FSOperation("NOT SUPPORTED") {
+    public static FSOperation NOT_SUPPORTED = new FSOperation("NOT SUPPORTED", false) {
         @Override
         public boolean call(DistributedFileSystem hdfs, String path, String content) {
             throw new NotImplementedException("The requested operation is not supported.");
         }
     };
 
-    public static FSOperation CREATE_FILE = new FSOperation("CREATE FILE") {
+    public static FSOperation CREATE_FILE = new FSOperation("CREATE FILE", true) {
         @Override
         public boolean call(DistributedFileSystem hdfs, String path, String content) {
             return createFile(path, content, hdfs);
@@ -76,21 +84,21 @@ public abstract class FSOperation {
         }
     };
 
-    public static FSOperation MKDIRS = new FSOperation("MKDIR") {
+    public static FSOperation MKDIRS = new FSOperation("MKDIR", true) {
         @Override
         public boolean call(DistributedFileSystem hdfs, String path, String content) {
             return mkdir(path, hdfs);
         }
     };
 
-    public static FSOperation DELETE_FILE = new FSOperation("DELETE") {
+    public static FSOperation DELETE_FILE = new FSOperation("DELETE", true) {
         @Override
         public boolean call(DistributedFileSystem hdfs, String path, String content) {
             return delete(path, hdfs);
         }
     };
 
-    public static FSOperation RENAME_FILE = new FSOperation("RENAME") {
+    public static FSOperation RENAME_FILE = new FSOperation("RENAME", true) {
         @Override
         public boolean call(DistributedFileSystem hdfs, String path, String content) {
             return readFile(path, hdfs);
