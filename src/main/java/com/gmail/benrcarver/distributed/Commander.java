@@ -1269,6 +1269,8 @@ public class Commander {
         try (Writer writer = new BufferedWriter(
                 new OutputStreamWriter(new FileOutputStream(dir + "/summary.dat"), StandardCharsets.UTF_8))) {
             writer.write(aggregatedResult.toString());
+            writer.write("\n");
+            writer.write(aggregatedResult.toString(df));
         }
 
         // Write timestamps and latencies for ALL operations.
