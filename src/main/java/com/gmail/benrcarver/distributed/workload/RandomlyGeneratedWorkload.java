@@ -203,11 +203,9 @@ public class RandomlyGeneratedWorkload {
         startTime = System.currentTimeMillis();     // Start the clock.
         startLatch.countDown();                     // Let the threads start.
 
+        boolean acquired = false;
         try {
-            boolean acquired = endSemaphore.tryAcquire((long)(duration * 1.1), TimeUnit.MILLISECONDS);
-
-            if (!acquired)
-                LOG.error("Timed-out waiting for workload after " + (long)(duration * 1.1) + " milliseconds.");
+            acquired = endSemaphore.tryAcquire((long)(duration * 1.1), TimeUnit.MILLISECONDS);
         } catch (InterruptedException ex) {
             LOG.error("Interrupted while waiting for workload to complete:", ex);
         }
@@ -215,26 +213,33 @@ public class RandomlyGeneratedWorkload {
         long totalTime = endTime - startTime;
         // executor.invokeAll(workers); // blocking call
 
-        LOG.info("Randomly-generated workload ended after " + totalTime + " ms.");
+        if (!acquired)
+            LOG.error("Timed-out waiting for workload after " + totalTime + " milliseconds.");
+        else
+            LOG.info("Randomly-generated workload ended after " + totalTime + " ms.");
 
         int numFailed = 0;
-        int numSucceeded = 0;
-        for (Future<Object> future : futures) {
-            if (future.isDone()) {
-                numSucceeded++;
-                future.get(); // Not really necessary.
-            } else {
-                numFailed++;
+        if (acquired) {
+            for (Future<Object> future : futures) {
+                future.get();
             }
-        }
-
-        if (numFailed > 0) {
-            LOG.error(numFailed + " worker" + (numFailed == 1 ? " " : "s ") + "failed to complete successfully.");
-            LOG.info(numSucceeded + "/" + (numFailed + numSucceeded) + " worker(s) completed successfully.");
         } else {
-            LOG.info("All " + numSucceeded + " worker(s) completed successfully.");
-        }
+            int numSucceeded = 0;
+            for (Future<Object> future : futures) {
+                if (future.isDone() && !future.isCancelled()) {
+                    numSucceeded++;
+                    future.get(); // Not really necessary.
+                } else {
+                    numFailed++;
+                }
+            }
 
+            if (numFailed > 0) {
+                LOG.error(numFailed + " worker" + (numFailed == 1 ? " " : "s ") + "failed to complete successfully.");
+            }
+            LOG.info(numSucceeded + "/" + (numFailed + numSucceeded) + " worker(s) completed successfully.");
+        }
+        
         List<OperationPerformed> allOpsPerformed = new ArrayList<>();
 
         for (List<OperationPerformed> opsPerformed : operationsPerformed) {
@@ -406,7 +411,7 @@ public class RandomlyGeneratedWorkload {
                         filePool.fileCreationSucceeded(path);
                 }
 
-                // updateStats(opType, retVal, new BMOpStats(opStartTime, opExeTime));
+                // updateStats(operation, retVal, new BMOpStats(opStartTime, opExeTime));
             } else {
                 LOG.debug("Could not perform operation " + operation + ". Got Null from the file pool");
             }
