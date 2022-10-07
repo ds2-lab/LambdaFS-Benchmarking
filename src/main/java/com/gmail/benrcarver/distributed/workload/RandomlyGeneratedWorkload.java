@@ -203,15 +203,37 @@ public class RandomlyGeneratedWorkload {
         startTime = System.currentTimeMillis();     // Start the clock.
         startLatch.countDown();                     // Let the threads start.
 
-        endSemaphore.acquire();
+        try {
+            boolean acquired = endSemaphore.tryAcquire((long)(duration * 1.1), TimeUnit.MILLISECONDS);
+
+            if (!acquired)
+                LOG.error("Timed-out waiting for workload after " + (long)(duration * 1.1) + " milliseconds.");
+        } catch (InterruptedException ex) {
+            LOG.error("Interrupted while waiting for workload to complete:", ex);
+        }
         long endTime = System.currentTimeMillis();
         long totalTime = endTime - startTime;
         // executor.invokeAll(workers); // blocking call
 
-        LOG.info("Finished randomly-generated workload in " + totalTime + " ms.");
+        LOG.info("Randomly-generated workload ended after " + totalTime + " ms.");
 
-        for (Future<Object> future : futures)
-            future.get();
+        int numFailed = 0;
+        int numSucceeded = 0;
+        for (Future<Object> future : futures) {
+            if (future.isDone()) {
+                numSucceeded++;
+                future.get(); // Not really necessary.
+            } else {
+                numFailed++;
+            }
+        }
+
+        if (numFailed > 0) {
+            LOG.error(numFailed + " worker" + (numFailed == 1 ? " " : "s ") + "failed to complete successfully.");
+            LOG.info(numSucceeded + "/" + (numFailed + numSucceeded) + " worker(s) completed successfully.");
+        } else {
+            LOG.info("All " + numSucceeded + " worker(s) completed successfully.");
+        }
 
         List<OperationPerformed> allOpsPerformed = new ArrayList<>();
 
