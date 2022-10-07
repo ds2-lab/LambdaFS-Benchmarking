@@ -166,7 +166,7 @@ public class RandomlyGeneratedWorkload {
 
         int numWorkerThreads = bmConf.getThreadsPerWorker();
         int numWriters = (int)(numWorkerThreads * percentWriters);
-        int numReaderOnly = (int)(numWorkerThreads - numWriters);
+        int numReaderOnly = numWorkerThreads - numWriters;
 
         LOG.debug("Creating " + numWorkerThreads + " threads now...");
 
