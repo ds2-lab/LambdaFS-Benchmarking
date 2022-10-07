@@ -176,7 +176,7 @@ public class RandomlyGeneratedWorkload {
         }
 
         for (int i = 0; i < numReaderOnly; i++) {
-            Callable<Object> worker = new Worker(bmConf, true);
+            Callable<Object> worker = new Worker(bmConf, false);
             workers.add(worker);
         }
 
