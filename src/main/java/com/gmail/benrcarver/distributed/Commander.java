@@ -887,29 +887,12 @@ public class Commander {
         System.out.println("throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
         System.out.println(aggregatedResult.metricsString);
 
-        long unixTs = System.currentTimeMillis() / 1000L;
-        File dir = new File("./random_workload_data/random_workload_" + unixTs);
+        String outputDirectory = "./random_workload_data/" + operationId;
+        File dir = new File(outputDirectory);
         dir.mkdirs();
 
         // Write workload summary to a file.
-        try (Writer writer = new BufferedWriter(
-                new OutputStreamWriter(new FileOutputStream(dir + "/summary.dat"), StandardCharsets.UTF_8))) {
-            writer.write(aggregatedResult.toString());
-        }
-
-        for (Map.Entry<String, List<BMOpStats>> entry : aggregatedResult.opsStats.entrySet()) {
-            String opName = entry.getKey();
-            List<BMOpStats> stats = entry.getValue();
-
-            try (Writer writer = new BufferedWriter(new OutputStreamWriter(
-                    new FileOutputStream(dir + "/" + opName + ".txt"), StandardCharsets.UTF_8))) {
-                for (BMOpStats stat : stats) {
-                    long ts = stat.OpStart;
-                    long latency = stat.OpDuration;
-                    writer.write(ts + "," + latency + "\n");
-                }
-            }
-        }
+        Utils.writeAggregatedResultToFile(aggregatedResult, outputDirectory);
     }
 
     /**
@@ -2546,7 +2529,7 @@ public class Commander {
         System.out.print("> ");
     }
 
-    public static class AggregatedResult {
+    public static class AggregatedResult implements Serializable {
         public double throughput;
         public double averageLatency;
         public String metricsString; // All the metrics I'd want formatted so that I can copy & paste into Excel.

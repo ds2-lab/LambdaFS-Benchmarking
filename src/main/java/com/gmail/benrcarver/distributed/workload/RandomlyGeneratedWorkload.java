@@ -351,15 +351,6 @@ public class RandomlyGeneratedWorkload {
         }
 
         private void updateStats(FSOperation opType, boolean success, BMOpStats stats) {
-            // AtomicLong stat = operationsStats.get(opType.getName());
-            // if (stat == null) {
-                // this should be synchronized to get accurate stats. However, this will slow
-                // down and these stats are just for log messages. Some inconsistencies are OK.
-                // stat = new AtomicLong(0);
-                // /operationsStats.put(opType.getName(), stat);
-            // }
-            // stat.incrementAndGet();
-
             synchronized (opsStats) {
                 ArrayList<BMOpStats> times = (ArrayList<BMOpStats>) opsStats.computeIfAbsent(opType.getName(), k -> new ArrayList<>());
                 times.add(stats);

@@ -1,14 +1,19 @@
 package com.gmail.benrcarver.distributed.util;
 
+import com.gmail.benrcarver.distributed.Commander;
+import com.gmail.benrcarver.distributed.DistributedBenchmarkResult;
+import com.gmail.benrcarver.distributed.workload.BMOpStats;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class Utils {
     /**
@@ -22,6 +27,86 @@ public class Utils {
             ex.printStackTrace();
         }
         return configuration;
+    }
+
+    /**
+     * WARNING: If there is existing data in the output directory, then it will be over-written.
+     * @param result The object to write.
+     * @param outputDirectory Directory in which to write all the files.
+     */
+    public static void writeDistributedResultToFile(DistributedBenchmarkResult result, String outputDirectory)
+            throws IOException {
+        // Write workload summary to a file.
+        try (Writer writer = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(outputDirectory + "/summary.dat"), StandardCharsets.UTF_8))) {
+            writer.write(result.toString());
+        }
+
+        for (Map.Entry<String, List<BMOpStats>> entry : result.opsStats.entrySet()) {
+            String opName = entry.getKey();
+            List<BMOpStats> stats = entry.getValue();
+
+            try (Writer writer = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(outputDirectory + "/" + opName + ".txt"), StandardCharsets.UTF_8))) {
+                for (BMOpStats stat : stats) {
+                    long ts = stat.OpStart;
+                    long latency = stat.OpDuration;
+                    writer.write(ts + "," + latency + "\n");
+                }
+            }
+        }
+
+        // Write the serialized object to a file.
+        try (FileOutputStream fos = new FileOutputStream(outputDirectory + "/distributedBenchmarkResult.dat");
+             ObjectOutputStream oos = new ObjectOutputStream(fos)) {
+
+            oos.writeObject(result);
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Write the given aggregated result object to a file. This involves writing the summary string, the
+     * latency statistics for each operation, and the serialized object itself.
+     *
+     * WARNING: If there is existing data in the output directory, then it will be over-written.
+     * @param aggregatedResult The object to write.
+     * @param outputDirectory Directory in which to write all the files.
+     */
+    public static void writeAggregatedResultToFile(Commander.AggregatedResult aggregatedResult, String outputDirectory)
+            throws IOException {
+        // Write workload summary to a file.
+        try (Writer writer = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(outputDirectory + "/summary.dat"), StandardCharsets.UTF_8))) {
+            writer.write(aggregatedResult.toString());
+        }
+
+        // Write the latency statistics to a file.
+        for (Map.Entry<String, List<BMOpStats>> entry : aggregatedResult.opsStats.entrySet()) {
+            String opName = entry.getKey();
+            List<BMOpStats> stats = entry.getValue();
+
+            try (Writer writer = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(outputDirectory + "/" + opName + ".txt"), StandardCharsets.UTF_8))) {
+                for (BMOpStats stat : stats) {
+                    long ts = stat.OpStart;
+                    long latency = stat.OpDuration;
+                    writer.write(ts + "," + latency + "\n");
+                }
+            }
+        }
+
+        // Write the serialized object to a file.
+        try (FileOutputStream fos = new FileOutputStream(outputDirectory + "/aggregatedResult.dat");
+             ObjectOutputStream oos = new ObjectOutputStream(fos)) {
+
+            oos.writeObject(aggregatedResult);
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
     }
 
     /**
