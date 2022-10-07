@@ -53,8 +53,6 @@ public class DirNamesGenerator {
             // The second condition checks if we're creating the first child directory or not.
             // If we are creating the first child directory, then remove the parent from the set of leaf directories.
             if (pathIndices[level + 1] < 0) {
-                System.out.println("childNum: " + childNum);
-                System.out.println("Parent directory: " + next.toString());
                 // The parent directory will be the current form of the string in the string builder.
                 leafDirectories.remove(next.toString());
             }
