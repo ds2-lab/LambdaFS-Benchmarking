@@ -168,7 +168,9 @@ public class RandomlyGeneratedWorkload {
         int numWriters = (int)(numWorkerThreads * percentWriters);
         int numReaderOnly = numWorkerThreads - numWriters;
 
-        LOG.debug("Creating " + numWorkerThreads + " threads now...");
+        LOG.info("Creating a total of " + (numWriters + numReaderOnly) + " worker thread(s).");
+        LOG.info("There will be " + numWriters + " workers that can read and write.");
+        LOG.info("There will be " + numReaderOnly + " workers that are read-only.");
 
         for (int i = 0; i < numWriters; i++) {
             Callable<Object> worker = new Worker(bmConf);
@@ -185,8 +187,6 @@ public class RandomlyGeneratedWorkload {
             workerLimiter.setDuration(duration);
             workerLimiter.setStat("completed", operationsCompleted);
         }
-
-        LOG.debug("workers.size(): " + workers.size());
 
         List<Future<Object>> futures = new ArrayList<>();
         for (Callable<Object> worker : workers) {
