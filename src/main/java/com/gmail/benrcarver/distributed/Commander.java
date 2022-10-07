@@ -1056,7 +1056,7 @@ public class Commander {
         waitingOn.clear();
         workloadResponseQueue.clear();
 
-        final int expectedNumResponses = followers.size();
+        int expectedNumResponses = followers.size();
 
         LOG.info("Telling Followers to prepare for Random Workload " + operationId);
         issueCommandToFollowers("Prepare for Random Workload", operationId, payload, true);
@@ -1083,8 +1083,11 @@ public class Commander {
             if (counter >= 60000) {
                 boolean decision = getBooleanFromUser("Stop waiting early?");
 
-                if (decision)
+                if (decision) {
+                    // We won't be waiting on these anymore.
+                    expectedNumResponses -= waitingOn.size();
                     break;
+                }
 
                 counter = 0;
             }
@@ -1139,8 +1142,11 @@ public class Commander {
             if (counter >= 60000) {
                 boolean decision = getBooleanFromUser("Stop waiting early?");
 
-                if (decision)
+                if (decision) {
+                    // We won't be waiting on these anymore.
+                    expectedNumResponses -= waitingOn.size();
                     break;
+                }
 
                 counter = 0;
             }
@@ -1201,8 +1207,11 @@ public class Commander {
             if (counter >= 60000) {
                 boolean decision = getBooleanFromUser("Stop waiting early?");
 
-                if (decision)
+                if (decision) {
+                    // We won't be waiting on these anymore.
+                    expectedNumResponses -= waitingOn.size();
                     break;
+                }
 
                 counter = 0;
             }
@@ -2225,8 +2234,11 @@ public class Commander {
             if (counter >= 60000) {
                 boolean decision = getBooleanFromUser("Stop waiting early?");
 
-                if (decision)
+                if (decision) {
+                    // We won't be waiting on these anymore.
+                    numDistributedResults -= waitingOn.size();
                     break;
+                }
 
                 counter = 0;
             }
