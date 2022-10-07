@@ -296,10 +296,10 @@ public class Commands {
 
         // TODO: Verify that I've calculated the total number of operations correctly.
         int numSuccess = numSuccessfulOps.get();
-        double totalOperations = numOps.get();
+        int totalOperations = numOps.get();
         LOG.info("Finished performing all " + totalOperations + " operations in " + durationSeconds + " sec.");
-        double totalThroughput = totalOperations / durationSeconds;
-        double successThroughput = numSuccess / durationSeconds;
+        double totalThroughput = (double)totalOperations / durationSeconds;
+        double successThroughput = (double)numSuccess / durationSeconds;
         LOG.info("Number of successful operations: " + numSuccess);
         LOG.info("Number of failed operations: " + (totalOperations - numSuccess));
 
@@ -315,7 +315,7 @@ public class Commands {
                 durationSeconds, start, end, totalCacheHits, totalCacheMisses,
                 TRACK_OP_PERFORMED ? allOperationsPerformed.toArray(new OperationPerformed[0]) : null,
                 TRACK_OP_PERFORMED ? sharedHdfs.getTransactionEvents() : null,
-                latencyTcp, latencyHttp);
+                latencyTcp, latencyHttp, totalOperations - numSuccess);
     }
 
     public static DistributedBenchmarkResult writeFilesToDirectories(DistributedFileSystem hdfs)
@@ -910,7 +910,8 @@ public class Commands {
         for (Long latency : latencies)
             System.out.println(latency);
 
-        return new DistributedBenchmarkResult(null, OP_DELETE_FILES, paths.size(), durationSeconds, s, t);
+        return new DistributedBenchmarkResult(null, OP_DELETE_FILES, paths.size(), durationSeconds, s, t,
+                0, 0, new OperationPerformed[0], null);
     }
 
     /**

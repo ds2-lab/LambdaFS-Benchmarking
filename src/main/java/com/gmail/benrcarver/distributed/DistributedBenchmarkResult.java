@@ -43,6 +43,8 @@ public class DistributedBenchmarkResult implements Serializable {
 
     public int cacheMisses;
 
+    public int numFailures;
+
     /**
      * TCP latencies obtained during the workload whose result is encapsulated by this DistributedBenchmarkResult instance.
      */
@@ -58,19 +60,8 @@ public class DistributedBenchmarkResult implements Serializable {
 
     public DistributedBenchmarkResult() { }
 
-    /**
-     * Constructor.
-     *
-     * @param opId Unique ID of the operation.
-     * @param operation Internal ID of the operation (like the constant integer value that refers to this
-     *                  operation in the code).
-     * @param numOpsPerformed How many operations we performed (at a high/abstract level, as certain operations may
-     *                        actually perform a number of real FS calls).
-     * @param duration How long, in seconds.
-     * @param startTime Start time, epoch millisecond.
-     * @param stopTime End time, epoch millisecond.
-     */
-    public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed,
+
+    private DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed,
                                       double duration, long startTime, long stopTime) {
         this(opId, operation, numOpsPerformed, duration, startTime, stopTime, 0, 0);
     }
@@ -86,14 +77,27 @@ public class DistributedBenchmarkResult implements Serializable {
                                       long stopTime, int cacheHits, int cacheMisses, OperationPerformed[] opsPerformed,
                                       ConcurrentHashMap<String, List<TransactionEvent>> txEvents) {
         this(opId, operation, numOpsPerformed, duration, startTime, stopTime, cacheHits, cacheMisses,
-                opsPerformed, txEvents, null, null);
+                opsPerformed, txEvents, null, null, -1);
     }
 
+    /**
+     * Constructor.
+     *
+     * @param opId Unique ID of the operation.
+     * @param operation Internal ID of the operation (like the constant integer value that refers to this
+     *                  operation in the code).
+     * @param numOpsPerformed How many operations we performed (at a high/abstract level, as certain operations may
+     *                        actually perform a number of real FS calls).
+     * @param duration How long, in seconds.
+     * @param startTime Start time, epoch millisecond.
+     * @param stopTime End time, epoch millisecond.
+     */
     public DistributedBenchmarkResult(String opId, int operation, int numOpsPerformed, double duration, long startTime,
                                       long stopTime, int cacheHits, int cacheMisses, OperationPerformed[] opsPerformed,
                                       ConcurrentHashMap<String, List<TransactionEvent>> txEvents,
                                       DescriptiveStatistics tcpLatencyStatistics,
-                                      DescriptiveStatistics httpLatencyStatistics) {
+                                      DescriptiveStatistics httpLatencyStatistics,
+                                      int numFailures) {
         this.opId = opId;
         this.operation = operation;
         this.numOpsPerformed = numOpsPerformed;
@@ -106,6 +110,7 @@ public class DistributedBenchmarkResult implements Serializable {
         this.txEvents = txEvents;
         this.tcpLatencyStatistics = tcpLatencyStatistics;
         this.httpLatencyStatistics = httpLatencyStatistics;
+        this.numFailures = numFailures;
 
         this.jvmId = ManagementFactory.getRuntimeMXBean().getName();
     }
@@ -128,7 +133,7 @@ public class DistributedBenchmarkResult implements Serializable {
         String str = "DistributedBenchmarkResult(opId=" + opId + ", operation=" + operation + ", numOpsPerformed=" +
                 numOpsPerformed + ", duration=" + durationSeconds + "sec, throughput=" + getOpsPerSecond() +
                 " ops/sec, startTime=" + startTime + ", stopTime=" + stopTime + ", cacheHits=" + cacheHits +
-                ", cacheMisses=" + cacheMisses;
+                ", cacheMisses=" + cacheMisses + ", numFailures=" + numFailures;
 
         if (tcpLatencyStatistics != null)
             str += ", avgTcpLatency=" + (tcpLatencyStatistics.getN() > 0 ? tcpLatencyStatistics.getMean() : 0);
@@ -136,6 +141,6 @@ public class DistributedBenchmarkResult implements Serializable {
         if (httpLatencyStatistics != null)
             str += ", avgHttpLatency=" + (httpLatencyStatistics.getN() > 0 ? httpLatencyStatistics.getMean() : 0);
 
-        return str;
+        return str + ")";
     }
 }

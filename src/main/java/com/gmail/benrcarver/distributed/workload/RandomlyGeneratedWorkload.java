@@ -245,7 +245,7 @@ public class RandomlyGeneratedWorkload {
 
         DistributedBenchmarkResult result = new DistributedBenchmarkResult(opId, Constants.OP_PREPARE_GENERATED_WORKLOAD,
                 operationsCompleted.get(), totalTime / 1.0e3, startTime, endTime, 0, 0,
-                allOpsPerformed.toArray(new OperationPerformed[0]), null, tcpLatency, httpLatency);
+                allOpsPerformed.toArray(new OperationPerformed[0]), null, tcpLatency, httpLatency, numFailed);
 
         currentState = WorkloadState.FINISHED;
         return result;
