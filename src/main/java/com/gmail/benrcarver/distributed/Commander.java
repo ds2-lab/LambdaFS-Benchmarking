@@ -1269,11 +1269,11 @@ public class Commander {
         DecimalFormat df = new DecimalFormat("#.####");
         System.out.println(aggregatedResult.toString(df));
 
-        HashMap<String, List<Pair<Long, Long>>> perOpLatencies = new HashMap<>();
-
         long unixTs = System.currentTimeMillis() / 1000L;
-        File dir = new File("./random_workload_data/random_workload_" + unixTs);
+        String outputDirectory = "./random_workload_data/" + operationId;
+        File dir = new File(outputDirectory);
         dir.mkdirs();
+
         // Write workload summary to a file.
         try (Writer writer = new BufferedWriter(
                 new OutputStreamWriter(new FileOutputStream(dir + "/summary.dat"), StandardCharsets.UTF_8))) {
@@ -1282,34 +1282,7 @@ public class Commander {
             writer.write(aggregatedResult.toString(df));
         }
 
-        // Write timestamps and latencies for ALL operations.
-        try (Writer writer = new BufferedWriter(new OutputStreamWriter(
-                new FileOutputStream(dir + "/ALL_OPS.dat"), StandardCharsets.UTF_8))) {
-            for (OperationPerformed operationPerformed : primaryHdfs.getOperationsPerformed()) {
-                long ts = operationPerformed.getInvokedAtTime();
-                long latency = operationPerformed.getLatency();
-                writer.write(ts + "," + latency + "\n");
-
-                List<Pair<Long, Long>> opData = perOpLatencies.computeIfAbsent(operationPerformed.getOperationName(),
-                        k -> new ArrayList<>());
-                opData.add(new Pair<>(operationPerformed.getInvokedAtTime(), operationPerformed.getLatency()));
-            }
-        }
-
-        // Write timestamps and latencies for each individual operation.
-        for (Map.Entry<String, List<Pair<Long, Long>>> entry : perOpLatencies.entrySet()) {
-            String opName = entry.getKey();
-            List<Pair<Long, Long>> latencyData = entry.getValue();
-
-            try (Writer writer = new BufferedWriter(new OutputStreamWriter(
-                    new FileOutputStream(dir + "/" + opName + ".txt"), StandardCharsets.UTF_8))) {
-                for (Pair<Long, Long> datum : latencyData) {
-                    long ts = datum.getFirst();
-                    long latency = datum.getSecond();
-                    writer.write(ts + "," + latency + "\n");
-                }
-            }
-        }
+        Utils.writeRandomWorkloadResultsToFile(outputDirectory, primaryHdfs.getOperationsPerformed());
     }
 
     private void mkdirWeakScaling(final DistributedFileSystem sharedHdfs) throws IOException, InterruptedException {

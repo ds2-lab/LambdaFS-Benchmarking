@@ -516,6 +516,14 @@ public class Follower {
 
                     if (activeWorkload.getCurrentState() == RandomlyGeneratedWorkload.WorkloadState.FINISHED) {
                         LOG.debug("Successfully executed random workload.");
+
+                        LOG.debug("Writing result to file now...");
+                        String outputDirectory = "./random_workload_follower_data/" + operationId;
+                        File dir = new File(outputDirectory);
+                        dir.mkdirs();
+                        Utils.writeRandomWorkloadResultsToFile(outputDirectory, hdfs.getOperationsPerformed());
+
+                        LOG.debug("Sending result to leader now...");
                         sendResultToLeader(result);
                     }
                     else {
