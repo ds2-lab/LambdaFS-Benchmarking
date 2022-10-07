@@ -125,9 +125,17 @@ public class DistributedBenchmarkResult implements Serializable {
 
     @Override
     public String toString() {
-        return "DistributedBenchmarkResult(opId=" + opId + ", operation=" + operation + ", numOpsPerformed=" +
+        String str = "DistributedBenchmarkResult(opId=" + opId + ", operation=" + operation + ", numOpsPerformed=" +
                 numOpsPerformed + ", duration=" + durationSeconds + "sec, throughput=" + getOpsPerSecond() +
                 " ops/sec, startTime=" + startTime + ", stopTime=" + stopTime + ", cacheHits=" + cacheHits +
-                ", cacheMisses=" + cacheMisses + ")";
+                ", cacheMisses=" + cacheMisses;
+
+        if (tcpLatencyStatistics != null)
+            str += ", avgTcpLatency=" + (tcpLatencyStatistics.getN() > 0 ? tcpLatencyStatistics.getMean() : 0);
+
+        if (httpLatencyStatistics != null)
+            str += ", avgHttpLatency=" + (httpLatencyStatistics.getN() > 0 ? httpLatencyStatistics.getMean() : 0);
+
+        return str;
     }
 }
