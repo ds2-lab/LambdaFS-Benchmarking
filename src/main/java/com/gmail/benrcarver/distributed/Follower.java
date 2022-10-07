@@ -521,7 +521,7 @@ public class Follower {
                         String outputDirectory = "./random_workload_follower_data/" + operationId;
                         File dir = new File(outputDirectory);
                         dir.mkdirs();
-                        Utils.writeRandomWorkloadResultsToFile(outputDirectory, hdfs.getOperationsPerformed());
+                        Utils.writeRandomWorkloadResultsToFile(outputDirectory, result.opsPerformed);
 
                         LOG.debug("Sending result to leader now...");
                         sendResultToLeader(result);

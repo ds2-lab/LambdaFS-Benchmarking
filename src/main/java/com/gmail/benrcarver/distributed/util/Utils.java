@@ -28,6 +28,40 @@ public class Utils {
         return configuration;
     }
 
+    public static void writeRandomWorkloadResultsToFile(String outputDirectory, OperationPerformed[] opsPerf)
+            throws IOException {
+        HashMap<String, List<Pair<Long, Long>>> perOpLatencies = new HashMap<>();
+
+        // Write timestamps and latencies for ALL operations.
+        try (Writer writer = new BufferedWriter(new OutputStreamWriter(
+                new FileOutputStream(outputDirectory + "/ALL_OPS.dat"), StandardCharsets.UTF_8))) {
+            for (OperationPerformed operationPerformed : opsPerf) {
+                long ts = operationPerformed.getInvokedAtTime();
+                long latency = operationPerformed.getLatency();
+                writer.write(ts + "," + latency + "\n");
+
+                List<Pair<Long, Long>> opData = perOpLatencies.computeIfAbsent(operationPerformed.getOperationName(),
+                        k -> new ArrayList<>());
+                opData.add(new Pair<>(operationPerformed.getInvokedAtTime(), operationPerformed.getLatency()));
+            }
+        }
+
+        // Write timestamps and latencies for each individual operation.
+        for (Map.Entry<String, List<Pair<Long, Long>>> entry : perOpLatencies.entrySet()) {
+            String opName = entry.getKey();
+            List<Pair<Long, Long>> latencyData = entry.getValue();
+
+            try (Writer writer = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(outputDirectory + "/" + opName + ".txt"), StandardCharsets.UTF_8))) {
+                for (Pair<Long, Long> datum : latencyData) {
+                    long ts = datum.getFirst();
+                    long latency = datum.getSecond();
+                    writer.write(ts + "," + latency + "\n");
+                }
+            }
+        }
+    }
+
     public static void writeRandomWorkloadResultsToFile(String outputDirectory, List<OperationPerformed> opsPerf)
             throws IOException {
         HashMap<String, List<Pair<Long, Long>>> perOpLatencies = new HashMap<>();
