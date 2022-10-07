@@ -112,6 +112,9 @@ public class Constants {
     public static String INTLVD_DELETE_FILES_PERCENTAGE_KEY = "interleaved.delete.files.percentage";
     public static double INTLVD_DELETE_FILES_PERCENTAGE_DEFAULT = 0;
 
+    public static String PERCENT_WORKERS_CAN_WRITE = "interleaved.percent.workers.can.write";
+    public static double PERCENT_WORKERS_CAN_WRITE_DEFAULT = 1.0;
+
     public static String RAW_CHMOD_FILES_PHASE_DURATION_KEY = "raw.chmod.files.phase.duration";
     public static long   RAW_CHMOD_FILES_PHASE_DURATION_DEFAULT = 0;
 

@@ -28,7 +28,7 @@ public class FileTreeGenerator implements FilePool {
     public FileTreeGenerator(String baseDir, int filesPerDir,
                              int dirPerDir, int initialTreeDepth) {
         this.allThreadFiles = new ArrayList<>(10000);
-        this.allThreadDirs = new ArrayList<>(10000);
+        // this.allThreadDirs = new ArrayList<>(10000);
         this.rand1 = new Random(System.currentTimeMillis());
         UUID uuid = UUID.randomUUID();
 
@@ -160,17 +160,15 @@ public class FileTreeGenerator implements FilePool {
                 if (getPathLength(path) < THRESHOLD) {
                     continue;
                 }
-//        System.out.println("Path "+path);
                 return path;
             }
         }
 
-        LOG.error("Error: Unable to getRandomFile from file pool: "+this+" PoolSize is: "+allThreadFiles.size());
+        LOG.error("Error: Unable to getRandomFile from file pool: " + this + ". PoolSize is: "+allThreadFiles.size());
         return null;
     }
 
     private int getPathLength(String path){
-//    return PathUtils.getPathNames(path).length;
         return StringUtils.countMatches(path,"/");
     }
 
@@ -184,12 +182,11 @@ public class FileTreeGenerator implements FilePool {
                 if (getPathLength(path) < THRESHOLD) {
                     continue;
                 }
-//        System.out.println("Path "+path+ " after retires: "+i);
                 return path;
             }
         }
 
-        LOG.error("Error: Unable to getRandomDir from file pool: "+this+" PoolSize is: "+allThreadFiles.size());
+        LOG.error("Error: Unable to getRandomDir from file pool: " + this + ". PoolSize is: "+allThreadFiles.size());
         return null;
     }
 

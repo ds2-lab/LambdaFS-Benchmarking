@@ -41,6 +41,7 @@ public class RandomlyGeneratedWorkload {
     SynchronizedDescriptiveStatistics avgLatency = new SynchronizedDescriptiveStatistics();
     private final RateLimiter limiter;
     private final ExecutorService executor;
+    private final double percentWriters;
 
     private WorkloadState currentState = WorkloadState.CREATED;
 
@@ -80,6 +81,8 @@ public class RandomlyGeneratedWorkload {
         readySemaphore = new Semaphore((numThreads * -1) + 1);
         endLatch = new CountDownLatch(numThreads);
         startLatch = new CountDownLatch(numThreads + 1);
+
+        percentWriters = bmConf.getWorkerPercentWrites();
 
         operationsPerformed = new ArrayBlockingQueue<>(bmConf.getThreadsPerWorker());
     }
@@ -162,15 +165,18 @@ public class RandomlyGeneratedWorkload {
         }
 
         int numWorkerThreads = bmConf.getThreadsPerWorker();
+        int numWriters = (int)(numWorkerThreads * percentWriters);
+        int numReaderOnly = (int)(numWorkerThreads - numWriters);
+
         LOG.debug("Creating " + numWorkerThreads + " threads now...");
 
-        for (int i = 0; i < numWorkerThreads / 2; i++) {
+        for (int i = 0; i < numWriters; i++) {
             Callable<Object> worker = new Worker(bmConf);
             workers.add(worker);
         }
 
-        for (int i = 0; i < numWorkerThreads / 2; i++) {
-            Callable<Object> worker = new Worker(bmConf);
+        for (int i = 0; i < numReaderOnly; i++) {
+            Callable<Object> worker = new Worker(bmConf, true);
             workers.add(worker);
         }
 

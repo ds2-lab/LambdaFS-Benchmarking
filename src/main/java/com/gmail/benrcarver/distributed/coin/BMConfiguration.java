@@ -87,6 +87,13 @@ public class BMConfiguration implements Serializable {
         return getBigDecimal(Constants.INTLVD_RENAME_FILES_PERCENTAGE_KEY, Constants.INTLVD_RENAME_FILES_PERCENTAGE_DEFAULT);
     }
 
+    /**
+     * What percentage of workers can perform both reads AND writes?
+     */
+    public double getWorkerPercentWrites() {
+        return getDouble(Constants.PERCENT_WORKERS_CAN_WRITE, Constants.PERCENT_WORKERS_CAN_WRITE_DEFAULT);
+    }
+
     public long getRawBmDeleteFilesPhaseDuration() {
         return getLong(Constants.RAW_DElETE_FILES_PHASE_DURATION_KEY, Constants.RAW_DELETE_FILES_PHASE_DURATION_DEFAULT);
     }
