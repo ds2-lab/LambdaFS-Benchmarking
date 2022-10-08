@@ -245,7 +245,7 @@ public class Follower {
                 break;
             case OP_CLEAR_METRIC_DATA:
                 LOG.info("Clearing statistics packages...");
-                Commands.clearMetricData(hdfs);
+                Commands.clearMetricDataNoPrompt(hdfs);
                 break;
             case OP_WRITE_STATISTICS:
                 LOG.info("Writing statistics packages to files...");

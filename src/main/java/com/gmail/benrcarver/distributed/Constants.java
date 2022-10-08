@@ -245,6 +245,9 @@ public class Constants {
     public static String NUM_WORKER_THREADS_KEY = "num.worker.threads";
     public static int    NUM_WORKER_THREADS_DEFAULT = 1;
 
+    /**
+     * Should be a double between 0.0 and 1.0.
+     */
     public static String PERCENT_WORKERS_TYPE_2_KEY = "percent.workers.type2";
     public static double PERCENT_WORKERS_TYPE_2_DEFAULT = 0.0;
 
