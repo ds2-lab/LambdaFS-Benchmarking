@@ -197,7 +197,7 @@ public class RandomlyGeneratedWorkload {
         LOG.info("READ2: " + bmConf.getInterleavedBmReadFilesPercentage2() + "\n");
 
         for (int i = 0; i < numType2Workers; i++) {
-            Callable<Object> worker = new Worker(bmConf);
+            Callable<Object> worker = new Worker(bmConf, true);
             workers.add(worker);
         }
 
@@ -407,9 +407,6 @@ public class RandomlyGeneratedWorkload {
                         }
 
                         FSOperation op = opCoin.flip();
-
-                        if (!isType2 && op.isWrite())
-                            op = FSOperation.READ_FILE;
 
                         if (LOG.isDebugEnabled()) {
                             LOG.debug("Generated " + op.getName() + " operation! Completed " + numOperations +
