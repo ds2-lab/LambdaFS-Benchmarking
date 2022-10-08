@@ -13,6 +13,8 @@ import static com.gmail.benrcarver.distributed.coin.FileSizeMultiFaceCoin.isTwoD
 
 /**
  * Originally written by Salman Niazi, the author of HopsFS.
+ *
+ * Extended by Ben.
  */
 public class BMConfiguration implements Serializable {
     private Properties props = null;

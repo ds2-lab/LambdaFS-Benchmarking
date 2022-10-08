@@ -172,7 +172,29 @@ public class RandomlyGeneratedWorkload {
 
         LOG.info("Creating a total of " + (numType2Workers + numType1Workers) + " worker thread(s).");
         LOG.info("There will be " + numType2Workers + " Type 2 workers.");
-        LOG.info("There will be " + numType1Workers + " Type 1 workers.");
+        LOG.info("There will be " + numType1Workers + " Type 1 workers.\n");
+
+        LOG.info("Type 1 Worker Percentages:");
+        LOG.info("CREATE: " + bmConf.getInterleavedBmCreateFilesPercentage());
+        LOG.info("RENAME: " + bmConf.getInterleavedBmRenameFilesPercentage());
+        LOG.info("DELETE: " + bmConf.getInterleavedBmDeleteFilesPercentage());
+        LOG.info("MKDIR: " + bmConf.getInterleavedBmMkdirPercentage());
+        LOG.info("LS DIR: " + bmConf.getInterleavedBmLsDirPercentage());
+        LOG.info("LS FILE: " + bmConf.getInterleavedBmLsFilePercentage());
+        LOG.info("STAT FILE: " + bmConf.getInterleavedBmGetFileInfoPercentage());
+        LOG.info("STAT DIR: " + bmConf.getInterleavedBmGetDirInfoPercentage());
+        LOG.info("READ: " + bmConf.getInterleavedBmReadFilesPercentage() + "\n");
+
+        LOG.info("Type 2 Worker Percentages:");
+        LOG.info("CREATE2: " + bmConf.getInterleavedBmCreateFilesPercentage2());
+        LOG.info("RENAME2: " + bmConf.getInterleavedBmRenameFilesPercentage2());
+        LOG.info("DELETE2: " + bmConf.getInterleavedBmDeleteFilesPercentage2());
+        LOG.info("MKDIR2: " + bmConf.getInterleavedBmMkdirPercentage2());
+        LOG.info("LS DIR2: " + bmConf.getInterleavedBmLsDirPercentage2());
+        LOG.info("LS FILE2: " + bmConf.getInterleavedBmLsFilePercentage2());
+        LOG.info("STAT FILE2: " + bmConf.getInterleavedBmGetFileInfoPercentage2());
+        LOG.info("STAT DIR2: " + bmConf.getInterleavedBmGetDirInfoPercentage2());
+        LOG.info("READ2: " + bmConf.getInterleavedBmReadFilesPercentage2() + "\n");
 
         for (int i = 0; i < numType2Workers; i++) {
             Callable<Object> worker = new Worker(bmConf);
