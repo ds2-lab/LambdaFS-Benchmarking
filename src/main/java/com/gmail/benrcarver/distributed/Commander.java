@@ -1269,7 +1269,6 @@ public class Commander {
         DecimalFormat df = new DecimalFormat("#.####");
         System.out.println(aggregatedResult.toString(df));
 
-        long unixTs = System.currentTimeMillis() / 1000L;
         String outputDirectory = "./random_workload_data/" + operationId;
         File dir = new File(outputDirectory);
         dir.mkdirs();

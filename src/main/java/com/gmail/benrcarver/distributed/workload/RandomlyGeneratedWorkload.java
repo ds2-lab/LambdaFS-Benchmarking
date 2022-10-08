@@ -41,7 +41,7 @@ public class RandomlyGeneratedWorkload {
     SynchronizedDescriptiveStatistics avgLatency = new SynchronizedDescriptiveStatistics();
     private final RateLimiter limiter;
     private final ExecutorService executor;
-    private final double percentWriters;
+    private final double percentType2Workers;
 
     private WorkloadState currentState = WorkloadState.CREATED;
 
@@ -82,7 +82,7 @@ public class RandomlyGeneratedWorkload {
         endLatch = new CountDownLatch(numThreads);
         startLatch = new CountDownLatch(numThreads + 1);
 
-        percentWriters = bmConf.getWorkerPercentWrites();
+        percentType2Workers = bmConf.getPercentWorkersType2();
 
         operationsPerformed = new ArrayBlockingQueue<>(bmConf.getThreadsPerWorker());
     }
@@ -165,19 +165,21 @@ public class RandomlyGeneratedWorkload {
         }
 
         int numWorkerThreads = bmConf.getThreadsPerWorker();
-        int numWriters = (int)(numWorkerThreads * percentWriters);
-        int numReaderOnly = numWorkerThreads - numWriters;
+        int numType2Workers = (int)(numWorkerThreads * percentType2Workers);
+        int numType1Workers = numWorkerThreads - numType2Workers;
 
-        LOG.info("Creating a total of " + (numWriters + numReaderOnly) + " worker thread(s).");
-        LOG.info("There will be " + numWriters + " workers that can read and write.");
-        LOG.info("There will be " + numReaderOnly + " workers that are read-only.");
+        assert(numType1Workers + numType2Workers == numWorkerThreads);
 
-        for (int i = 0; i < numWriters; i++) {
+        LOG.info("Creating a total of " + (numType2Workers + numType1Workers) + " worker thread(s).");
+        LOG.info("There will be " + numType2Workers + " Type 2 workers.");
+        LOG.info("There will be " + numType1Workers + " Type 1 workers.");
+
+        for (int i = 0; i < numType2Workers; i++) {
             Callable<Object> worker = new Worker(bmConf);
             workers.add(worker);
         }
 
-        for (int i = 0; i < numReaderOnly; i++) {
+        for (int i = 0; i < numType1Workers; i++) {
             Callable<Object> worker = new Worker(bmConf, false);
             workers.add(worker);
         }
@@ -266,15 +268,15 @@ public class RandomlyGeneratedWorkload {
     public class Worker implements Callable<Object> {
         private FilePool filePool;
         private final BMConfiguration config;
-        private final boolean canWrite;
+        private final boolean isType2;
 
         public Worker(BMConfiguration config) {
             this(config, true);
         }
 
-        public Worker(BMConfiguration config, boolean canWrite) {
+        public Worker(BMConfiguration config, boolean isType2) {
             this.config = config;
-            this.canWrite = canWrite;
+            this.isType2 = isType2;
         }
 
         private void extractMetrics(DistributedFileSystem dfs) throws InterruptedException {
@@ -302,28 +304,56 @@ public class RandomlyGeneratedWorkload {
             Commands.returnHdfsClient(dfs);
         }
 
+        /**
+         * Return a coin created from the configuration file based on whether this is a Type 1 or Type 2 worker.
+         *
+         * Type 1 and Type 2 workers simply have different percentages for the operations they perform.
+         */
+        private InterleavedMultiFaceCoin getCoin() {
+            if (isType2) {
+                return new InterleavedMultiFaceCoin(config.getInterleavedBmCreateFilesPercentage2(),
+                        config.getInterleavedBmAppendFilePercentage2(),
+                        config.getInterleavedBmReadFilesPercentage2(),
+                        config.getInterleavedBmRenameFilesPercentage2(),
+                        config.getInterleavedBmDeleteFilesPercentage2(),
+                        config.getInterleavedBmLsFilePercentage2(),
+                        config.getInterleavedBmLsDirPercentage2(),
+                        config.getInterleavedBmChmodFilesPercentage2(),
+                        config.getInterleavedBmChmodDirsPercentage2(),
+                        config.getInterleavedBmMkdirPercentage2(),
+                        config.getInterleavedBmSetReplicationPercentage2(),
+                        config.getInterleavedBmGetFileInfoPercentage2(),
+                        config.getInterleavedBmGetDirInfoPercentage2(),
+                        config.getInterleavedBmFileChangeOwnerPercentage2(),
+                        config.getInterleavedBmDirChangeOwnerPercentage2()
+                );
+            } else {
+                return new InterleavedMultiFaceCoin(config.getInterleavedBmCreateFilesPercentage(),
+                        config.getInterleavedBmAppendFilePercentage(),
+                        config.getInterleavedBmReadFilesPercentage(),
+                        config.getInterleavedBmRenameFilesPercentage(),
+                        config.getInterleavedBmDeleteFilesPercentage(),
+                        config.getInterleavedBmLsFilePercentage(),
+                        config.getInterleavedBmLsDirPercentage(),
+                        config.getInterleavedBmChmodFilesPercentage(),
+                        config.getInterleavedBmChmodDirsPercentage(),
+                        config.getInterleavedBmMkdirPercentage(),
+                        config.getInterleavedBmSetReplicationPercentage(),
+                        config.getInterleavedBmGetFileInfoPercentage(),
+                        config.getInterleavedBmGetDirInfoPercentage(),
+                        config.getInterleavedBmFileChangeOwnerPercentage(),
+                        config.getInterleavedBmDirChangeOwnerPercentage()
+                );
+            }
+        }
+
         @Override
         public Object call() throws FileNotFoundException {
             DistributedFileSystem dfs = Commands.getHdfsClient(sharedHdfs, false);
             filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(), bmConf.getDirPerDir(), bmConf.getFilesPerDir(),
                     bmConf.getTreeDepth(), bmConf.isFixedDepthTree(), bmConf.isExistingSubtree(), bmConf.getExistingSubtreePath());
 
-            InterleavedMultiFaceCoin opCoin = new InterleavedMultiFaceCoin(config.getInterleavedBmCreateFilesPercentage(),
-                    config.getInterleavedBmAppendFilePercentage(),
-                    config.getInterleavedBmReadFilesPercentage(),
-                    config.getInterleavedBmRenameFilesPercentage(),
-                    config.getInterleavedBmDeleteFilesPercentage(),
-                    config.getInterleavedBmLsFilePercentage(),
-                    config.getInterleavedBmLsDirPercentage(),
-                    config.getInterleavedBmChmodFilesPercentage(),
-                    config.getInterleavedBmChmodDirsPercentage(),
-                    config.getInterleavedBmMkdirPercentage(),
-                    config.getInterleavedBmSetReplicationPercentage(),
-                    config.getInterleavedBmGetFileInfoPercentage(),
-                    config.getInterleavedBmGetDirInfoPercentage(),
-                    config.getInterleavedBmFileChangeOwnerPercentage(),
-                    config.getInterleavedBmDirChangeOwnerPercentage()
-            );
+            InterleavedMultiFaceCoin opCoin = getCoin();
 
             LOG.debug("Acquiring 'ready' semaphore now...");
             readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
@@ -356,7 +386,7 @@ public class RandomlyGeneratedWorkload {
 
                         FSOperation op = opCoin.flip();
 
-                        if (!canWrite && op.isWrite())
+                        if (!isType2 && op.isWrite())
                             op = FSOperation.READ_FILE;
 
                         if (LOG.isDebugEnabled()) {

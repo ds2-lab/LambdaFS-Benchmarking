@@ -28,31 +28,19 @@ public class BMConfiguration implements Serializable {
         this.props = loadPropFile(configPath);
     }
 
+    /////////////
+    // GENERAL //
+    /////////////
+
     public static void printHelp() {
         System.out.println("You are doomed");
     }
-
 
     private Properties loadPropFile(String file) throws IOException {
         Properties props = new Properties();
         InputStream input = new FileInputStream(file);
         props.load(input);
         return props;
-    }
-
-    public boolean isExistingSubtree() {
-        return getBoolean(Constants.ENABLE_EXISTING_SUBTREE_KEY, Constants.ENABLE_EXISTING_SUBTREE_DEFAULT);
-    }
-
-    public boolean isFixedDepthTree() {
-        return getBoolean(Constants.ENABLE_FIXED_DEPTH_TREE_KEY, Constants.ENABLE_FIXED_DEPTH_TREE_DEFAULT);
-    }
-
-    /**
-     * Return the path to the file containing list of HopsFS file paths (for the existing subtree).
-     */
-    public String getExistingSubtreePath() {
-        return getString(Constants.EXISTING_SUBTREE_PATH_KEY, Constants.EXISTING_SUBTREE_PATH_DEFAULT);
     }
     
     public int getThreadsPerWorker() {
@@ -67,81 +55,20 @@ public class BMConfiguration implements Serializable {
         return getBoolean(Constants.BENCHMARK_DRYRUN_KEY, Constants.BENCHMARK_DRYRUN_DEFAULT);
     }
 
-    public BigDecimal getInterleavedBmCreateFilesPercentage() {
-        return getBigDecimal(Constants.INTLVD_CREATE_FILES_PERCENTAGE_KEY, Constants.INTLVD_CREATE_FILES_PERCENTAGE_DEFAULT);
-    }
-
-    public long getRawBmReadFilesPhaseDuration() {
-        return getLong(Constants.RAW_READ_FILES_PHASE_DURATION_KEY, Constants.RAW_READ_FILES_PHASE_DURATION_DEFAULT);
-    }
-
-    public BigDecimal getInterleavedBmReadFilesPercentage() {
-        return getBigDecimal(Constants.INTLVD_READ_FILES_PERCENTAGE_KEY, Constants.INTLVD_READ_FILES_PERCENTAGE_DEFAULT);
-    }
-
-    public long getRawBmRenameFilesPhaseDuration() {
-        return getLong(Constants.RAW_RENAME_FILES_PHASE_DURATION_KEY, Constants.RAW_RENAME_FILES_PHASE_DURATION_DEFAULT);
-    }
-
-    public BigDecimal getInterleavedBmRenameFilesPercentage() {
-        return getBigDecimal(Constants.INTLVD_RENAME_FILES_PERCENTAGE_KEY, Constants.INTLVD_RENAME_FILES_PERCENTAGE_DEFAULT);
-    }
-
     /**
-     * What percentage of workers can perform both reads AND writes?
+     * Returns the percentage of Type 2 workers. The only difference between Type 1 and Type 2
+     * workers is that the percentage of each file system operation they perform may be different.
      */
-    public double getWorkerPercentWrites() {
-        return getDouble(Constants.PERCENT_WORKERS_CAN_WRITE, Constants.PERCENT_WORKERS_CAN_WRITE_DEFAULT);
+    public double getPercentWorkersType2() {
+        return getDouble(Constants.PERCENT_WORKERS_TYPE_2_KEY, Constants.PERCENT_WORKERS_TYPE_2_DEFAULT);
     }
 
-    public long getRawBmDeleteFilesPhaseDuration() {
-        return getLong(Constants.RAW_DElETE_FILES_PHASE_DURATION_KEY, Constants.RAW_DELETE_FILES_PHASE_DURATION_DEFAULT);
-    }
-
-    public BigDecimal getInterleavedBmDeleteFilesPercentage() {
-        return getBigDecimal(Constants.INTLVD_DELETE_FILES_PERCENTAGE_KEY, Constants.INTLVD_DELETE_FILES_PERCENTAGE_DEFAULT);
-    }
-
-    public long getRawBmChmodFilesPhaseDuration() {
-        return getLong(Constants.RAW_CHMOD_FILES_PHASE_DURATION_KEY, Constants.RAW_CHMOD_FILES_PHASE_DURATION_DEFAULT);
-    }
-
-    public long getRawBmChmodDirsPhaseDuration() {
-        return getLong(Constants.RAW_CHMOD_DIRS_PHASE_DURATION_KEY, Constants.RAW_CHMOD_DIRS_PHASE_DURATION_DEFAULT);
-    }
-
-    public BigDecimal getInterleavedBmChmodFilesPercentage() {
-        return getBigDecimal(Constants.INTLVD_CHMOD_FILES_PERCENTAGE_KEY, Constants.INTLVD_CHMOD_FILES_PERCENTAGE_DEFAULT);
-    }
-
-    public BigDecimal getInterleavedBmChmodDirsPercentage() {
-        return getBigDecimal(Constants.INTLVD_CHMOD_DIRS_PERCENTAGE_KEY, Constants.INTLVD_CHMOD_DIRS_PERCENTAGE_DEFAULT);
-    }
-
-    public long getRawBmLsFilePhaseDuration() {
-        return getLong(Constants.RAW_LS_FILE_PHASE_DURATION_KEY, Constants.RAW_LS_FILE_PHASE_DURATION_DEFAULT);
-    }
-
-    public BigDecimal getInterleavedBmLsFilePercentage() {
-        return getBigDecimal(Constants.INTLVD_LS_FILE_PERCENTAGE_KEY, Constants.INTLVD_LS_FILE_PERCENTAGE_DEFAULT);
-    }
-
-    public long getRawBmLsDirPhaseDuration() {
-        return getLong(Constants.RAW_LS_DIR_PHASE_DURATION_KEY, Constants.RAW_LS_DIR_PHASE_DURATION_DEFAULT);
-    }
-    public static String INTERLEAVED_WORKLOAD_NAME_KEY = "interleaved.workload.name";
-    public static double INTERLEAVED_WORKLOAD_NAME_DEFAULT = 0;
+    ///////////////////////////////////
+    // GENERAL INTERLEAVED BENCHMARK //
+    ///////////////////////////////////
 
     public String getInterleavedBmWorkloadName() {
         return getString(Constants.INTERLEAVED_WORKLOAD_NAME_KEY, Constants.INTERLEAVED_WORKLOAD_NAME_DEFAULT);
-    }
-
-    public BigDecimal getInterleavedBmLsDirPercentage() {
-        return getBigDecimal(Constants.INTLVD_LS_DIR_PERCENTAGE_KEY, Constants.INTLVD_LS_DIR_PERCENTAGE_DEFAULT);
-    }
-
-    public long getRawBmMkdirPhaseDuration() {
-        return getLong(Constants.RAW_MKDIR_PHASE_DURATION_KEY, Constants.RAW_MKDIR_PHASE_DURATION_DEFAULT);
     }
 
     public int getInterleavedBMIaTUnit() {
@@ -151,7 +78,7 @@ public class BMConfiguration implements Serializable {
     public int getInterleavedBMIaTSkipUnit() {
         return getInt(Constants.INTERLEAVED_BM_IAT_SKIPUNIT_KEY, Constants.INTERLEAVED_BM_IAT_SKIPUNIT_DEFAULT);
     }
-    
+
     public long getInterleavedBmDuration() {
         return getLong(Constants.INTERLEAVED_BM_DURATION_KEY, Constants.INTERLEAVED_BM_DURATION_DEFAULT);
     }
@@ -173,49 +100,197 @@ public class BMConfiguration implements Serializable {
         return getDouble(Constants.INTERLEAVED_BM_IAT_PARETO_LOCATION_KEY, Constants.INTERLEAVED_BM_IAT_PARETO_LOCATION_DEFAULT);
     }
 
-    public BigDecimal getInterleavedBmMkdirPercentage() {
-        return getBigDecimal(Constants.INTLVD_MKDIR_PERCENTAGE_KEY, Constants.INTLVD_MKDIR_PERCENTAGE_DEFAULT);
+    ///////////////////////////////
+    // WORKER Type 1 PERCENTAGES //
+    ///////////////////////////////
+
+    public BigDecimal getInterleavedBmLsDirPercentage() {
+        return getBigDecimal(Constants.INTLVD_LS_DIR_PERCENTAGE_KEY, Constants.INTLVD_LS_DIR_PERCENTAGE_DEFAULT);
     }
 
-    public long getRawBmSetReplicationPhaseDuration() {
-        return getLong(Constants.RAW_SETREPLICATION_PHASE_DURATION_KEY, Constants.RAW_SETREPLICATION_PHASE_DURATION_DEFAULT);
+    public BigDecimal getInterleavedBmMkdirPercentage() {
+        return getBigDecimal(Constants.INTLVD_MKDIR_PERCENTAGE_KEY, Constants.INTLVD_MKDIR_PERCENTAGE_DEFAULT);
     }
 
     public BigDecimal getInterleavedBmSetReplicationPercentage() {
         return getBigDecimal(Constants.INTLVD_SETREPLICATION_PERCENTAGE_KEY, Constants.INTLVD_SETREPLICATION_PERCENTAGE_DEFAULT);
     }
 
-    public long getRawBmGetFileInfoPhaseDuration() {
-        return getLong(Constants.RAW_GET_FILE_INFO_PHASE_DURATION_KEY, Constants.RAW_GET_FILE_INFO_PHASE_DURATION_DEFAULT);
-    }
-
     public BigDecimal getInterleavedBmGetFileInfoPercentage() {
         return getBigDecimal(Constants.INTLVD_GET_FILE_INFO_PERCENTAGE_KEY, Constants.INTLVD_GET_FILE_INFO_PERCENTAGE_DEFAULT);
-    }
-
-    public long getRawBmGetDirInfoPhaseDuration() {
-        return getLong(Constants.RAW_GET_DIR_INFO_PHASE_DURATION_KEY, Constants.RAW_GET_DIR_INFO_PHASE_DURATION_DEFAULT);
     }
 
     public BigDecimal getInterleavedBmGetDirInfoPercentage() {
         return getBigDecimal(Constants.INTLVD_GET_DIR_INFO_PERCENTAGE_KEY, Constants.INTLVD_GET_DIR_INFO_PERCENTAGE_DEFAULT);
     }
 
-    public long getRawBmAppendFilePhaseDuration() {
-        return getLong(Constants.RAW_FILE_APPEND_PHASE_DURATION_KEY, Constants.RAW_FILE_APPEND_PHASE_DURATION_DEFAULT);
-    }
-
     public BigDecimal getInterleavedBmAppendFilePercentage() {
         return getBigDecimal(Constants.INTLVD_APPEND_FILE_PERCENTAGE_KEY, Constants.INTLVD_APPEND_FILE_PERCENTAGE_DEFAULT);
     }
 
-    public int getTreeDepth() {
-        return getInt(Constants.TREE_DEPTH_KEY, Constants.TREE_DEPTH_DEFAULT);
+    public BigDecimal getInterleavedBmFileChangeOwnerPercentage() {
+        return getBigDecimal(Constants.INTLVD_FILE_CHANGE_USER_PERCENTAGE_KEY, Constants.INTLVD_FILE_CHANGE_USER_PERCENTAGE_DEFAULT);
     }
-    
-    public String getBaseDir() {
-        return getString(Constants.BASE_DIR_KEY, Constants.BASE_DIR_DEFAULT);
+
+    public BigDecimal getInterleavedBmDirChangeOwnerPercentage() {
+        return getBigDecimal(Constants.INTLVD_DIR_CHANGE_USER_PERCENTAGE_KEY, Constants.INTLVD_DIR_CHANGE_USER_PERCENTAGE_DEFAULT);
     }
+
+    public BigDecimal getInterleavedBmCreateFilesPercentage() {
+        return getBigDecimal(Constants.INTLVD_CREATE_FILES_PERCENTAGE_KEY, Constants.INTLVD_CREATE_FILES_PERCENTAGE_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmReadFilesPercentage() {
+        return getBigDecimal(Constants.INTLVD_READ_FILES_PERCENTAGE_KEY, Constants.INTLVD_READ_FILES_PERCENTAGE_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmRenameFilesPercentage() {
+        return getBigDecimal(Constants.INTLVD_RENAME_FILES_PERCENTAGE_KEY, Constants.INTLVD_RENAME_FILES_PERCENTAGE_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmDeleteFilesPercentage() {
+        return getBigDecimal(Constants.INTLVD_DELETE_FILES_PERCENTAGE_KEY, Constants.INTLVD_DELETE_FILES_PERCENTAGE_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmChmodFilesPercentage() {
+        return getBigDecimal(Constants.INTLVD_CHMOD_FILES_PERCENTAGE_KEY, Constants.INTLVD_CHMOD_FILES_PERCENTAGE_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmChmodDirsPercentage() {
+        return getBigDecimal(Constants.INTLVD_CHMOD_DIRS_PERCENTAGE_KEY, Constants.INTLVD_CHMOD_DIRS_PERCENTAGE_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmLsFilePercentage() {
+        return getBigDecimal(Constants.INTLVD_LS_FILE_PERCENTAGE_KEY, Constants.INTLVD_LS_FILE_PERCENTAGE_DEFAULT);
+    }
+
+    ///////////////////////////////
+    // WORKER Type 2 PERCENTAGES //
+    ///////////////////////////////
+
+    public BigDecimal getInterleavedBmLsDirPercentage2() {
+        return getBigDecimal(Constants.INTLVD_LS_DIR_PERCENTAGE2_KEY, Constants.INTLVD_LS_DIR_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmMkdirPercentage2() {
+        return getBigDecimal(Constants.INTLVD_MKDIR_PERCENTAGE2_KEY, Constants.INTLVD_MKDIR_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmSetReplicationPercentage2() {
+        return getBigDecimal(Constants.INTLVD_SETREPLICATION_PERCENTAGE2_KEY, Constants.INTLVD_SETREPLICATION_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmGetFileInfoPercentage2() {
+        return getBigDecimal(Constants.INTLVD_GET_FILE_INFO_PERCENTAGE2_KEY, Constants.INTLVD_GET_FILE_INFO_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmGetDirInfoPercentage2() {
+        return getBigDecimal(Constants.INTLVD_GET_DIR_INFO_PERCENTAGE2_KEY, Constants.INTLVD_GET_DIR_INFO_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmAppendFilePercentage2() {
+        return getBigDecimal(Constants.INTLVD_APPEND_FILE_PERCENTAGE2_KEY, Constants.INTLVD_APPEND_FILE_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmFileChangeOwnerPercentage2() {
+        return getBigDecimal(Constants.INTLVD_FILE_CHANGE_USER_PERCENTAGE2_KEY, Constants.INTLVD_FILE_CHANGE_USER_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmDirChangeOwnerPercentage2() {
+        return getBigDecimal(Constants.INTLVD_DIR_CHANGE_USER_PERCENTAGE2_KEY, Constants.INTLVD_DIR_CHANGE_USER_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmCreateFilesPercentage2() {
+        return getBigDecimal(Constants.INTLVD_CREATE_FILES_PERCENTAGE2_KEY, Constants.INTLVD_CREATE_FILES_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmReadFilesPercentage2() {
+        return getBigDecimal(Constants.INTLVD_READ_FILES_PERCENTAGE2_KEY, Constants.INTLVD_READ_FILES_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmRenameFilesPercentage2() {
+        return getBigDecimal(Constants.INTLVD_RENAME_FILES_PERCENTAGE2_KEY, Constants.INTLVD_RENAME_FILES_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmDeleteFilesPercentage2() {
+        return getBigDecimal(Constants.INTLVD_DELETE_FILES_PERCENTAGE2_KEY, Constants.INTLVD_DELETE_FILES_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmChmodFilesPercentage2() {
+        return getBigDecimal(Constants.INTLVD_CHMOD_FILES_PERCENTAGE2_KEY, Constants.INTLVD_CHMOD_FILES_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmChmodDirsPercentage2() {
+        return getBigDecimal(Constants.INTLVD_CHMOD_DIRS_PERCENTAGE2_KEY, Constants.INTLVD_CHMOD_DIRS_PERCENTAGE2_DEFAULT);
+    }
+
+    public BigDecimal getInterleavedBmLsFilePercentage2() {
+        return getBigDecimal(Constants.INTLVD_LS_FILE_PERCENTAGE2_KEY, Constants.INTLVD_LS_FILE_PERCENTAGE2_DEFAULT);
+    }
+
+    ///////////////////
+    // RAW BENCHMARK //
+    ///////////////////
+
+    public long getRawBmReadFilesPhaseDuration() {
+        return getLong(Constants.RAW_READ_FILES_PHASE_DURATION_KEY, Constants.RAW_READ_FILES_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getRawBmRenameFilesPhaseDuration() {
+        return getLong(Constants.RAW_RENAME_FILES_PHASE_DURATION_KEY, Constants.RAW_RENAME_FILES_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getRawBmDeleteFilesPhaseDuration() {
+        return getLong(Constants.RAW_DElETE_FILES_PHASE_DURATION_KEY, Constants.RAW_DELETE_FILES_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getRawBmChmodFilesPhaseDuration() {
+        return getLong(Constants.RAW_CHMOD_FILES_PHASE_DURATION_KEY, Constants.RAW_CHMOD_FILES_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getRawBmChmodDirsPhaseDuration() {
+        return getLong(Constants.RAW_CHMOD_DIRS_PHASE_DURATION_KEY, Constants.RAW_CHMOD_DIRS_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getRawBmLsFilePhaseDuration() {
+        return getLong(Constants.RAW_LS_FILE_PHASE_DURATION_KEY, Constants.RAW_LS_FILE_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getRawBmLsDirPhaseDuration() {
+        return getLong(Constants.RAW_LS_DIR_PHASE_DURATION_KEY, Constants.RAW_LS_DIR_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getRawBmMkdirPhaseDuration() {
+        return getLong(Constants.RAW_MKDIR_PHASE_DURATION_KEY, Constants.RAW_MKDIR_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getRawBmSetReplicationPhaseDuration() {
+        return getLong(Constants.RAW_SETREPLICATION_PHASE_DURATION_KEY, Constants.RAW_SETREPLICATION_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getRawBmGetFileInfoPhaseDuration() {
+        return getLong(Constants.RAW_GET_FILE_INFO_PHASE_DURATION_KEY, Constants.RAW_GET_FILE_INFO_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getRawBmGetDirInfoPhaseDuration() {
+        return getLong(Constants.RAW_GET_DIR_INFO_PHASE_DURATION_KEY, Constants.RAW_GET_DIR_INFO_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getRawBmAppendFilePhaseDuration() {
+        return getLong(Constants.RAW_FILE_APPEND_PHASE_DURATION_KEY, Constants.RAW_FILE_APPEND_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getRawFileChangeUserPhaseDuration() {
+        return getLong(Constants.RAW_FILE_CHANGE_USER_PHASE_DURATION_KEY, Constants.RAW_FILE_CHANGE_USER_PHASE_DURATION_DEFAULT);
+    }
+
+    public long getRawDirChangeUserPhaseDuration() {
+        return getLong(Constants.RAW_DIR_CHANGE_USER_PHASE_DURATION_KEY, Constants.RAW_DIR_CHANGE_USER_PHASE_DURATION_DEFAULT);
+    }
+
+    ////////////
+    // WARMUP //
+    ////////////
 
     public int getFilesToCreateInWarmUpPhase() {
         return getInt(Constants.FILES_TO_CREATE_IN_WARM_UP_PHASE_KEY, Constants.FILES_TO_CREATE_IN_WARM_UP_PHASE_DEFAULT);
@@ -225,28 +300,39 @@ public class BMConfiguration implements Serializable {
         return getInt(Constants.WARM_UP_PHASE_WAIT_TIME_KEY, Constants.WARM_UP_PHASE_WAIT_TIME_DEFAULT);
     }
 
+    ///////////////////////////
+    // FILE TREE & FILE POOL //
+    ///////////////////////////
+
+    public boolean isExistingSubtree() {
+        return getBoolean(Constants.ENABLE_EXISTING_SUBTREE_KEY, Constants.ENABLE_EXISTING_SUBTREE_DEFAULT);
+    }
+
+    public boolean isFixedDepthTree() {
+        return getBoolean(Constants.ENABLE_FIXED_DEPTH_TREE_KEY, Constants.ENABLE_FIXED_DEPTH_TREE_DEFAULT);
+    }
+
+    /**
+     * Return the path to the file containing list of HopsFS file paths (for the existing subtree).
+     */
+    public String getExistingSubtreePath() {
+        return getString(Constants.EXISTING_SUBTREE_PATH_KEY, Constants.EXISTING_SUBTREE_PATH_DEFAULT);
+    }
+
+    public int getTreeDepth() {
+        return getInt(Constants.TREE_DEPTH_KEY, Constants.TREE_DEPTH_DEFAULT);
+    }
+
+    public String getBaseDir() {
+        return getString(Constants.BASE_DIR_KEY, Constants.BASE_DIR_DEFAULT);
+    }
+
     public int getDirPerDir() {
         return getInt(Constants.DIR_PER_DIR_KEY, Constants.DIR_PER_DIR_DEFAULT);
     }
 
     public int getFilesPerDir() {
         return getInt(Constants.FILES_PER_DIR_KEY, Constants.FILES_PER_DIR_DEFAULT);
-    }
-
-    public long getRawFileChangeUserPhaseDuration() {
-        return getLong(Constants.RAW_FILE_CHANGE_USER_PHASE_DURATION_KEY, Constants.RAW_FILE_CHANGE_USER_PHASE_DURATION_DEFAULT);
-    }
-
-    public BigDecimal getInterleavedBmFileChangeOwnerPercentage() {
-        return getBigDecimal(Constants.INTLVD_FILE_CHANGE_USER_PERCENTAGE_KEY, Constants.INTLVD_FILE_CHANGE_USER_PERCENTAGE_DEFAULT);
-    }
-
-    public long getRawDirChangeUserPhaseDuration() {
-        return getLong(Constants.RAW_DIR_CHANGE_USER_PHASE_DURATION_KEY, Constants.RAW_DIR_CHANGE_USER_PHASE_DURATION_DEFAULT);
-    }
-
-    public BigDecimal getInterleavedBmDirChangeOwnerPercentage() {
-        return getBigDecimal(Constants.INTLVD_DIR_CHANGE_USER_PERCENTAGE_KEY, Constants.INTLVD_DIR_CHANGE_USER_PERCENTAGE_DEFAULT);
     }
 
     public boolean getReadFilesFromDisk(){
@@ -260,6 +346,10 @@ public class BMConfiguration implements Serializable {
     public int getWorkerWarmUpDelay(){
         return getInt(Constants.LEADER_WORKER_WARMUP_DELAY_KEY, Constants.LEADER_WORKER_WARMUP_DELAY_KEY_DEFAULT);
     }
+
+    ///////////////////////
+    // EXTRACTING VALUES //
+    ///////////////////////
 
     private int getInt(String key, int defaultVal) {
         String val = props.getProperty(key, Integer.toString(defaultVal));
