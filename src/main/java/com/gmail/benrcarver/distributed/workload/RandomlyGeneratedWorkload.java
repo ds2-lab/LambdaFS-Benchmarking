@@ -215,9 +215,58 @@ public class RandomlyGeneratedWorkload {
     public class Worker implements Callable<Object> {
         private FilePool filePool;
         private final BMConfiguration config;
+        private final boolean isType2;
 
         public Worker(BMConfiguration config) {
+            this(config, true);
+        }
+
+        public Worker(BMConfiguration config, boolean isType2) {
             this.config = config;
+            this.isType2 = isType2;
+        }
+
+        /**
+         * Return a coin created from the configuration file based on whether this is a Type 1 or Type 2 worker.
+         *
+         * Type 1 and Type 2 workers simply have different percentages for the operations they perform.
+         */
+        private InterleavedMultiFaceCoin getCoin() {
+            if (isType2) {
+                return new InterleavedMultiFaceCoin(config.getInterleavedBmCreateFilesPercentage2(),
+                        config.getInterleavedBmAppendFilePercentage2(),
+                        config.getInterleavedBmReadFilesPercentage2(),
+                        config.getInterleavedBmRenameFilesPercentage2(),
+                        config.getInterleavedBmDeleteFilesPercentage2(),
+                        config.getInterleavedBmLsFilePercentage2(),
+                        config.getInterleavedBmLsDirPercentage2(),
+                        config.getInterleavedBmChmodFilesPercentage2(),
+                        config.getInterleavedBmChmodDirsPercentage2(),
+                        config.getInterleavedBmMkdirPercentage2(),
+                        config.getInterleavedBmSetReplicationPercentage2(),
+                        config.getInterleavedBmGetFileInfoPercentage2(),
+                        config.getInterleavedBmGetDirInfoPercentage2(),
+                        config.getInterleavedBmFileChangeOwnerPercentage2(),
+                        config.getInterleavedBmDirChangeOwnerPercentage2()
+                );
+            } else {
+                return new InterleavedMultiFaceCoin(config.getInterleavedBmCreateFilesPercentage(),
+                        config.getInterleavedBmAppendFilePercentage(),
+                        config.getInterleavedBmReadFilesPercentage(),
+                        config.getInterleavedBmRenameFilesPercentage(),
+                        config.getInterleavedBmDeleteFilesPercentage(),
+                        config.getInterleavedBmLsFilePercentage(),
+                        config.getInterleavedBmLsDirPercentage(),
+                        config.getInterleavedBmChmodFilesPercentage(),
+                        config.getInterleavedBmChmodDirsPercentage(),
+                        config.getInterleavedBmMkdirPercentage(),
+                        config.getInterleavedBmSetReplicationPercentage(),
+                        config.getInterleavedBmGetFileInfoPercentage(),
+                        config.getInterleavedBmGetDirInfoPercentage(),
+                        config.getInterleavedBmFileChangeOwnerPercentage(),
+                        config.getInterleavedBmDirChangeOwnerPercentage()
+                );
+            }
         }
 
         private void extractMetrics(DistributedFileSystem dfs) throws InterruptedException {
@@ -244,22 +293,7 @@ public class RandomlyGeneratedWorkload {
             filePool = FilePoolUtils.getFilePool(bmConf.getBaseDir(), bmConf.getDirPerDir(), bmConf.getFilesPerDir(),
                     bmConf.getTreeDepth(), bmConf.isFixedDepthTree(), bmConf.isExistingSubtree(), bmConf.getExistingSubtreePath());
 
-            InterleavedMultiFaceCoin opCoin = new InterleavedMultiFaceCoin(config.getInterleavedBmCreateFilesPercentage(),
-                    config.getInterleavedBmAppendFilePercentage(),
-                    config.getInterleavedBmReadFilesPercentage(),
-                    config.getInterleavedBmRenameFilesPercentage(),
-                    config.getInterleavedBmDeleteFilesPercentage(),
-                    config.getInterleavedBmLsFilePercentage(),
-                    config.getInterleavedBmLsDirPercentage(),
-                    config.getInterleavedBmChmodFilesPercentage(),
-                    config.getInterleavedBmChmodDirsPercentage(),
-                    config.getInterleavedBmMkdirPercentage(),
-                    config.getInterleavedBmSetReplicationPercentage(),
-                    config.getInterleavedBmGetFileInfoPercentage(),
-                    config.getInterleavedBmGetDirInfoPercentage(),
-                    config.getInterleavedBmFileChangeOwnerPercentage(),
-                    config.getInterleavedBmDirChangeOwnerPercentage()
-            );
+            InterleavedMultiFaceCoin opCoin = getCoin();
 
             LOG.debug("Acquiring 'ready' semaphore now...");
             readySemaphore.release(); // Ready to start. Once all threads have done this, the timer begins.
