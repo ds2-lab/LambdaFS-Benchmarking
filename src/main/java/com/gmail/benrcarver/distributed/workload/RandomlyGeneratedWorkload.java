@@ -61,6 +61,7 @@ public class RandomlyGeneratedWorkload {
     private final DistributedFileSystem sharedHdfs;
 
     public RandomlyGeneratedWorkload(BMConfiguration bmConf, DistributedFileSystem sharedHdfs, int numWorkers) {
+        LOG.info("Created new randomly-generated workload. Number of workers: " + numWorkers);
         BenchmarkDistribution distribution = bmConf.getInterleavedBMIaTDistribution();
         if (distribution == BenchmarkDistribution.POISSON) {
             limiter = new DistributionRateLimiter(bmConf, new PoissonGenerator(bmConf), numWorkers);
