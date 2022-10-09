@@ -397,8 +397,8 @@ public class RandomlyGeneratedWorkload {
                         to = to + "_" + RENAMED + "_" + currentCounter + "_" + "Times";
                         retVal = operation.call(dfs, path, to);
                         if (retVal) {
-                            filePool.fileRenamed(path, to);
                             operationsCompleted.incrementAndGet();
+                            filePool.fileRenamed(path, to);
                         }
                     } else {
                         retVal = operation.call(dfs, path, "");
