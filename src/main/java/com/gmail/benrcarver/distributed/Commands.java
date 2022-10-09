@@ -1113,7 +1113,24 @@ public class Commands {
             throw new IllegalArgumentException("User specified '" + input + "'. Aborting operation.");
     }
 
-    public static void renameOperation(DistributedFileSystem hdfs) {
+    public static boolean rename(DistributedFileSystem hdfs, String originalFileName, String renamedFileName) {
+        Path filePath = new Path(Commander.NAME_NODE_ENDPOINT + originalFileName);
+        Path filePathRename = new Path(Commander.NAME_NODE_ENDPOINT + renamedFileName);
+
+        LOG.info("Original file path: \"" + originalFileName + "\"");
+        LOG.info("New file path: \"" + renamedFileName + "\"");
+        long start = System.currentTimeMillis();
+        try {
+            boolean success = hdfs.rename(filePath, filePathRename);
+            LOG.info("Finished rename operation in " + (System.currentTimeMillis() - start) + "ms.");
+            return success;
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        return false;
+    }
+
+    public static boolean renameOperation(DistributedFileSystem hdfs) {
         System.out.print("Original file path:\n> ");
         String originalFileName = scanner.nextLine();
         checkForExit(originalFileName);
@@ -1125,14 +1142,17 @@ public class Commands {
         Path filePath = new Path(Commander.NAME_NODE_ENDPOINT + originalFileName);
         Path filePathRename = new Path(Commander.NAME_NODE_ENDPOINT + renamedFileName);
 
+        LOG.info("Original file path: \"" + originalFileName + "\"");
+        LOG.info("New file path: \"" + renamedFileName + "\"");
+        long start = System.currentTimeMillis();
         try {
-            LOG.info("\t Original file path: \"" + originalFileName + "\"");
-            LOG.info("\t New file path: \"" + renamedFileName + "\"");
-            hdfs.rename(filePath, filePathRename);
-            LOG.info("\t Finished rename operation.");
+            boolean success = hdfs.rename(filePath, filePathRename);
+            LOG.info("Finished rename operation in " + (System.currentTimeMillis() - start) + "ms.");
+            return success;
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+        return false;
     }
 
     public static boolean listDirectory(DistributedFileSystem hdfs, String targetDirectory) {

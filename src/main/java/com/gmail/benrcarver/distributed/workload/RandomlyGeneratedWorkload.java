@@ -10,6 +10,7 @@ import com.gmail.benrcarver.distributed.workload.files.FilePool;
 import com.gmail.benrcarver.distributed.workload.files.FilePoolUtils;
 import com.gmail.benrcarver.distributed.workload.limiter.*;
 import org.apache.commons.math3.stat.descriptive.SynchronizedDescriptiveStatistics;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -372,6 +373,7 @@ public class RandomlyGeneratedWorkload {
             }
         }
 
+        private static final String RENAMED = "R0N0";
         private void performOperation(FSOperation operation, DistributedFileSystem dfs) {
             if (LOG.isDebugEnabled())
                 LOG.debug("Performing operation: " + operation.getName());
@@ -381,7 +383,24 @@ public class RandomlyGeneratedWorkload {
                 long opExeTime = 0;
                 long opStartTime = System.currentTimeMillis();
                 try {
-                    retVal = operation.call(dfs, path, "");
+
+                    if (operation == FSOperation.RENAME_FILE) {
+                        int currentCounter = 0;
+                        String to = path;
+                        if (path.contains(RENAMED)) {
+                            int index1 = path.lastIndexOf(RENAMED);
+                            int index2 = path.lastIndexOf("_");
+                            String counter = path.substring(index1 + RENAMED.length() + 1, index2);
+                            to = path.substring(0, index1 - 1);
+                            currentCounter = Integer.parseInt(counter);
+                        }
+                        currentCounter++;
+                        to = to + "_" + RENAMED + "_" + currentCounter + "_" + "Times";
+                        retVal = operation.call(dfs, path, to);
+                    } else {
+                        retVal = operation.call(dfs, path, "");
+                    }
+
                     opExeTime = System.currentTimeMillis() - opStartTime;
                 } catch (Exception e) {
                     LOG.error("Exception encountered:", e);

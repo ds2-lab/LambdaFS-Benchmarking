@@ -86,7 +86,7 @@ public abstract class FSOperation {
     public static FSOperation RENAME_FILE = new FSOperation("RENAME") {
         @Override
         public boolean call(DistributedFileSystem hdfs, String path, String content) {
-            return readFile(path, hdfs);
+            return Commands.rename(hdfs, path, content);
         }
     };
 }
