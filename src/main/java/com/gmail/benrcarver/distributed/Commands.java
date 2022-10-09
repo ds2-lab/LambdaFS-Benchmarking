@@ -1345,13 +1345,8 @@ public class Commands {
         Path filePath = new Path(Commander.NAME_NODE_ENDPOINT + originalFileName);
         Path filePathRename = new Path(Commander.NAME_NODE_ENDPOINT + renamedFileName);
 
-        //LOG.info("Original file path: \"" + originalFileName + "\"");
-        //LOG.info("New file path: \"" + renamedFileName + "\"");
-        long start = System.currentTimeMillis();
         try {
-            boolean success = hdfs.rename(filePath, filePathRename);
-            //LOG.info("Finished rename operation in " + (System.currentTimeMillis() - start) + "ms.");
-            return success;
+            return hdfs.rename(filePath, filePathRename);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -1370,13 +1365,8 @@ public class Commands {
         Path filePath = new Path(Commander.NAME_NODE_ENDPOINT + originalFileName);
         Path filePathRename = new Path(Commander.NAME_NODE_ENDPOINT + renamedFileName);
 
-        //LOG.info("Original file path: \"" + originalFileName + "\"");
-        //LOG.info("New file path: \"" + renamedFileName + "\"");
-        long start = System.currentTimeMillis();
         try {
-            boolean success = hdfs.rename(filePath, filePathRename);
-            //LOG.info("Finished rename operation in " + (System.currentTimeMillis() - start) + "ms.");
-            return success;
+            return hdfs.rename(filePath, filePathRename);
         } catch (IOException ex) {
             ex.printStackTrace();
         }

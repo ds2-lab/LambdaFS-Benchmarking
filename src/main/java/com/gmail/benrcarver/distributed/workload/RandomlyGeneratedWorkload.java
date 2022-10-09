@@ -460,17 +460,21 @@ public class RandomlyGeneratedWorkload {
                         currentCounter++;
                         to = to + "_" + RENAMED + "_" + currentCounter + "_" + "Times";
                         retVal = operation.call(dfs, path, to);
+
+                        if (retVal) {
+                            filePool.fileRenamed(path, to);
+                            operationsCompleted.incrementAndGet();
+                        }
                     } else {
                         retVal = operation.call(dfs, path, "");
+                        if (retVal) {
+                            operationsCompleted.incrementAndGet();
+                            if (operation == FSOperation.CREATE_FILE)
+                                filePool.fileCreationSucceeded(path);
+                        }
                     }
                 } catch (Exception e) {
                     LOG.error("Exception encountered:", e);
-                }
-
-                if (retVal) {
-                    operationsCompleted.incrementAndGet();
-                    if (operation == FSOperation.CREATE_FILE)
-                        filePool.fileCreationSucceeded(path);
                 }
 
                 // updateStats(operation, retVal, new BMOpStats(opStartTime, opExeTime));
