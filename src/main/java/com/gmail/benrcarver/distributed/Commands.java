@@ -1121,9 +1121,8 @@ public class Commands {
         //LOG.info("New file path: \"" + renamedFileName + "\"");
         long start = System.currentTimeMillis();
         try {
-            boolean success = hdfs.rename(filePath, filePathRename);
             //LOG.info("Finished rename operation in " + (System.currentTimeMillis() - start) + "ms.");
-            return success;
+            return hdfs.rename(filePath, filePathRename);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -1146,9 +1145,8 @@ public class Commands {
         //LOG.info("New file path: \"" + renamedFileName + "\"");
         long start = System.currentTimeMillis();
         try {
-            boolean success = hdfs.rename(filePath, filePathRename);
             //LOG.info("Finished rename operation in " + (System.currentTimeMillis() - start) + "ms.");
-            return success;
+            return hdfs.rename(filePath, filePathRename);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
