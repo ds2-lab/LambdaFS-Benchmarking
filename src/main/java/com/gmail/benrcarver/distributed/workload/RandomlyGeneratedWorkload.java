@@ -383,7 +383,6 @@ public class RandomlyGeneratedWorkload {
                 long opExeTime = 0;
                 long opStartTime = System.currentTimeMillis();
                 try {
-
                     if (operation == FSOperation.RENAME_FILE) {
                         int currentCounter = 0;
                         String to = path;
