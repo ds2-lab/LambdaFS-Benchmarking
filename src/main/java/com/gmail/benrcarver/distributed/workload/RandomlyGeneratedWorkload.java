@@ -387,11 +387,11 @@ public class RandomlyGeneratedWorkload {
                     LOG.error("Exception encountered:", e);
                 }
 
-                if (retVal) {
-                    operationsCompleted.incrementAndGet();
-                    if (operation == FSOperation.CREATE_FILE)
-                        filePool.fileCreationSucceeded(path);
-                }
+//                if (retVal) {
+//                    operationsCompleted.incrementAndGet();
+//                    if (operation == FSOperation.CREATE_FILE)
+//                        filePool.fileCreationSucceeded(path);
+//                }
 
                 updateStats(operation, retVal, new BMOpStats(opStartTime, opExeTime));
             } else {
