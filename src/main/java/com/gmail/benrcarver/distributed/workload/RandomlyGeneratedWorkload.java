@@ -56,6 +56,8 @@ public class RandomlyGeneratedWorkload {
     final Semaphore readySemaphore;
     final Semaphore endSemaphore;
 
+    private final double percentType2Workers;
+
     private final DistributedFileSystem sharedHdfs;
 
     public RandomlyGeneratedWorkload(BMConfiguration bmConf, DistributedFileSystem sharedHdfs, int numWorkers) {
@@ -78,6 +80,8 @@ public class RandomlyGeneratedWorkload {
         readySemaphore = new Semaphore((numThreads * -1) + 1);
         endLatch = new CountDownLatch(numThreads);
         startLatch = new CountDownLatch(numThreads + 1);
+
+        percentType2Workers = bmConf.getPercentWorkersType2();
     }
 
     public void doWarmup() throws InterruptedException {
@@ -158,10 +162,44 @@ public class RandomlyGeneratedWorkload {
         }
 
         int numWorkerThreads = bmConf.getThreadsPerWorker();
-        LOG.debug("Creating " + numWorkerThreads + " threads now...");
+        int numType2Workers = (int)(numWorkerThreads * percentType2Workers);
+        int numType1Workers = numWorkerThreads - numType2Workers;
 
-        for (int i = 0; i < numWorkerThreads; i++) {
-            Callable<Object> worker = new Worker(bmConf);
+        assert(numType1Workers + numType2Workers == numWorkerThreads);
+
+        LOG.info("Creating a total of " + (numType2Workers + numType1Workers) + " worker thread(s).");
+        LOG.info("There will be " + numType2Workers + " Type 2 workers.");
+        LOG.info("There will be " + numType1Workers + " Type 1 workers.\n");
+
+        LOG.info("Type 1 Worker Percentages:");
+        LOG.info("CREATE: " + bmConf.getInterleavedBmCreateFilesPercentage());
+        LOG.info("RENAME: " + bmConf.getInterleavedBmRenameFilesPercentage());
+        LOG.info("DELETE: " + bmConf.getInterleavedBmDeleteFilesPercentage());
+        LOG.info("MKDIR: " + bmConf.getInterleavedBmMkdirPercentage());
+        LOG.info("LS DIR: " + bmConf.getInterleavedBmLsDirPercentage());
+        LOG.info("LS FILE: " + bmConf.getInterleavedBmLsFilePercentage());
+        LOG.info("STAT FILE: " + bmConf.getInterleavedBmGetFileInfoPercentage());
+        LOG.info("STAT DIR: " + bmConf.getInterleavedBmGetDirInfoPercentage());
+        LOG.info("READ: " + bmConf.getInterleavedBmReadFilesPercentage() + "\n");
+
+        LOG.info("Type 2 Worker Percentages:");
+        LOG.info("CREATE2: " + bmConf.getInterleavedBmCreateFilesPercentage2());
+        LOG.info("RENAME2: " + bmConf.getInterleavedBmRenameFilesPercentage2());
+        LOG.info("DELETE2: " + bmConf.getInterleavedBmDeleteFilesPercentage2());
+        LOG.info("MKDIR2: " + bmConf.getInterleavedBmMkdirPercentage2());
+        LOG.info("LS DIR2: " + bmConf.getInterleavedBmLsDirPercentage2());
+        LOG.info("LS FILE2: " + bmConf.getInterleavedBmLsFilePercentage2());
+        LOG.info("STAT FILE2: " + bmConf.getInterleavedBmGetFileInfoPercentage2());
+        LOG.info("STAT DIR2: " + bmConf.getInterleavedBmGetDirInfoPercentage2());
+        LOG.info("READ2: " + bmConf.getInterleavedBmReadFilesPercentage2() + "\n");
+
+        for (int i = 0; i < numType2Workers; i++) {
+            Callable<Object> worker = new Worker(bmConf, true);
+            workers.add(worker);
+        }
+
+        for (int i = 0; i < numType1Workers; i++) {
+            Callable<Object> worker = new Worker(bmConf, false);
             workers.add(worker);
         }
 
