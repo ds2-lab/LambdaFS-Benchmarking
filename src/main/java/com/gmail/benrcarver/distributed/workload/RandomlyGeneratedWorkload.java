@@ -387,19 +387,13 @@ public class RandomlyGeneratedWorkload {
                     LOG.error("Exception encountered:", e);
                 }
 
-//                if (retVal) {
-//                    operationsCompleted.incrementAndGet();
-//                    if (operation == FSOperation.CREATE_FILE)
-//                        filePool.fileCreationSucceeded(path);
-//                }
-
-                updateStats(operation, retVal, new BMOpStats(opStartTime, opExeTime));
+                updateStats(operation, retVal, new BMOpStats(opStartTime, opExeTime), path);
             } else {
                 LOG.debug("Could not perform operation " + operation + ". Got Null from the file pool");
             }
         }
 
-        private void updateStats(FSOperation opType, boolean success, BMOpStats stats) {
+        private void updateStats(FSOperation opType, boolean success, BMOpStats stats, String path) {
             synchronized (opsStats) {
                 ArrayList<BMOpStats> times = (ArrayList<BMOpStats>) opsStats.computeIfAbsent(opType.getName(), k -> new ArrayList<>());
                 times.add(stats);
@@ -408,6 +402,10 @@ public class RandomlyGeneratedWorkload {
             if (success) {
                 operationsCompleted.incrementAndGet();
                 avgLatency.addValue(stats.OpDuration);
+
+                if (opType == FSOperation.CREATE_FILE) {
+                    filePool.fileCreationSucceeded(path);
+                }
             } else {
                 operationsFailed.incrementAndGet();
             }
