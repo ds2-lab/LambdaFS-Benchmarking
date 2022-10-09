@@ -439,17 +439,30 @@ public class RandomlyGeneratedWorkload {
             }
         }
 
+        private static final String RENAMED = "R0N0";
         private void performOperation(FSOperation operation, DistributedFileSystem dfs) {
             if (LOG.isDebugEnabled())
                 LOG.debug("Performing operation: " + operation.getName());
             String path = FilePoolUtils.getPath(operation, filePool);
             if (path != null) {
                 boolean retVal = false;
-                // long opExeTime = 0;
-                // long opStartTime = System.nanoTime();
                 try {
-                    retVal = operation.call(dfs, path, "");
-                    // opExeTime = System.nanoTime() - opStartTime;
+                    if (operation == FSOperation.RENAME_FILE) {
+                        int currentCounter = 0;
+                        String to = path;
+                        if (path.contains(RENAMED)) {
+                            int index1 = path.lastIndexOf(RENAMED);
+                            int index2 = path.lastIndexOf("_");
+                            String counter = path.substring(index1 + RENAMED.length() + 1, index2);
+                            to = path.substring(0, index1 - 1);
+                            currentCounter = Integer.parseInt(counter);
+                        }
+                        currentCounter++;
+                        to = to + "_" + RENAMED + "_" + currentCounter + "_" + "Times";
+                        retVal = operation.call(dfs, path, to);
+                    } else {
+                        retVal = operation.call(dfs, path, "");
+                    }
                 } catch (Exception e) {
                     LOG.error("Exception encountered:", e);
                 }

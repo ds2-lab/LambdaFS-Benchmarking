@@ -30,8 +30,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class DistributionRateLimiter implements WorkerRateLimiter {
   public static final Logger LOG = LoggerFactory.getLogger(DistributionRateLimiter.class);
 
-  public static int RPS_BASE = 1000; // 1 s
-  public static int RPS_INTERVAL = 10; // 10 ms
   public static int OPS_BASE = 1000; // 1 s
   public static int OPS_INTERVAL = 10; // 10 ms
 
