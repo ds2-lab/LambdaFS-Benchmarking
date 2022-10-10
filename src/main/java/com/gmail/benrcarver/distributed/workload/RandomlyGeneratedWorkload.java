@@ -397,7 +397,7 @@ public class RandomlyGeneratedWorkload {
                         to = to + "_" + RENAMED + "_" + currentCounter + "_" + "Times";
                         retVal = operation.call(dfs, path, to);
                         if (retVal) {
-                            LOG.info("Successfully renamed file '" + path + "' to '" + to + "'");
+                            // LOG.info("Successfully renamed file '" + path + "' to '" + to + "'");
                             filePool.fileRenamed(path, to);
                         } else {
                             LOG.warn("Failed to rename file '" + path + "' to '" + to + "'");
