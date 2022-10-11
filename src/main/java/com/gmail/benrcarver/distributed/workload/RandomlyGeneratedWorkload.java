@@ -445,7 +445,7 @@ public class RandomlyGeneratedWorkload {
                 LOG.debug("Performing operation: " + operation.getName());
             String path = FilePoolUtils.getPath(operation, filePool);
             if (path != null) {
-                boolean retVal = false;
+                boolean retVal;
                 try {
                     if (operation == FSOperation.RENAME_FILE) {
                         int currentCounter = 0;
@@ -483,23 +483,23 @@ public class RandomlyGeneratedWorkload {
             }
         }
 
-        private void updateStats(FSOperation opType, boolean success, BMOpStats stats) {
-            AtomicLong stat = operationsStats.get(opType);
-            if (stat == null) {
-                // this should be synchronized to get accurate stats. However, this will slow
-                // down and these stats are just for log messages. Some inconsistencies are OK.
-                stat = new AtomicLong(0);
-                operationsStats.put(opType, stat);
-            }
-            stat.incrementAndGet();
-
-            if (success) {
-                operationsCompleted.incrementAndGet();
-                avgLatency.addValue(stats.OpDuration);
-            } else {
-                operationsFailed.incrementAndGet();
-            }
-
-        }
+//        private void updateStats(FSOperation opType, boolean success, BMOpStats stats) {
+//            AtomicLong stat = operationsStats.get(opType);
+//            if (stat == null) {
+//                // this should be synchronized to get accurate stats. However, this will slow
+//                // down and these stats are just for log messages. Some inconsistencies are OK.
+//                stat = new AtomicLong(0);
+//                operationsStats.put(opType, stat);
+//            }
+//            stat.incrementAndGet();
+//
+//            if (success) {
+//                operationsCompleted.incrementAndGet();
+//                avgLatency.addValue(stats.OpDuration);
+//            } else {
+//                operationsFailed.incrementAndGet();
+//            }
+//
+//        }
     }
 }

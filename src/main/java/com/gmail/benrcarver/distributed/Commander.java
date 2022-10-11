@@ -2764,8 +2764,8 @@ public class Commander {
             if (connection.name != null) {
                 LOG.warn("Lost connection to follower at " + connection.name);
                 LOG.debug("We now have " + followers.size() + " followers registered.");
-                LOG.info("Trying to re-launch Follower " + connection.name + " now...");
-                launchFollower("ben", connection.name, String.format(LAUNCH_FOLLOWER_CMD, ip, port));
+                //LOG.info("Trying to re-launch Follower " + connection.name + " now...");
+                //launchFollower("ben", connection.name, String.format(LAUNCH_FOLLOWER_CMD, ip, port));
             } else {
                 LOG.warn("Lost connection to follower.");
                 LOG.debug("We now have " + followers.size() + " followers registered.");
