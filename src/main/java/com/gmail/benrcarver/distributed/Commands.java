@@ -808,12 +808,14 @@ public class Commands {
             BufferedWriter opsPerformedWriter = new BufferedWriter(new FileWriter(baseFilePath + ".csv"));
             List<OperationPerformed> operationsPerformed = hdfs.getOperationsPerformed();
 
-            opsPerformedWriter.write(OperationPerformed.getHeader());
-            opsPerformedWriter.newLine();
             if (choice) {
+                opsPerformedWriter.write(OperationPerformed.getHeader());
+                opsPerformedWriter.newLine();
                 for (OperationPerformed op : operationsPerformed)
                     op.write(opsPerformedWriter);
             } else {
+                opsPerformedWriter.write(OperationPerformed.getBriefHeader());
+                opsPerformedWriter.newLine();
                 for (OperationPerformed op : operationsPerformed)
                     op.writeBrief(opsPerformedWriter);
             }
