@@ -736,6 +736,39 @@ public class Commands {
     }
 
     /**
+     * Display the provided prompt and accept input from the user, trying to convert it to a boolean value.
+     *
+     * The following user inputs will be converted to true (ignoring case):
+     * - y
+     * - yes
+     * - t
+     * - true
+     * - 1
+     *
+     * Any other input will be converted to false.
+     *
+     * @param prompt The prompt to be displayed to the user.
+     * @return True or false depending on the user's input.
+     */
+    private static boolean getBooleanFromUser(String prompt) {
+        System.out.print(prompt + " [y/n]\n> ");
+        String input = scanner.nextLine().trim();
+
+        checkForExit(input);
+
+        return input.equalsIgnoreCase("y") || input.equalsIgnoreCase("yes") ||
+                input.equalsIgnoreCase("t") || input.equalsIgnoreCase("true") ||
+                input.equalsIgnoreCase("1");
+    }
+
+    private static String getStringFromUser(String prompt) {
+        System.out.print(prompt + "\n> ");
+        String input = scanner.nextLine();
+        checkForExit(input);
+        return input;
+    }
+
+    /**
      * Print the operations performed. Optionally write them to a CSV.
      */
     public static void printOperationsPerformed(DistributedFileSystem hdfs) throws IOException {
@@ -743,9 +776,6 @@ public class Commands {
             LOG.error("This operation is not supported by Vanilla HopsFS!");
             return;
         }
-
-        System.out.print("Write to CSV? \n> ");
-        String input = scanner.nextLine();
 
         hdfs.printOperationsPerformed();
 
@@ -768,17 +798,24 @@ public class Commands {
 
         System.out.println("\n==============================================================================================================================");
 
-        if (input.equalsIgnoreCase("y")) {
-            System.out.print("File path? (no extension)\n> ");
-            String baseFilePath = scanner.nextLine();
+        boolean choice = getBooleanFromUser("Write to CSV?");
+
+        if (choice) {
+            choice = getBooleanFromUser("Write full data? (If no, then short data will be written)");
+
+            String baseFilePath = getStringFromUser("File path? (no extension)");
 
             BufferedWriter opsPerformedWriter = new BufferedWriter(new FileWriter(baseFilePath + ".csv"));
             List<OperationPerformed> operationsPerformed = hdfs.getOperationsPerformed();
 
             opsPerformedWriter.write(OperationPerformed.getHeader());
             opsPerformedWriter.newLine();
-            for (OperationPerformed op : operationsPerformed) {
-                op.write(opsPerformedWriter);
+            if (choice) {
+                for (OperationPerformed op : operationsPerformed)
+                    op.write(opsPerformedWriter);
+            } else {
+                for (OperationPerformed op : operationsPerformed)
+                    op.writeBrief(opsPerformedWriter);
             }
             opsPerformedWriter.close();
 
