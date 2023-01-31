@@ -66,7 +66,7 @@ public class Commander {
     /**
      * Has a default value.
      */
-    protected static String NAME_NODE_ENDPOINT = "hdfs://10.150.0.48:8020/";
+    protected static String NAME_NODE_ENDPOINT = "hdfs://ip-10-0-0-4.ec2.internal:8020/";
 
     /**
      * Used to obtain input from the user.
