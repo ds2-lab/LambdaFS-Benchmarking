@@ -1,9 +1,6 @@
-namenodeEndpoint: hdfs://10.150.0.48:8020/
+namenodeEndpoint: hdfs://ip-10-0-0-4.ec2.internal:8020/
 hdfsConfigFile: /home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0.2-RC0/etc/hadoop/hdfs-site.xml
 followers:
         -
-                ip: 10.150.0.45
-                user: ben
-        -
-                ip: 10.150.0.57
-                user: ben
+                ip: ip-10-0-11-153.ec2.internal
+                user: ubuntu
