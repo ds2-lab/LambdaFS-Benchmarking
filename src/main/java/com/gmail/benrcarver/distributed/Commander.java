@@ -315,7 +315,6 @@ public class Commander {
 
             channel.connect();
             channel.disconnect();
-            System.out.println("DONE");
 
             if (disconnectSessionAfterCommand)
                 session.disconnect();
@@ -396,11 +395,15 @@ public class Commander {
         if (numFollowersFromConfigToStart < 0)
             numFollowersFromConfigToStart = followerConfigs.size();
 
-        LOG.info("Starting " + numFollowersFromConfigToStart + " follower(s) now...");
+        if (!scpJars && !scpConfig && manuallyLaunchFollowers) {
+            LOG.info("No files to copy and we're launching followers manually.");
+            return;
+        }
+
+        LOG.info("Starting and/or copying files to " + numFollowersFromConfigToStart + " follower(s) now...");
 
         for (int i = 0; i < numFollowersFromConfigToStart; i++) {
             FollowerConfig config = followerConfigs.get(i);
-            LOG.info("Starting follower at " + config.getUser() + "@" + config.getIp() + " now.");
 
             // Don't kill Java processes if we're not auto-launching Followers. We might kill the user's process.
             if (!manuallyLaunchFollowers)
