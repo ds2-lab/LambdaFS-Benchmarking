@@ -367,19 +367,14 @@ public class Commander {
                 LOG.info("SFTP'd workload.yaml to Follower " + host + ".");
             }
 
-            //ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
-            //sftpChannel.connect();
-            //sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties", "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties");
-            //sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml", "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml");
-
-            sftpChannel.disconnect();
-
             if (!manuallyLaunchFollowers) {
                 LOG.info("Explicitly starting follower on " + user + "@" + host + " with command: " + launchCommand);
                 executeCommand(user, host, launchCommand, session, true);
             }
             else
                 LOG.info("'Manually Launch Followers' is set to TRUE. Commander will not auto-launch Follower.");
+
+            sftpChannel.disconnect();
         } catch (JSchException | SftpException e) {
             e.printStackTrace();
         }
