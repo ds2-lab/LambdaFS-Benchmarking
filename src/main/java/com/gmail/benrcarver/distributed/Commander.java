@@ -297,15 +297,16 @@ public class Commander {
         interactiveLoop();
     }
 
-    private void executeCommand(String user, String host, String launchCommand) {
+    private void executeCommand(String user, String host, String launchCommand, Session session, boolean disconnectSessionAfterCommand) {
         java.util.Properties sshConfig = new java.util.Properties();
         sshConfig.put("StrictHostKeyChecking", "no");
 
-        Session session;
         try {
-            session = jsch.getSession(user, host, 22);
-            session.setConfig(sshConfig);
-            session.connect();
+            if (session == null) {
+                session = jsch.getSession(user, host, 22);
+                session.setConfig(sshConfig);
+                session.connect();
+            }
 
             Channel channel = session.openChannel("exec");
             ((ChannelExec) channel).setCommand(launchCommand);
@@ -314,8 +315,10 @@ public class Commander {
 
             channel.connect();
             channel.disconnect();
-            session.disconnect();
             System.out.println("DONE");
+
+            if (disconnectSessionAfterCommand)
+                session.disconnect();
         } catch (JSchException e) {
             e.printStackTrace();
         }
@@ -369,11 +372,12 @@ public class Commander {
             //sftpChannel.connect();
             //sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties", "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties");
             //sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml", "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml");
+
             sftpChannel.disconnect();
 
             if (!manuallyLaunchFollowers) {
                 LOG.info("Explicitly starting follower on " + user + "@" + host + " with command: " + launchCommand);
-                executeCommand(user, host, launchCommand);
+                executeCommand(user, host, launchCommand, session, true);
             }
             else
                 LOG.info("'Manually Launch Followers' is set to TRUE. Commander will not auto-launch Follower.");
@@ -400,7 +404,7 @@ public class Commander {
 
             // Don't kill Java processes if we're not auto-launching Followers. We might kill the user's process.
             if (!manuallyLaunchFollowers)
-                executeCommand(config.getUser(), config.getIp(), "pkill -9 java");
+                executeCommand(config.getUser(), config.getIp(), "pkill -9 java", null, true);
 
             launchFollower(config.getUser(), config.getIp(), launchCommand);
         }
