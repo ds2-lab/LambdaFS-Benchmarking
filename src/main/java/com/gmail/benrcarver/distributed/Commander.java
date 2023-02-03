@@ -335,34 +335,34 @@ public class Commander {
             sftpChannel.connect();
 
             if (scpJars) {
-                LOG.debug("SFTP-ing hadoop-hdfs-3.2.0.3-SNAPSHOT.jar to Follower " + host + ".");
+                LOG.info("SFTP-ing hadoop-hdfs-3.2.0.3-SNAPSHOT.jar to Follower " + host + ".");
 
                 sftpChannel.put(HADOOP_HDFS_JAR_PATH, HADOOP_HDFS_JAR_PATH);
-                LOG.debug("SFTP-ing HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + host + ".");
+                LOG.info("SFTP-ing HopsFSBenchmark-1.0-jar-with-dependencies.jar to Follower " + host + ".");
                 sftpChannel.put(BENCHMARK_JAR_PATH, BENCHMARK_JAR_PATH);
             }
 
             if (scpConfig) {
-                LOG.debug("SFTP-ing hdfs-site.xml to Follower " + host + ".");
+                LOG.info("SFTP-ing hdfs-site.xml to Follower " + host + ".");
                 sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
 
-                LOG.debug("SFTP-ing mkdirWeakScaling to Follower " + host + ".");
+                LOG.info("SFTP-ing mkdirWeakScaling to Follower " + host + ".");
                 sftpChannel.put("/home/ubuntu/repos/HopsFS-Benchmarking-Utility/mkdirWeakScaling", "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/mkdirWeakScaling");
 
-                LOG.debug("SFTP-ing log4j.properties to Follower " + host + " now.");
+                LOG.info("SFTP-ing log4j.properties to Follower " + host + " now.");
                 String log4jPath = "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties";
                 sftpChannel.put(log4jPath, log4jPath);
                 LOG.debug("SFTP'd log4j.properties to Follower " + host + ".");
 
-                LOG.debug("SFTP-ing logback.xml to Follower " + host + " now.");
+                LOG.info("SFTP-ing logback.xml to Follower " + host + " now.");
                 String logbackPath = "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml";
                 sftpChannel.put(logbackPath, logbackPath);
-                LOG.debug("SFTP'd logback.xml to Follower " + host + ".");
+                LOG.info("SFTP'd logback.xml to Follower " + host + ".");
 
-                LOG.debug("SFTP-ing workload.yaml to Follower " + host + " now.");
+                LOG.info("SFTP-ing workload.yaml to Follower " + host + " now.");
                 String workloadYamlPath = "/home/ben/repos/HopsFS-Benchmarking-Utility/workload.yaml";
                 sftpChannel.put(workloadYamlPath, workloadYamlPath);
-                LOG.debug("SFTP'd workload.yaml to Follower " + host + ".");
+                LOG.info("SFTP'd workload.yaml to Follower " + host + ".");
             }
 
             //ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
@@ -371,10 +371,12 @@ public class Commander {
             //sftpChannel.put("/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml", "/home/ben/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml");
             sftpChannel.disconnect();
 
-            if (!manuallyLaunchFollowers)
+            if (!manuallyLaunchFollowers) {
+                LOG.info("Explicitly starting follower on " + user + "@" + host + " with command: " + launchCommand);
                 executeCommand(user, host, launchCommand);
+            }
             else
-                LOG.debug("'Manually Launch Followers' is set to TRUE. Commander will not auto-launch Follower.");
+                LOG.info("'Manually Launch Followers' is set to TRUE. Commander will not auto-launch Follower.");
         } catch (JSchException | SftpException e) {
             e.printStackTrace();
         }
