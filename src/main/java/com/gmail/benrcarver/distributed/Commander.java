@@ -160,6 +160,12 @@ public class Commander {
     private boolean isServerless = true;
 
     /**
+     * If true, then the Commander will execute tasks/jobs too.
+     * If false, then the Commander will only direct Followers to perform tasks and aggregate their results.
+     */
+    private boolean commanderExecutesToo = true;
+
+    /**
      * Start the first 'numFollowersFromConfigToStart' followers listed in the config.
      */
     private int numFollowersFromConfigToStart;
@@ -270,6 +276,7 @@ public class Commander {
             followerConfigs = config.getFollowers();
             hdfsConfigFilePath = config.getHdfsConfigFile();
             isServerless = config.getIsServerless();
+            commanderExecutesToo = config.getCommanderExecutesToo();
 
             Commands.IS_SERVERLESS = isServerless;
 
@@ -465,6 +472,8 @@ public class Commander {
                 int op = getNextOperation();
 
                 switch (op) {
+                    case OP_SET_COMMANDER_EXECUTES_TOO:
+                        setCommanderExecutesToo();
                     case OP_SET_HTTP_TCP_REPLACEMENT_CHANCE:
                         setHttpTcpReplacementChance();
                         break;
@@ -671,6 +680,28 @@ public class Commander {
             if (numGCsPerformedDuringLastOp > 0)
                 LOG.debug("Spent " + timeSpentInGCDuringLastOp + " ms garbage collecting during the last operation.");
         }
+    }
+
+    private void setCommanderExecutesToo() {
+        if (commanderExecutesToo) {
+            System.out.println("Currently, the Commander DOES execute tasks/jobs too.");
+        } else {
+            System.out.println("Currently, the Commander does NOT execute tasks/jobs too.");
+        }
+
+        System.out.print("Should the Commander execute tasks/jobs? Enter nothing to retain the current value.\n> ");
+        String input = scanner.nextLine().trim();
+
+        if (input.length() == 0) {
+            System.out.println("Retaining current value (" + commanderExecutesToo + ").");
+            return;
+        }
+
+        commanderExecutesToo = input.equalsIgnoreCase("y") || input.equalsIgnoreCase("yes") ||
+                input.equalsIgnoreCase("t") || input.equalsIgnoreCase("true") ||
+                input.equalsIgnoreCase("1");
+
+        System.out.println("Updated value: " + commanderExecutesToo);
     }
 
     private void readerWriterTest1() throws InterruptedException, FileNotFoundException {
@@ -2186,7 +2217,12 @@ public class Commander {
             String operationId,
             DistributedBenchmarkResult localResult) throws InterruptedException {
         if (numDistributedResults < 1) {
-            // LOG.warn("The number of distributed results is 1. We have nothing to wait for.");
+            if (localResult == null) {
+                assert(!commanderExecutesToo);
+                LOG.error("We are not expecting any distributed results, but the Commander does not execute tasks/jobs.");
+                return new AggregatedResult(0, 0, 0, "[INVALID METRICS STRING]", -1, -1, -1);
+            }
+
             String metricsString = "";
 
             DecimalFormat df = new DecimalFormat("#.####");
@@ -2268,31 +2304,47 @@ public class Commander {
         DescriptiveStatistics cacheHits = new DescriptiveStatistics();
         DescriptiveStatistics cacheMisses = new DescriptiveStatistics();
 
-        opsPerformed.addValue(localResult.numOpsPerformed);
-        duration.addValue(localResult.durationSeconds);
-        throughput.addValue(localResult.getOpsPerSecond());
-        cacheHits.addValue(localResult.cacheHits);
-        cacheMisses.addValue(localResult.cacheMisses);
+        DescriptiveStatistics tcpLatency = new DescriptiveStatistics();
+        DescriptiveStatistics httpLatency = new DescriptiveStatistics();
 
-        LOG.info("========== LOCAL RESULT ==========");
-        LOG.info("Num Ops Performed   : " + localResult.numOpsPerformed);
-        LOG.info("Duration (sec)      : " + localResult.durationSeconds);
-        LOG.info("Cache hits          : " + localResult.cacheHits);
-        LOG.info("Cache misses        : " + localResult.cacheMisses);
-        if (localResult.cacheHits + localResult.cacheMisses > 0)
-            LOG.info("Cache hit percentage: " + (localResult.cacheHits/(localResult.cacheHits + localResult.cacheMisses)));
-        else
-            LOG.info("Cache hit percentage: N/A");
-        LOG.info("Throughput          : " + localResult.getOpsPerSecond() + "\n");
+        List<Double> allThroughputValues = new ArrayList<>(resultQueue.size() + 1);
 
-        double trialAvgTcpLatency =
-                localResult.tcpLatencyStatistics.getN() > 0 ? localResult.tcpLatencyStatistics.getMean() : 0;
-        double trialAvgHttpLatency =
-                localResult.httpLatencyStatistics.getN() > 0 ? localResult.httpLatencyStatistics.getMean() : 0;
+        // We divide by this when calculating averages.
+        // We set it depending on whether localResult is null. If it is null, then we do not want to include
+        // the Commander when computing averages.
+        int denominator = resultQueue.size() + (localResult == null ? 0 : 1);
+
+        if (localResult != null) {
+            opsPerformed.addValue(localResult.numOpsPerformed);
+            duration.addValue(localResult.durationSeconds);
+            throughput.addValue(localResult.getOpsPerSecond());
+            cacheHits.addValue(localResult.cacheHits);
+            cacheMisses.addValue(localResult.cacheMisses);
+
+            LOG.info("========== LOCAL RESULT ==========");
+            LOG.info("Num Ops Performed   : " + localResult.numOpsPerformed);
+            LOG.info("Duration (sec)      : " + localResult.durationSeconds);
+            LOG.info("Cache hits          : " + localResult.cacheHits);
+            LOG.info("Cache misses        : " + localResult.cacheMisses);
+            if (localResult.cacheHits + localResult.cacheMisses > 0)
+                LOG.info("Cache hit percentage: " + (localResult.cacheHits / (localResult.cacheHits + localResult.cacheMisses)));
+            else
+                LOG.info("Cache hit percentage: N/A");
+            LOG.info("Throughput          : " + localResult.getOpsPerSecond() + "\n");
+
+            allThroughputValues.add(localResult.getOpsPerSecond());
+
+            for (double d : localResult.tcpLatencyStatistics.getValues())
+                tcpLatency.addValue(d);
+
+            for (double d : localResult.httpLatencyStatistics.getValues())
+                httpLatency.addValue(d);
+
+            //trialAvgTcpLatency += localResult.tcpLatencyStatistics.getN() > 0 ? localResult.tcpLatencyStatistics.getMean() : 0;
+            //trialAvgHttpLatency += localResult.httpLatencyStatistics.getN() > 0 ? localResult.httpLatencyStatistics.getMean() : 0;
+        }
 
         LOG.info("Result queue contains " + resultQueue.size() + " distributed results.");
-        List<Double> allThroughputValues = new ArrayList<>(resultQueue.size() + 1);
-        allThroughputValues.add(localResult.getOpsPerSecond());
         for (DistributedBenchmarkResult res : resultQueue) {
             LOG.info("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");
             LOG.info("Num Ops Performed   : " + res.numOpsPerformed);
@@ -2323,8 +2375,14 @@ public class Commander {
                         ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
                         ", N: " + latencyHttp.getN() + "]");
 
-                trialAvgTcpLatency += (latencyTcp.getN() > 0 ? latencyTcp.getMean() : 0);
-                trialAvgHttpLatency += (latencyHttp.getN() > 0 ? latencyHttp.getMean() : 0);
+                for (double d : latencyTcp.getValues())
+                    tcpLatency.addValue(d);
+
+                for (double d : latencyHttp.getValues())
+                    httpLatency.addValue(d);
+
+                //trialAvgTcpLatency += (latencyTcp.getN() > 0 ? latencyTcp.getMean() : 0);
+                //trialAvgHttpLatency += (latencyHttp.getN() > 0 ? latencyHttp.getMean() : 0);
             }
 
             if (res.opsPerformed != null)
@@ -2337,25 +2395,33 @@ public class Commander {
             allThroughputValues.add(res.getOpsPerSecond());
         }
 
-        trialAvgTcpLatency = trialAvgTcpLatency / (1 + numDistributedResults);   // Add 1 to account for local result.
-        trialAvgHttpLatency = trialAvgHttpLatency / (1 + numDistributedResults); // Add 1 to account for local result.
+        // trialAvgTcpLatency = trialAvgTcpLatency / denominator;
+        // trialAvgHttpLatency = trialAvgHttpLatency / denominator;
         double aggregateThroughput = (opsPerformed.getSum() / duration.getMean());
 
         int totalCacheHits = (int)(cacheHits.getN() > 0 ? cacheHits.getSum() : 0);
         int totalCacheMisses = (int)(cacheMisses.getN() > 0 ? cacheMisses.getSum() : 0);
 
+//        double avgCombinedLatency = 0.0;
+//        int divisor = 0; // We divide `avgCombinedLatency` by this.
+//        if (trialAvgTcpLatency > 0) {
+//            avgCombinedLatency += trialAvgTcpLatency;
+//            divisor++; // TCP latency is non-zero, so we need to account for it when calculating average.
+//        }
+//        if (trialAvgHttpLatency > 0) {
+//            avgCombinedLatency += trialAvgHttpLatency;
+//            divisor++; // HTTP latency is non-zero, so we need to account for it when calculating average.
+//        }
+//        if (divisor > 0)
+//            avgCombinedLatency /= divisor;
+
+        // Compute weighted average.
         double avgCombinedLatency = 0.0;
-        int divisor = 0; // We divide `avgCombinedLatency` by this.
-        if (trialAvgTcpLatency > 0) {
-            avgCombinedLatency += trialAvgTcpLatency;
-            divisor++; // TCP latency is non-zero, so we need to account for it when calculating average.
-        }
-        if (trialAvgHttpLatency > 0) {
-            avgCombinedLatency += trialAvgHttpLatency;
-            divisor++; // HTTP latency is non-zero, so we need to account for it when calculating average.
-        }
-        if (divisor > 0)
-            avgCombinedLatency /= divisor;
+        double totalNumLatencies = tcpLatency.getN() + httpLatency.getN();
+        if (tcpLatency.getN() > 0)
+            avgCombinedLatency += (tcpLatency.getMean() * (tcpLatency.getN() / totalNumLatencies));
+        if (httpLatency.getN() > 0)
+            avgCombinedLatency += (httpLatency.getMean() * (httpLatency.getN() / totalNumLatencies));
 
         double cacheHitRate = 0.0;
         if (totalCacheHits > 0 || totalCacheMisses > 0)
@@ -2367,20 +2433,20 @@ public class Commander {
         LOG.info("Cache hits: " + totalCacheHits);
         LOG.info("Cache misses: " + totalCacheMisses);
         LOG.info("Cache hit percentage: " + cacheHitRate);
-        LOG.info("Average TCP latency: " + trialAvgTcpLatency + " ms");
-        LOG.info("Average HTTP latency: " + trialAvgHttpLatency + " ms");
+        LOG.info("Average TCP latency: " + tcpLatency.getMean() + " ms");
+        LOG.info("Average HTTP latency: " + httpLatency.getMean() + " ms");
         LOG.info("Average combined latency: " + avgCombinedLatency + " ms");
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
 
         DecimalFormat df = new DecimalFormat("#.####");
         String metricsString = String.format("%s %d %d %s %s %s %s", df.format(aggregateThroughput),
                 totalCacheHits, totalCacheMisses,
-                df.format(cacheHitRate), df.format(trialAvgTcpLatency),
-                df.format(trialAvgHttpLatency), df.format(avgCombinedLatency));
+                df.format(cacheHitRate), df.format(tcpLatency.getMean()),
+                df.format(httpLatency.getMean()), df.format(avgCombinedLatency));
 
         LOG.info(metricsString);
 
-        // Create a copy and sort it so the estimated results are ordered by largest to smallest throughput.
+        // Create a copy and sort it so the estimated results are ordered by largest to the smallest throughput.
         Collections.sort(allThroughputValues);
         System.out.println("\n['Estimated' Throughput]");
         String format = "%10.2f --> %10.2f";
@@ -2390,7 +2456,7 @@ public class Commander {
         }
 
         return new AggregatedResult(aggregateThroughput, totalCacheHits, totalCacheMisses, metricsString,
-                trialAvgTcpLatency, trialAvgHttpLatency, avgCombinedLatency);
+                tcpLatency.getMean(), httpLatency.getMean(), avgCombinedLatency);
     }
 
     /**
@@ -2507,15 +2573,19 @@ public class Commander {
                 issueCommandToFollowers(commandDescription, operationId, payload, true);
             }
 
-            DistributedBenchmarkResult localResult =
-                    operation.call(sharedHdfs, NAME_NODE_ENDPOINT, numThreads, opsPerFile, inputPath, shuffle, opCode, directories);
+            DistributedBenchmarkResult localResult = null;
+            if (commanderExecutesToo) {localResult = operation.call(sharedHdfs, NAME_NODE_ENDPOINT, numThreads, opsPerFile, inputPath, shuffle, opCode, directories);
 
-            if (localResult == null) {
-                LOG.warn("Local result is null. Aborting.");
-                return;
+                if (localResult == null) {
+                    LOG.warn("Local result is null. Aborting.");
+                    return;
+                }
+
+                localResult.setOperationId(operationId);
+            } else {
+                LOG.info("Commander is not executing this job.");
             }
 
-            localResult.setOperationId(operationId);
             double throughput;
             int aggregatedCacheMisses;
             int aggregatedCacheHits;

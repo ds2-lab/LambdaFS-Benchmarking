@@ -12,6 +12,7 @@ public class LocalConfiguration {
     private List<FollowerConfig> followers;
     private String hdfsConfigFile;
     private boolean isServerless = true;
+    private boolean commanderExecutesToo = true;
 
     public boolean getIsServerless() { return isServerless; }
     public void setIsServerless(boolean isServerless) { this.isServerless = isServerless; }
@@ -44,5 +45,13 @@ public class LocalConfiguration {
 
     public void setHdfsConfigFile(String hdfsConfigFile) {
         this.hdfsConfigFile = hdfsConfigFile;
+    }
+
+    public boolean getCommanderExecutesToo() {
+        return commanderExecutesToo;
+    }
+
+    public void setCommanderExecutesToo(boolean commanderExecutesToo) {
+        this.commanderExecutesToo = commanderExecutesToo;
     }
 }
