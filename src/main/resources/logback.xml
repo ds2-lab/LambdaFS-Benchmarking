@@ -5,9 +5,9 @@
         </encoder>
     </appender>
 
-    <appender name="CLOUD" class="com.google.cloud.logging.logback.LoggingAppender">
-        <redirectToStdout>false</redirectToStdout>
-    </appender>
+<!--    <appender name="CLOUD" class="com.google.cloud.logging.logback.LoggingAppender">-->
+<!--        <redirectToStdout>false</redirectToStdout>-->
+<!--    </appender>-->
 
     <logger name="io.grpc.netty.shaded" level="off">
         <appender-ref ref="STDOUT" />
