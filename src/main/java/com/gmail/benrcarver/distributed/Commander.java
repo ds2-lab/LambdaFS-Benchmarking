@@ -346,25 +346,53 @@ public class Commander {
 
             if (scpConfig) {
                 LOG.info("SFTP-ing hdfs-site.xml to Follower " + host + ".");
-                sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
 
-                LOG.info("SFTP-ing mkdirWeakScaling to Follower " + host + ".");
-                sftpChannel.put("/home/ubuntu/repos/HopsFS-Benchmarking-Utility/mkdirWeakScaling", "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/mkdirWeakScaling");
+                File f = new File(hdfsConfigFilePath);
+                if (f.exists()) {
+                    sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
+                    LOG.info("SFTP-ing mkdirWeakScaling to Follower " + host + ".");
+                }
+                else
+                    LOG.error("Cannot SFTP '" + hdfsConfigFilePath + "' as it does not exist.");
 
-                LOG.info("SFTP-ing log4j.properties to Follower " + host + " now.");
+                f = new File("/home/ubuntu/repos/HopsFS-Benchmarking-Utility/mkdirWeakScaling");
+                if (f.exists()) {
+                    sftpChannel.put("/home/ubuntu/repos/HopsFS-Benchmarking-Utility/mkdirWeakScaling", "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/mkdirWeakScaling");
+                    LOG.info("SFTP-ing log4j.properties to Follower " + host + " now.");
+                }
+                else
+                    LOG.error("Cannot SFTP '/home/ubuntu/repos/HopsFS-Benchmarking-Utility/mkdirWeakScaling' as it does not exist.");
+
                 String log4jPath = "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties";
-                sftpChannel.put(log4jPath, log4jPath);
-                LOG.debug("SFTP'd log4j.properties to Follower " + host + ".");
+                f = new File(log4jPath);
+                if (f.exists()) {
+                    sftpChannel.put(log4jPath, log4jPath);
+                    LOG.debug("SFTP'd log4j.properties to Follower " + host + ".");
+                }
+                else
+                    LOG.error("Cannot SFTP '" + log4jPath + "' as it does not exist.");
 
                 LOG.info("SFTP-ing logback.xml to Follower " + host + " now.");
                 String logbackPath = "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/src/main/resources/logback.xml";
-                sftpChannel.put(logbackPath, logbackPath);
-                LOG.info("SFTP'd logback.xml to Follower " + host + ".");
+                f = new File(logbackPath);
+                if (f.exists()) {
+                    sftpChannel.put(logbackPath, logbackPath);
+                    LOG.info("SFTP'd logback.xml to Follower " + host + ".");
+                }
+                else {
+                    LOG.error("Cannot SFTP '" + logbackPath + "' as it does not exist.");
+                }
 
                 LOG.info("SFTP-ing workload.yaml to Follower " + host + " now.");
                 String workloadYamlPath = "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/workload.yaml";
-                sftpChannel.put(workloadYamlPath, workloadYamlPath);
-                LOG.info("SFTP'd workload.yaml to Follower " + host + ".");
+                f = new File(workloadYamlPath);
+                if (f.exists()) {
+                    sftpChannel.put(workloadYamlPath, workloadYamlPath);
+                    LOG.info("SFTP'd workload.yaml to Follower " + host + ".");
+                }
+                else {
+                    LOG.error("Cannot SFTP '" + workloadYamlPath + "' as it does not exist.");
+                }
             }
 
             if (!manuallyLaunchFollowers) {
