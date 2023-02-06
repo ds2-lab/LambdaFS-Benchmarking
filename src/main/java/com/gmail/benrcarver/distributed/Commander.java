@@ -14,9 +14,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jcraft.jsch.*;
-import io.hops.metrics.OperationPerformed;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.math3.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
@@ -26,7 +24,6 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.*;
@@ -102,7 +99,12 @@ public class Commander {
     /**
      * Fully-qualified path of hdfs-site.xml configuration file.
      */
-    public static String hdfsConfigFilePath;
+    public static String hdfsSiteConfigFilePath;
+
+    /**
+     * Fully-qualified path of core-site.xml configuration file.
+     */
+    public static String coreSiteConfigFilePath;
 
     /**
      * Map from operation ID to the queue in which distributed results should be placed by the TCP server.
@@ -340,11 +342,13 @@ public class Commander {
 
             NAME_NODE_ENDPOINT = config.getNamenodeEndpoint();
             followerConfigs = config.getFollowers();
-            hdfsConfigFilePath = config.getHdfsConfigFile();
+            hdfsSiteConfigFilePath = config.getHdfsConfigFile();
+            coreSiteConfigFilePath = config.getCoreSiteConfigFile();
 
             LOG.info("Loaded configuration!");
             LOG.debug("NameNode endpoint: " + NAME_NODE_ENDPOINT);
-            LOG.debug("HDFS configuration file path: " + hdfsConfigFilePath);
+            LOG.debug("hdfs-site.xml configuration file path: " + hdfsSiteConfigFilePath);
+            LOG.debug("core-site.xml configuration file path: " + coreSiteConfigFilePath);
             LOG.info(String.valueOf(config));
         }
     }
@@ -427,15 +431,14 @@ public class Commander {
                 LOG.debug("SFTP-ing hdfs-site.xml to Follower " + host + " now.");
                 ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
                 sftpChannel.connect();
-                sftpChannel.put(hdfsConfigFilePath, hdfsConfigFilePath);
+                sftpChannel.put(hdfsSiteConfigFilePath, hdfsSiteConfigFilePath);
                 sftpChannel.disconnect();
                 LOG.debug("SFTP'd hdfs-site.xml to Follower " + host + ".");
 
                 LOG.debug("SFTP-ing core-site.xml to Follower " + host + " now.");
                 sftpChannel = (ChannelSftp) session.openChannel("sftp");
                 sftpChannel.connect();
-                String coreSitePath = "/home/ben/repos/hops/hadoop-dist/target/hadoop-3.2.0.2-RC0/etc/hadoop/core-site.xml";
-                sftpChannel.put(coreSitePath, coreSitePath);
+                sftpChannel.put(coreSiteConfigFilePath, coreSiteConfigFilePath);
                 sftpChannel.disconnect();
                 LOG.debug("SFTP'd core-site.xml to Follower " + host + ".");
 
@@ -2371,9 +2374,9 @@ public class Commander {
      */
     public static DistributedFileSystem initDfsClient(String nameNodeEndpoint) {
         LOG.debug("Creating HDFS client now...");
-        Configuration hdfsConfiguration = Utils.getConfiguration(hdfsConfigFilePath);
+        Configuration hdfsConfiguration = Utils.getConfiguration(hdfsSiteConfigFilePath);
         try {
-            hdfsConfiguration.addResource(new File(hdfsConfigFilePath).toURI().toURL());
+            hdfsConfiguration.addResource(new File(hdfsSiteConfigFilePath).toURI().toURL());
         } catch (MalformedURLException ex) {
             ex.printStackTrace();
         }
@@ -2435,10 +2438,10 @@ public class Commander {
             JsonObject registrationPayload = new JsonObject();
             registrationPayload.addProperty(OPERATION, OP_REGISTRATION);
             registrationPayload.addProperty(NAMENODE_ENDPOINT, NAME_NODE_ENDPOINT);
-            registrationPayload.addProperty(HDFS_CONFIG_PATH, hdfsConfigFilePath);
+            registrationPayload.addProperty(HDFS_CONFIG_PATH, hdfsSiteConfigFilePath);
 
             LOG.debug("Sending '" + NAMENODE_ENDPOINT + "' as '" + NAMENODE_ENDPOINT + "'.");
-            LOG.debug("Sending '" + HDFS_CONFIG_PATH + "' as '" + hdfsConfigFilePath + "'.");
+            LOG.debug("Sending '" + HDFS_CONFIG_PATH + "' as '" + hdfsSiteConfigFilePath + "'.");
 
             conn.sendTCP(new Gson().toJson(registrationPayload));
         }

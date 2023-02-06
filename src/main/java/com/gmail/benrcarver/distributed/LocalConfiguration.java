@@ -11,6 +11,8 @@ public class LocalConfiguration {
     private String namenodeEndpoint;
     private List<FollowerConfig> followers;
     private String hdfsConfigFile;
+
+    private String coreSiteConfigFile;
     private boolean isServerless = false;
 
     public boolean getIsServerless() { return isServerless; }
@@ -32,10 +34,12 @@ public class LocalConfiguration {
         this.followers = followers;
     }
 
-    @Override
-    public String toString() {
-        return "LocalConfiguration(namenodeEndpoint=" + namenodeEndpoint + ", hdfsConfigFile=" + hdfsConfigFile +
-                ", followers=" + StringUtils.join(followers, ",") + ")";
+    public String getCoreSiteConfigFile() {
+        return coreSiteConfigFile;
+    }
+
+    public void setCoreSiteConfigFile(String coreSiteConfigFile) {
+        this.coreSiteConfigFile = coreSiteConfigFile;
     }
 
     public String getHdfsConfigFile() {
@@ -44,5 +48,11 @@ public class LocalConfiguration {
 
     public void setHdfsConfigFile(String hdfsConfigFile) {
         this.hdfsConfigFile = hdfsConfigFile;
+    }
+
+    @Override
+    public String toString() {
+        return "LocalConfiguration(namenodeEndpoint=" + namenodeEndpoint + ", hdfsConfigFile=" + hdfsConfigFile +
+                ", followers=" + StringUtils.join(followers, ",") + ")";
     }
 }

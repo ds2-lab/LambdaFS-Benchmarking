@@ -519,7 +519,7 @@ public class Follower {
 
         // The initDfsClient() function in the Commander file uses the Commander's static 'hdfsConfigFilePath'
         // variable. This is basically a hack, pretty gross.
-        Commander.hdfsConfigFilePath = hdfsConfigFilePath;
+        Commander.hdfsSiteConfigFilePath = hdfsConfigFilePath;
         LOG.debug("NameNode Endpoint: " + nameNodeEndpoint);
         LOG.debug("hdfsConfigFilePath: " + hdfsConfigFilePath);
 
