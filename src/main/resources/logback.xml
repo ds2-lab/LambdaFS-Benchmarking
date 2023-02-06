@@ -11,7 +11,7 @@
 
     <logger name="io.grpc.netty.shaded" level="off">
         <appender-ref ref="STDOUT" />
-        <appender-ref ref="CLOUD" />
+<!--        <appender-ref ref="CLOUD" />-->
     </logger>
 
 <!--    <logger name="io.grpc.netty.shaded.io.grpc.netty" level="off">-->
