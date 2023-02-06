@@ -529,6 +529,9 @@ public class Commander {
                     case OP_TRIGGER_CLIENT_GC:
                         performClientVMGarbageCollection();
                         break;
+                    case OP_CHANGE_SLEEP_INTERVAL:
+                        changeSleepInterval();
+                        break;
                     case OP_CLEAR_METRIC_DATA:
                         LOG.info("Clearing metric data (including latencies) now...");
                         Commands.clearMetricData(PRIMARY_HDFS);
@@ -1771,6 +1774,28 @@ public class Commander {
         return Integer.parseInt(input);
     }
 
+    private void changeSleepInterval() {
+        System.out.println("Current sleep interval: " + postTrialSleepInterval + " ms");
+
+        System.out.println("Please enter a new value for the sleep interval (in ms). Enter nothing to keep it the same.");
+
+        String input = scanner.nextLine();
+
+        if (input.equals("")) {
+            System.out.println("Keeping the sleep interval the same (" + postTrialSleepInterval + " ms).");
+            return;
+        }
+
+         try {
+             postTrialSleepInterval = Integer.parseInt(input);
+
+             System.out.println("Successfully updated post-trial sleep interval. New value: " + postTrialSleepInterval + " ms");
+         } catch (NumberFormatException ex) {
+             System.out.println("[ERROR] Specified value is not a valid integer: \"" + input + "\"");
+             System.out.println("Keeping the sleep interval the same (" + postTrialSleepInterval + " ms).");
+         }
+    }
+
     /**
      * Perform GCs on this Client VM as well as any other client VMs if we're the Commander for a distributed setup.
      */
@@ -2518,6 +2543,7 @@ public class Commander {
 
     private static void printMenu() {
         System.out.println("\n====== MENU ======");
+        System.out.println("(-9) Garbage Collection\n(-5) Change inter-trial sleep interval\n(-4) Clear metric data");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
