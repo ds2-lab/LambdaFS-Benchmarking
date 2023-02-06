@@ -474,6 +474,7 @@ public class Commander {
                 switch (op) {
                     case OP_SET_COMMANDER_EXECUTES_TOO:
                         setCommanderExecutesToo();
+                        break;
                     case OP_SET_HTTP_TCP_REPLACEMENT_CHANCE:
                         setHttpTcpReplacementChance();
                         break;
@@ -2312,7 +2313,7 @@ public class Commander {
         // We divide by this when calculating averages.
         // We set it depending on whether localResult is null. If it is null, then we do not want to include
         // the Commander when computing averages.
-        int denominator = resultQueue.size() + (localResult == null ? 0 : 1);
+        // int denominator = resultQueue.size() + (localResult == null ? 0 : 1);
 
         if (localResult != null) {
             opsPerformed.addValue(localResult.numOpsPerformed);
