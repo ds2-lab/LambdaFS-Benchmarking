@@ -2160,22 +2160,6 @@ public class Commander {
 
         int numTrials = getIntFromUser("How many trials should be performed?");
 
-//        int minLength = 0;
-//        System.out.print("Min string length (default " + minLength + "):\n> ");
-//        try {
-//            minLength = Integer.parseInt(scanner.nextLine());
-//        } catch (NumberFormatException ex) {
-//            LOG.info("Defaulting to " + minLength + ".");
-//        }
-//
-//        int maxLength = 0;
-//        System.out.print("Max string length (default " + maxLength + "):\n> ");
-//        try {
-//            maxLength = Integer.parseInt(scanner.nextLine());
-//        } catch (NumberFormatException ex) {
-//            LOG.info("Defaulting to " + maxLength + ".");
-//        }
-
         JsonObject payload = new JsonObject();
         payload.addProperty(OPERATION, OP_WEAK_SCALING_WRITES);
         payload.addProperty("n", writesPerThread);

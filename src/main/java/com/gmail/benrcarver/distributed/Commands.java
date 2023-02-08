@@ -1090,7 +1090,7 @@ public class Commands {
         assert(targetPathsPerThread.length == numThreads);
 
         return executeBenchmark(
-                sharedHdfs, numThreads, targetPathsPerThread, 1, opCode, FSOperation.READ_FILE);
+                sharedHdfs, numThreads, targetPathsPerThread, 1, opCode, FSOperation.CREATE_FILE);
     }
 
     /**
