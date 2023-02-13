@@ -1277,33 +1277,8 @@ public class Commands {
         assert (targetPathsPerThread != null);
         assert (targetPathsPerThread.length == numThreads);
 
-        DistributedBenchmarkResult result = executeBenchmark(sharedHdfs, numThreads,
+        return executeBenchmark(sharedHdfs, numThreads,
                 targetPathsPerThread, 1, opCode, FSOperation.MKDIRS);
-
-//        if (writePathsToFile) {
-//            String dirPath = "./weakScalingMkdirDirectoriesCreated/";
-//            String filePath = dirPath.concat(operationId + "-" + result.jvmId + ".txt");
-//
-//            LOG.debug("Writing HopsFS directory paths to file: '" + filePath + "'");
-//
-//            File dir = new File(dirPath);
-//            if (!dir.exists())
-//                dir.mkdir();
-//
-//            File file = new File(filePath);
-//            try {
-//                FileWriter fw = new FileWriter(file.getAbsoluteFile());
-//                BufferedWriter bw = new BufferedWriter(fw);
-//                for (String path : targetPaths) {
-//                    bw.write(path + "\n");
-//                }
-//                bw.close();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        }
-
-        return result;
     }
 
     public static Stack<TreeNode> createChildDirectories(String basePath, int subDirs,

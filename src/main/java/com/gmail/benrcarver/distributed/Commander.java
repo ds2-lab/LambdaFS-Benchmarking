@@ -1320,7 +1320,8 @@ public class Commander {
                     df.format(avgLatency));
 
             aggregatedResult = new AggregatedResult(localResult.getOpsPerSecond(), localResult.cacheHits,
-                    localResult.cacheMisses, metricsString, avgTcpLatency, avgHttpLatency, avgLatency);
+                    localResult.cacheMisses, metricsString, avgTcpLatency, avgHttpLatency, avgLatency,
+                    localResult.durationSeconds);
         } else {
             LOG.info("Expecting " + expectedNumResponses + " distributed results.");
             aggregatedResult = extractDistributedResultFromQueue(resultQueues.get(operationId), localResult,
@@ -2205,7 +2206,8 @@ public class Commander {
             if (localResult == null) {
                 assert(!commanderExecutesToo);
                 LOG.error("We are not expecting any distributed results, but the Commander does not execute tasks/jobs.");
-                return new AggregatedResult(0, 0, 0, "[INVALID METRICS STRING]", -1, -1, -1);
+                return new AggregatedResult(0, 0, 0, "[INVALID METRICS STRING]",
+                        -1, -1, -1, -1);
             }
 
             String metricsString = "";
@@ -2226,15 +2228,17 @@ public class Commander {
             double avgLatency = avgTcpLatency + avgHttpLatency / 2.0;
             double cacheHitRate = ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses));
             // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
-            metricsString = String.format("%s %d %d %s %s %s %s", df.format(localResult.getOpsPerSecond()),
+            metricsString = String.format("%s %d %d %s %s %s %s %s", df.format(localResult.getOpsPerSecond()),
                     localResult.cacheHits, localResult.cacheMisses,
                     df.format(cacheHitRate),
                     df.format(avgTcpLatency),
                     df.format(avgHttpLatency),
-                    df.format(avgLatency));
+                    df.format(avgLatency),
+                    df.format(localResult.durationSeconds));
 
             return new AggregatedResult(localResult.getOpsPerSecond(), localResult.cacheHits,
-                    localResult.cacheMisses, metricsString, avgTcpLatency, avgHttpLatency, avgLatency);
+                    localResult.cacheMisses, metricsString, avgTcpLatency, avgHttpLatency, avgLatency,
+                    localResult.durationSeconds);
         }
 
         LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
@@ -2424,10 +2428,10 @@ public class Commander {
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
 
         DecimalFormat df = new DecimalFormat("#.####");
-        String metricsString = String.format("%s %d %d %s %s %s %s", df.format(aggregateThroughput),
+        String metricsString = String.format("%s %d %d %s %s %s %s %s", df.format(aggregateThroughput),
                 totalCacheHits, totalCacheMisses,
                 df.format(cacheHitRate), df.format(tcpLatency.getMean()),
-                df.format(httpLatency.getMean()), df.format(avgCombinedLatency));
+                df.format(httpLatency.getMean()), df.format(avgCombinedLatency), df.format(duration.getMean()));
 
         LOG.info(metricsString);
 
@@ -2441,7 +2445,7 @@ public class Commander {
         }
 
         return new AggregatedResult(aggregateThroughput, totalCacheHits, totalCacheMisses, metricsString,
-                tcpLatency.getMean(), httpLatency.getMean(), avgCombinedLatency);
+                tcpLatency.getMean(), httpLatency.getMean(), avgCombinedLatency, duration.getMean());
     }
 
     /**
@@ -2606,7 +2610,7 @@ public class Commander {
             System.out.printf((formatString) + "%n", cacheHits[i], cacheMisses[i], ((double)cacheHits[i] / (cacheHits[i] + cacheMisses[i])));
         }
 
-        System.out.println("\nthroughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
+        System.out.println("\nthroughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency, duration");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString);
     }
@@ -2898,13 +2902,15 @@ public class Commander {
         public double avgCombinedLatency;
         public int cacheHits;
         public int cacheMisses;
+        public double durationSeconds;
 
         // Format (for serverless):
         // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
         public String metricsString; // All the metrics I'd want formatted so that I can copy and paste into Excel.
 
         public AggregatedResult(double throughput, int cacheHits, int cacheMisses, String metricsString,
-                                double avgTcpLatency, double avgHttpLatency, double avgCombinedLatency) {
+                                double avgTcpLatency, double avgHttpLatency, double avgCombinedLatency,
+                                double durationSeconds) {
             this.throughput = throughput;
             this.cacheHits = cacheHits;
             this.cacheMisses = cacheMisses;
@@ -2912,6 +2918,7 @@ public class Commander {
             this.avgHttpLatency = avgHttpLatency;
             this.avgTcpLatency = avgTcpLatency;
             this.avgCombinedLatency = avgCombinedLatency;
+            this.durationSeconds = durationSeconds;
         }
 
         public double getCacheHitRate() {
@@ -2920,6 +2927,10 @@ public class Commander {
             }
 
             return -1;
+        }
+
+        public double getDurationInMilliseconds() {
+            return this.durationSeconds * 1000;
         }
 
         @Override
