@@ -2948,7 +2948,8 @@ public class Commander {
             return "Throughput (ops/sec): " + df.format(throughput) + ", Cache Hits: " + cacheHits + ", Cache Misses: " +
                     cacheMisses + ", Cache Hit Rate: " + getCacheHitRate() + ", Average TCP Latency: " +
                     df.format(avgTcpLatency) + ", Average HTTP Latency: " + df.format(avgHttpLatency) +
-                    ", Average Combined Latency: " + df.format(avgCombinedLatency);
+                    ", Average Combined Latency: " + df.format(avgCombinedLatency) +
+                    ", Average Duration (seconds): " + durationSeconds;
 
         }
     }
