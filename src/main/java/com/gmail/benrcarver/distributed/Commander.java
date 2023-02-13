@@ -883,7 +883,7 @@ public class Commander {
                 avgLatency = new DescriptiveStatistics(localResult.latencyStatistics).getMean();
 
             aggregatedResult = new AggregatedResult(localResult.getOpsPerSecond(), avgLatency,
-                    metricsString, localResult.opsStats);
+                    metricsString, localResult.opsStats, localResult.durationSeconds);
         } else {
             LOG.info("Expecting " + expectedNumResponses + " distributed results.");
             aggregatedResult = extractDistributedResultFromQueue(resultQueues.get(operationId), localResult,
@@ -988,7 +988,8 @@ public class Commander {
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
 
         DecimalFormat df = new DecimalFormat("#.####");
-        String metricsString = String.format("%s %s", df.format(aggregateThroughput), df.format(trialAvgTcpLatency));
+        String metricsString = String.format("%s %s %s",
+                df.format(aggregateThroughput), df.format(trialAvgTcpLatency), df.format(duration.getMean()));
 
         LOG.info(metricsString);
 
@@ -1001,7 +1002,7 @@ public class Commander {
             System.out.println(formatted);
         }
 
-        return new AggregatedResult(aggregateThroughput, avgCombinedLatency, metricsString, opStats);
+        return new AggregatedResult(aggregateThroughput, avgCombinedLatency, metricsString, opStats, duration.getMean());
     }
 
     /**
@@ -2175,7 +2176,7 @@ public class Commander {
             }
 
             return new AggregatedResult(localResult.getOpsPerSecond(), statistics.getMean(),
-                    metricsString, localResult.opsStats);
+                    metricsString, localResult.opsStats, localResult.durationSeconds);
         }
 
         LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
@@ -2561,24 +2562,27 @@ public class Commander {
     public static class AggregatedResult implements Serializable {
         public double throughput;
         public double averageLatency;
+        public double durationSeconds;
         public String metricsString; // All the metrics I'd want formatted so that I can copy & paste into Excel.
         public Map<String, List<BMOpStats>> opsStats;
 
-        public AggregatedResult(double throughput, double averageLatency,
-                                String metricsString, Map<String, List<BMOpStats>> opsStats) {
+        public AggregatedResult(double throughput, double averageLatency, String metricsString,
+                                Map<String, List<BMOpStats>> opsStats, double durationSeconds) {
             this.throughput = throughput;
             this.averageLatency = averageLatency;
             this.metricsString = metricsString;
             this.opsStats = opsStats;
+            this.durationSeconds = durationSeconds;
         }
 
-        public AggregatedResult(double throughput, double averageLatency, String metricsString) {
-            this(throughput, averageLatency, metricsString, new HashMap<>());
+        public AggregatedResult(double throughput, double averageLatency, String metricsString, double durationSeconds) {
+            this(throughput, averageLatency, metricsString, new HashMap<>(), durationSeconds);
         }
 
         @Override
         public String toString() {
-            return "Throughput (ops/sec): " + throughput + ", Average Latency: " + averageLatency;
+            return "Throughput (ops/sec): " + throughput + ", Average Latency: " + averageLatency +
+                    " ms, Duration (seconds): " + durationSeconds;
 
         }
     }
