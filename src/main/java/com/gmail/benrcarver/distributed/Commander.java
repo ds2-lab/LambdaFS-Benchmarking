@@ -58,7 +58,7 @@ public class Commander {
     /**
      * Use with String.format(LAUNCH_FOLLOWER_CMD, leader_ip, leader_port)
      */
-    private static final String LAUNCH_FOLLOWER_CMD = "source ~/.bashrc; cd /home/ubuntu/repos/HopsFS-Benchmarking-Utility; java -Dlog4j.configuration=file:/home/ubuntu/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties -Dsun.io.serialization.extendedDebugInfo=true -Xmx58g -Xms58g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions -XX:ParGCCardsPerStrideChunk=32768 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 -XX:MaxNewSize=32000m -XX:+CMSClassUnloadingEnabled -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=75 -XX:+ScavengeBeforeFullGC -verbose:gc -XX:+PrintGCTimeStamps -XX:+PrintGCDetails -cp \".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/share/hadoop/hdfs/lib/*:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0-SNAPSHOT/share/hadoop/common/lib/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hops-leader-election/target/hops-leader-election-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/openwhisk-runtime-java/core/java8/libs/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hadoop-common-project/hadoop-common/target/hadoop-common-3.2.0.3-SNAPSHOT.jar\" com.gmail.benrcarver.distributed.InteractiveTest --leader_ip %s --leader_port %d --yaml_path /home/ubuntu/repos/HopsFS-Benchmarking-Utility/config.yaml --worker";
+    private static final String LAUNCH_FOLLOWER_CMD = "source ~/.bashrc; cd /home/ubuntu/repos/HopsFS-Benchmarking-Utility; java -Dlog4j.configuration=file:/home/ubuntu/repos/HopsFS-Benchmarking-Utility/src/main/resources/log4j.properties -Dsun.io.serialization.extendedDebugInfo=true -Xmx%sg -Xms%sg -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions -XX:ParGCCardsPerStrideChunk=32768 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 -XX:MaxNewSize=%sm -XX:+CMSClassUnloadingEnabled -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=75 -XX:+ScavengeBeforeFullGC -verbose:gc -XX:+PrintGCTimeStamps -XX:+PrintGCDetails -cp \".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/share/hadoop/hdfs/lib/*:/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0-SNAPSHOT/share/hadoop/common/lib/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hops-leader-election/target/hops-leader-election-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/openwhisk-runtime-java/core/java8/libs/*:/home/ubuntu/repos/hops/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar:/home/ubuntu/repos/hops/hadoop-common-project/hadoop-common/target/hadoop-common-3.2.0.3-SNAPSHOT.jar\" com.gmail.benrcarver.distributed.InteractiveTest --leader_ip %s --leader_port %d --yaml_path /home/ubuntu/repos/HopsFS-Benchmarking-Utility/config.yaml --worker";
 
     private static final String BENCHMARK_JAR_PATH = "/home/ubuntu/repos/HopsFS-Benchmarking-Utility/target/HopsFSBenchmark-1.0-jar-with-dependencies.jar";
 
@@ -207,6 +207,10 @@ public class Commander {
      */
     private final Set<String> waitingOn = ConcurrentHashMap.newKeySet();
 
+    private int maxNewSizeMb = 64000;
+    private int maxHeapSizeGb = 96;
+    private int minHeapSizeGb = 96;
+
     public static Commander getOrCreateCommander(String ip, int port, String yamlPath, boolean nondistributed,
                                                  boolean disableConsistency, int numFollowers,
                                                  boolean scpJars, boolean scpConfig,
@@ -277,6 +281,9 @@ public class Commander {
             hdfsConfigFilePath = config.getHdfsConfigFile();
             isServerless = config.getIsServerless();
             commanderExecutesToo = config.getCommanderExecutesToo();
+            maxHeapSizeGb = config.getMaxHeapSizeGb();
+            minHeapSizeGb = config.getMinHeapSizeGb();
+            maxNewSizeMb = config.getMaxNewSizeMb();
 
             Commands.IS_SERVERLESS = isServerless;
 
@@ -419,7 +426,7 @@ public class Commander {
      * Using SSH, launch the follower processes.
      */
     private void launchFollowers() throws IOException, JSchException {
-        final String launchCommand = String.format(LAUNCH_FOLLOWER_CMD, ip, port);
+        final String launchCommand = String.format(LAUNCH_FOLLOWER_CMD, maxHeapSizeGb, minHeapSizeGb, maxNewSizeMb, ip, port);
 
         // If 'numFollowersFromConfigToStart' is negative, then use all followers.
         if (numFollowersFromConfigToStart < 0)
