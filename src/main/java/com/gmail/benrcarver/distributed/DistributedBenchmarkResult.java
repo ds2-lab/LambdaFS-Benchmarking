@@ -39,11 +39,31 @@ public class DistributedBenchmarkResult implements Serializable {
      */
     public long stopTime;
 
+    /**
+     * Number of caches hits encountered during the experiment.
+     */
     public int cacheHits;
 
+    /**
+     * Number of caches misses encountered during the experiment.
+     */
     public int cacheMisses;
 
+    /**
+     * The number of failed FS operations.
+     */
     public int numFailures;
+
+
+    /**
+     * The amount of time (units: milliseconds) spent garbage-collecting by all NameNodes during the experiment.
+     */
+    public double gcTimeMs;
+
+    /**
+     * The number of garbage collections across all NameNodes during the experiment.
+     */
+    public int numGCs;
 
     /**
      * TCP latencies obtained during the workload whose result is encapsulated by this DistributedBenchmarkResult instance.
@@ -96,8 +116,7 @@ public class DistributedBenchmarkResult implements Serializable {
                                       long stopTime, int cacheHits, int cacheMisses, OperationPerformed[] opsPerformed,
                                       ConcurrentHashMap<String, List<TransactionEvent>> txEvents,
                                       DescriptiveStatistics tcpLatencyStatistics,
-                                      DescriptiveStatistics httpLatencyStatistics,
-                                      int numFailures) {
+                                      DescriptiveStatistics httpLatencyStatistics, int numFailures) {
         this.opId = opId;
         this.operation = operation;
         this.numOpsPerformed = numOpsPerformed;
@@ -111,6 +130,8 @@ public class DistributedBenchmarkResult implements Serializable {
         this.tcpLatencyStatistics = tcpLatencyStatistics;
         this.httpLatencyStatistics = httpLatencyStatistics;
         this.numFailures = numFailures;
+//        this.gcTimeMs = gcTimeMs;
+//        this.numGCs = numGCs;
 
         this.jvmId = ManagementFactory.getRuntimeMXBean().getName();
     }
@@ -133,7 +154,8 @@ public class DistributedBenchmarkResult implements Serializable {
         String str = "DistributedBenchmarkResult(opId=" + opId + ", operation=" + operation + ", numOpsPerformed=" +
                 numOpsPerformed + ", duration=" + durationSeconds + "sec, throughput=" + getOpsPerSecond() +
                 " ops/sec, startTime=" + startTime + ", stopTime=" + stopTime + ", cacheHits=" + cacheHits +
-                ", cacheMisses=" + cacheMisses + ", numFailures=" + numFailures;
+                ", cacheMisses=" + cacheMisses + ", numFailures=" + numFailures +
+                ", gcTime(Seconds)=" + gcTimeMs + ", numGCs=" + numGCs;
 
         if (tcpLatencyStatistics != null)
             str += ", avgTcpLatency=" + (tcpLatencyStatistics.getN() > 0 ? tcpLatencyStatistics.getMean() : 0);

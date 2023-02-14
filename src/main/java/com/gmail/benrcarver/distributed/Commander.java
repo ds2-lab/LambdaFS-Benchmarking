@@ -32,7 +32,6 @@ import java.nio.file.Paths;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.Random;
@@ -1298,42 +1297,45 @@ public class Commander {
             primaryHdfs.mergeTransactionEvents(localResult.txEvents, true);
         }
 
-        AggregatedResult aggregatedResult;
-        if (expectedNumResponses < 1) {
-            LOG.info("The number of distributed results is 1. We have nothing to wait for.");
-            String metricsString = "";
-
-            DecimalFormat df = new DecimalFormat("#.####");
-            double avgTcpLatency;
-            if (localResult.tcpLatencyStatistics != null)
-                avgTcpLatency = localResult.tcpLatencyStatistics.getMean();
-            else
-                avgTcpLatency = -1;
-
-            double avgHttpLatency;
-            if (localResult.httpLatencyStatistics != null)
-                avgHttpLatency = (localResult.httpLatencyStatistics.getN() > 0) ? localResult.httpLatencyStatistics.getMean() : 0;
-            else
-                avgHttpLatency = -1;
-
-            double avgLatency = avgTcpLatency + avgHttpLatency / 2.0;
-            double cacheHitRate = ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses));
-            // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
-            metricsString = String.format("%s %d %d %s %s %s %s", df.format(localResult.getOpsPerSecond()),
-                    localResult.cacheHits, localResult.cacheMisses,
-                    df.format(cacheHitRate),
-                    df.format(avgTcpLatency),
-                    df.format(avgHttpLatency),
-                    df.format(avgLatency));
-
-            aggregatedResult = new AggregatedResult(localResult.getOpsPerSecond(), localResult.cacheHits,
-                    localResult.cacheMisses, metricsString, avgTcpLatency, avgHttpLatency, avgLatency,
-                    localResult.durationSeconds);
-        } else {
-            LOG.info("Expecting " + expectedNumResponses + " distributed results.");
-            aggregatedResult = extractDistributedResultFromQueue(resultQueues.get(operationId), localResult,
-                    expectedNumResponses);
-        }
+        // In theory, calling `extractDistributedResultFromQueue` when there's only a local result should work.
+        // We'll use the data from the local result, then skip the loop where we extract distributed results
+        // from the queue, and so we'll ultimately just return an AggregatedResult created from only the local result.
+        AggregatedResult aggregatedResult = extractDistributedResultFromQueue(
+                resultQueues.getOrDefault(operationId, new LinkedBlockingQueue<>()), localResult);
+//        if (expectedNumResponses < 1) {
+//            LOG.info("The number of distributed results is 1. We have nothing to wait for.");
+//            String metricsString = "";
+//
+//            DecimalFormat df = new DecimalFormat("#.####");
+//            double avgTcpLatency;
+//            if (localResult.tcpLatencyStatistics != null)
+//                avgTcpLatency = localResult.tcpLatencyStatistics.getMean();
+//            else
+//                avgTcpLatency = -1;
+//
+//            double avgHttpLatency;
+//            if (localResult.httpLatencyStatistics != null)
+//                avgHttpLatency = (localResult.httpLatencyStatistics.getN() > 0) ? localResult.httpLatencyStatistics.getMean() : 0;
+//            else
+//                avgHttpLatency = -1;
+//
+//            double avgLatency = avgTcpLatency + avgHttpLatency / 2.0;
+//            double cacheHitRate = ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses));
+//            // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
+//            metricsString = String.format("%s %d %d %s %s %s %s", df.format(localResult.getOpsPerSecond()),
+//                    localResult.cacheHits, localResult.cacheMisses,
+//                    df.format(cacheHitRate),
+//                    df.format(avgTcpLatency),
+//                    df.format(avgHttpLatency),
+//                    df.format(avgLatency));
+//
+//            aggregatedResult = new AggregatedResult(localResult.getOpsPerSecond(), localResult.cacheHits,
+//                    localResult.cacheMisses, metricsString, avgTcpLatency, avgHttpLatency, avgLatency,
+//                    localResult.durationSeconds);
+//        } else {
+//            LOG.info("Expecting " + expectedNumResponses + " distributed results.");
+//            aggregatedResult = extractDistributedResultFromQueue(resultQueues.get(operationId), localResult);
+//        }
 
         System.out.println("throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
         System.out.println(aggregatedResult.metricsString);
@@ -2209,78 +2211,92 @@ public class Commander {
             int numDistributedResults,
             String operationId,
             DistributedBenchmarkResult localResult) throws InterruptedException {
-        if (numDistributedResults < 1) {
-            if (localResult == null) {
-                assert(!commanderExecutesToo);
-                LOG.error("We are not expecting any distributed results, but the Commander does not execute tasks/jobs.");
-                return new AggregatedResult(0, 0, 0, "[INVALID METRICS STRING]",
-                        -1, -1, -1, -1);
-            }
-
-            String metricsString = "";
-
-            DecimalFormat df = new DecimalFormat("#.####");
-            double avgTcpLatency;
-            if (localResult.tcpLatencyStatistics != null)
-                avgTcpLatency = localResult.tcpLatencyStatistics.getMean();
-            else
-                avgTcpLatency = -1;
-
-            double avgHttpLatency;
-            if (localResult.httpLatencyStatistics != null)
-                avgHttpLatency = (localResult.httpLatencyStatistics.getN() > 0) ? localResult.httpLatencyStatistics.getMean() : 0;
-            else
-                avgHttpLatency = -1;
-
-            double avgLatency = avgTcpLatency + avgHttpLatency / 2.0;
-            double cacheHitRate = ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses));
-            // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
-            metricsString = String.format("%s %d %d %s %s %s %s %s", df.format(localResult.getOpsPerSecond()),
-                    localResult.cacheHits, localResult.cacheMisses,
-                    df.format(cacheHitRate),
-                    df.format(avgTcpLatency),
-                    df.format(avgHttpLatency),
-                    df.format(avgLatency),
-                    df.format(localResult.durationSeconds));
-
-            return new AggregatedResult(localResult.getOpsPerSecond(), localResult.cacheHits,
-                    localResult.cacheMisses, metricsString, avgTcpLatency, avgHttpLatency, avgLatency,
-                    localResult.durationSeconds);
+        // If there are no distributed results, then the local result should be non-null.
+        // If the local result is null, then the Commander should be configured to NOT execute tasks (if that were the
+        // case, then we'd have a local result). If the Commander is configured to execute tasks, then we'll throw an
+        // assertion error, as that's a bug. Otherwise, it's just weird that we called waitForDistributedResult(),
+        // given there are both no results and the Commander isn't executing anything itself.
+        if (numDistributedResults < 1 && localResult == null) {
+            assert(!commanderExecutesToo);
+            LOG.error("We are not expecting any distributed results, but the Commander does not execute tasks/jobs.");
+            return AggregatedResult.DEFAULT_RESULT;
         }
 
-        LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
-        BlockingQueue<DistributedBenchmarkResult> resultQueue = resultQueues.get(operationId);
-        assert(resultQueue != null);
+//        if (numDistributedResults < 1) {
+//            if (localResult == null) {
+//                assert(!commanderExecutesToo);
+//                LOG.error("We are not expecting any distributed results, but the Commander does not execute tasks/jobs.");
+//                return AggregatedResult.DEFAULT_RESULT;
+//            }
+//
+//            String metricsString = "";
+//
+//            DecimalFormat df = new DecimalFormat("#.####");
+//            double avgTcpLatency;
+//            if (localResult.tcpLatencyStatistics != null)
+//                avgTcpLatency = localResult.tcpLatencyStatistics.getMean();
+//            else
+//                avgTcpLatency = -1;
+//
+//            double avgHttpLatency;
+//            if (localResult.httpLatencyStatistics != null)
+//                avgHttpLatency = (localResult.httpLatencyStatistics.getN() > 0) ? localResult.httpLatencyStatistics.getMean() : 0;
+//            else
+//                avgHttpLatency = -1;
+//
+//            double avgLatency = avgTcpLatency + avgHttpLatency / 2.0;
+//            double cacheHitRate = ((double)localResult.cacheHits / (double)(localResult.cacheHits + localResult.cacheMisses));
+//            // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
+//            metricsString = String.format("%s %d %d %s %s %s %s %s", df.format(localResult.getOpsPerSecond()),
+//                    localResult.cacheHits, localResult.cacheMisses,
+//                    df.format(cacheHitRate),
+//                    df.format(avgTcpLatency),
+//                    df.format(avgHttpLatency),
+//                    df.format(avgLatency),
+//                    df.format(localResult.durationSeconds));
+//
+//            return new AggregatedResult(localResult.getOpsPerSecond(), localResult.cacheHits,
+//                    localResult.cacheMisses, metricsString, avgTcpLatency, avgHttpLatency, avgLatency,
+//                    localResult.durationSeconds);
+//        }
 
-        int counter = 0;
-        long time = System.currentTimeMillis();
+        BlockingQueue<DistributedBenchmarkResult> resultQueue;
+        if (numDistributedResults >= 1) {
+            LOG.debug("Waiting for " + numDistributedResults + " distributed result(s).");
+            resultQueue = resultQueues.get(operationId);
+            assert (resultQueue != null);
 
-        while (waitingOn.size() > 0) {
-            LOG.debug("Still waiting on the following Followers: " + StringUtils.join(waitingOn, ", "));
-            Thread.sleep(1000);
+            int counter = 0;
+            long time = System.currentTimeMillis();
 
-            int numDisconnects = numDisconnections.getAndSet(0);
+            while (waitingOn.size() > 0) {
+                LOG.debug("Still waiting on the following Followers: " + StringUtils.join(waitingOn, ", "));
+                Thread.sleep(1000);
 
-            if (numDisconnects > 0) {
-                LOG.warn("There has been at least one disconnection.");
-            }
+                int numDisconnects = numDisconnections.getAndSet(0);
 
-            counter += (System.currentTimeMillis() - time);
-            time = System.currentTimeMillis();
-            if (counter >= 60000) {
-                boolean decision = getBooleanFromUser("Stop waiting early?");
-
-                if (decision) {
-                    // We won't be waiting on these anymore.
-                    numDistributedResults -= waitingOn.size();
-                    break;
+                if (numDisconnects > 0) {
+                    LOG.warn("There has been at least one disconnection.");
                 }
 
-                counter = 0;
+                counter += (System.currentTimeMillis() - time);
+                time = System.currentTimeMillis();
+                if (counter >= 60000) {
+                    boolean decision = getBooleanFromUser("Stop waiting early?");
+
+                    if (decision) {
+                        // We won't be waiting on these anymore.
+                        break;
+                    }
+
+                    counter = 0;
+                }
             }
+        } else {
+            resultQueue = new LinkedBlockingQueue<>(); // Empty queue, no distributed results.
         }
 
-        return extractDistributedResultFromQueue(resultQueue, localResult, numDistributedResults);
+        return extractDistributedResultFromQueue(resultQueue, localResult);
     }
 
     /**
@@ -2288,13 +2304,11 @@ public class Commander {
      *
      * @param resultQueue The queue from which to extract results.
      * @param localResult The result from local execution.
-     * @param numDistributedResults Expected number of results from queue.
      */
     private AggregatedResult extractDistributedResultFromQueue(
             BlockingQueue<DistributedBenchmarkResult> resultQueue,
-            DistributedBenchmarkResult localResult,
-            int numDistributedResults) {
-        DescriptiveStatistics opsPerformed = new DescriptiveStatistics();
+            DistributedBenchmarkResult localResult) {
+        DescriptiveStatistics numOpsPerformed = new DescriptiveStatistics();
         DescriptiveStatistics duration = new DescriptiveStatistics();
         DescriptiveStatistics throughput = new DescriptiveStatistics();
         DescriptiveStatistics cacheHits = new DescriptiveStatistics();
@@ -2303,15 +2317,14 @@ public class Commander {
         DescriptiveStatistics tcpLatency = new DescriptiveStatistics();
         DescriptiveStatistics httpLatency = new DescriptiveStatistics();
 
+        DescriptiveStatistics gcTime = new DescriptiveStatistics();
+        int totalNumberOfGCs = 0;
+
         List<Double> allThroughputValues = new ArrayList<>(resultQueue.size() + 1);
 
-        // We divide by this when calculating averages.
-        // We set it depending on whether localResult is null. If it is null, then we do not want to include
-        // the Commander when computing averages.
-        // int denominator = resultQueue.size() + (localResult == null ? 0 : 1);
-
+        long startProcessLocalResult = System.currentTimeMillis();
         if (localResult != null) {
-            opsPerformed.addValue(localResult.numOpsPerformed);
+            numOpsPerformed.addValue(localResult.numOpsPerformed);
             duration.addValue(localResult.durationSeconds);
             throughput.addValue(localResult.getOpsPerSecond());
             cacheHits.addValue(localResult.cacheHits);
@@ -2336,87 +2349,114 @@ public class Commander {
             for (double d : localResult.httpLatencyStatistics.getValues())
                 httpLatency.addValue(d);
 
-            //trialAvgTcpLatency += localResult.tcpLatencyStatistics.getN() > 0 ? localResult.tcpLatencyStatistics.getMean() : 0;
-            //trialAvgHttpLatency += localResult.httpLatencyStatistics.getN() > 0 ? localResult.httpLatencyStatistics.getMean() : 0;
-        }
+            // Gather garbage collection information.
+            if (localResult.opsPerformed != null) {
+                for (OperationPerformed operationPerformed : localResult.opsPerformed) {
+                    gcTime.addValue(operationPerformed.getGarbageCollectionTime());
+                    totalNumberOfGCs += operationPerformed.getNumGarbageCollections();
+                }
 
-        LOG.info("Result queue contains " + resultQueue.size() + " distributed results.");
-        for (DistributedBenchmarkResult res : resultQueue) {
-            LOG.info("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");
-            LOG.info("Num Ops Performed   : " + res.numOpsPerformed);
-            LOG.info("Duration (sec)      : " + res.durationSeconds);
-            LOG.info("Cache hits          : " + res.cacheHits);
-            LOG.info("Cache misses        : " + res.cacheMisses);
-            if (res.cacheHits + res.cacheMisses > 0)
-                LOG.info("Cache hit percentage: " + (res.cacheHits/(res.cacheHits + res.cacheMisses)));
-            else
-                LOG.info("Cache hit percentage: N/A");
-            LOG.info("Throughput          : " + res.getOpsPerSecond());
-
-            opsPerformed.addValue(res.numOpsPerformed);
-            duration.addValue(res.durationSeconds);
-            throughput.addValue(res.getOpsPerSecond());
-            cacheHits.addValue(res.cacheHits);
-            cacheMisses.addValue(res.cacheMisses);
-
-            if (res.tcpLatencyStatistics != null && res.httpLatencyStatistics != null) {
-                DescriptiveStatistics latencyTcp = res.tcpLatencyStatistics;
-                DescriptiveStatistics latencyHttp = res.httpLatencyStatistics;
-                primaryHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
-
-                LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
-                        ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
-                        ", N: " + latencyTcp.getN() + "]");
-                LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
-                        ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
-                        ", N: " + latencyHttp.getN() + "]");
-
-                for (double d : latencyTcp.getValues())
-                    tcpLatency.addValue(d);
-
-                for (double d : latencyHttp.getValues())
-                    httpLatency.addValue(d);
-
-                //trialAvgTcpLatency += (latencyTcp.getN() > 0 ? latencyTcp.getMean() : 0);
-                //trialAvgHttpLatency += (latencyHttp.getN() > 0 ? latencyHttp.getMean() : 0);
+                // Local result is the only result processed so far, so just use running totals to print.
+                LOG.info("Number of GCs: " + totalNumberOfGCs);
+                LOG.info("Time spent GC-ing: " + gcTime.getSum() + " ms");
             }
 
-            if (res.opsPerformed != null)
-                primaryHdfs.addOperationPerformeds(res.opsPerformed);
-
-            if (res.txEvents != null) {
-                primaryHdfs.mergeTransactionEvents(res.txEvents, true);
-            }
-
-            allThroughputValues.add(res.getOpsPerSecond());
+            LOG.info("Processed local result in " + (System.currentTimeMillis() - startProcessLocalResult) + " ms.");
         }
 
-        // trialAvgTcpLatency = trialAvgTcpLatency / denominator;
-        // trialAvgHttpLatency = trialAvgHttpLatency / denominator;
-        double aggregateThroughput = (opsPerformed.getSum() / duration.getMean());
+        long startProcessDistributedResults = System.currentTimeMillis();
+        if (resultQueue.size() > 0) {
+            int numDistributedResults = resultQueue.size();
+            LOG.info("Result queue contains " + numDistributedResults + " distributed results.");
+            for (DistributedBenchmarkResult res : resultQueue) {
+                long startProcessCurrDistResult = System.currentTimeMillis();
+                LOG.info("========== RECEIVED RESULT FROM " + res.jvmId + " ==========");
+                LOG.info("Num Ops Performed   : " + res.numOpsPerformed);
+                LOG.info("Duration (sec)      : " + res.durationSeconds);
+                LOG.info("Cache hits          : " + res.cacheHits);
+                LOG.info("Cache misses        : " + res.cacheMisses);
+                if (res.cacheHits + res.cacheMisses > 0)
+                    LOG.info("Cache hit percentage: " + (res.cacheHits / (res.cacheHits + res.cacheMisses)));
+                else
+                    LOG.info("Cache hit percentage: N/A");
+                LOG.info("Throughput          : " + res.getOpsPerSecond());
+
+                numOpsPerformed.addValue(res.numOpsPerformed);
+                duration.addValue(res.durationSeconds);
+                throughput.addValue(res.getOpsPerSecond());
+                cacheHits.addValue(res.cacheHits);
+                cacheMisses.addValue(res.cacheMisses);
+
+                if (res.tcpLatencyStatistics != null && res.httpLatencyStatistics != null) {
+                    DescriptiveStatistics latencyTcp = res.tcpLatencyStatistics;
+                    DescriptiveStatistics latencyHttp = res.httpLatencyStatistics;
+                    primaryHdfs.addLatencies(latencyTcp.getValues(), latencyHttp.getValues());
+
+                    LOG.info("Latency TCP (ms) [min: " + latencyTcp.getMin() + ", max: " + latencyTcp.getMax() +
+                            ", avg: " + latencyTcp.getMean() + ", std dev: " + latencyTcp.getStandardDeviation() +
+                            ", N: " + latencyTcp.getN() + "]");
+                    LOG.info("Latency HTTP (ms) [min: " + latencyHttp.getMin() + ", max: " + latencyHttp.getMax() +
+                            ", avg: " + latencyHttp.getMean() + ", std dev: " + latencyHttp.getStandardDeviation() +
+                            ", N: " + latencyHttp.getN() + "]");
+
+                    for (double d : latencyTcp.getValues())
+                        tcpLatency.addValue(d);
+
+                    for (double d : latencyHttp.getValues())
+                        httpLatency.addValue(d);
+                }
+
+                // Gather garbage collection information.
+                if (res.opsPerformed != null) {
+                    OperationPerformed[] tmpOperationsPerformed = res.opsPerformed;
+
+                    long currentResultGcTime = 0;
+                    int currentResultNumGCs = 0;
+                    for (OperationPerformed operationPerformed : tmpOperationsPerformed) {
+                        currentResultGcTime += operationPerformed.getGarbageCollectionTime();
+                        currentResultNumGCs += operationPerformed.getNumGarbageCollections();
+
+                        gcTime.addValue(operationPerformed.getGarbageCollectionTime());
+                        totalNumberOfGCs += operationPerformed.getNumGarbageCollections();
+                    }
+
+                    LOG.info("Number of GCs: " + currentResultNumGCs);
+                    LOG.info("Time spent GC-ing: " + currentResultGcTime + " ms");
+
+                    primaryHdfs.addOperationPerformeds(tmpOperationsPerformed);
+                }
+
+                if (res.txEvents != null) {
+                    primaryHdfs.mergeTransactionEvents(res.txEvents, true);
+                }
+
+                allThroughputValues.add(res.getOpsPerSecond());
+
+                LOG.info("Processed result from " + res.jvmId + " in " +
+                        (System.currentTimeMillis() - startProcessCurrDistResult) + " ms.");
+            }
+
+            LOG.info("Processed all " + numDistributedResults + " distributed result(s) in " +
+                    (System.currentTimeMillis() - startProcessDistributedResults) + " ms.");
+        } else {
+            LOG.info("There are no distributed results in the queue.");
+        }
+
+        double aggregateThroughput = (numOpsPerformed.getSum() / duration.getMean());
 
         int totalCacheHits = (int)(cacheHits.getN() > 0 ? cacheHits.getSum() : 0);
         int totalCacheMisses = (int)(cacheMisses.getN() > 0 ? cacheMisses.getSum() : 0);
-
-//        double avgCombinedLatency = 0.0;
-//        int divisor = 0; // We divide `avgCombinedLatency` by this.
-//        if (trialAvgTcpLatency > 0) {
-//            avgCombinedLatency += trialAvgTcpLatency;
-//            divisor++; // TCP latency is non-zero, so we need to account for it when calculating average.
-//        }
-//        if (trialAvgHttpLatency > 0) {
-//            avgCombinedLatency += trialAvgHttpLatency;
-//            divisor++; // HTTP latency is non-zero, so we need to account for it when calculating average.
-//        }
-//        if (divisor > 0)
-//            avgCombinedLatency /= divisor;
 
         // Compute weighted average.
         double avgCombinedLatency = 0.0;
         double totalNumLatencies = tcpLatency.getN() + httpLatency.getN();
         if (tcpLatency.getN() > 0)
+            // If TCP only, then `(tcpLatency.getN() / totalNumLatencies)` will evaluate to 1.
+            // Otherwise, `(tcpLatency.getN() / totalNumLatencies)` will help compute a weighted average.
             avgCombinedLatency += (tcpLatency.getMean() * (tcpLatency.getN() / totalNumLatencies));
         if (httpLatency.getN() > 0)
+            // If HTTP only, then `(httpLatency.getN() / totalNumLatencies)` will evaluate to 1.
+            // Otherwise, `(httpLatency.getN() / totalNumLatencies)` will help compute a weighted average.
             avgCombinedLatency += (httpLatency.getMean() * (httpLatency.getN() / totalNumLatencies));
 
         double cacheHitRate = 0.0;
@@ -2452,7 +2492,8 @@ public class Commander {
         }
 
         return new AggregatedResult(aggregateThroughput, totalCacheHits, totalCacheMisses, metricsString,
-                tcpLatency.getMean(), httpLatency.getMean(), avgCombinedLatency, duration.getMean());
+                tcpLatency.getMean(), httpLatency.getMean(), avgCombinedLatency, duration.getMean(),
+                totalNumberOfGCs, gcTime.getSum());
     }
 
     /**
@@ -2556,7 +2597,7 @@ public class Commander {
                                                DistributedBenchmarkOperation operation)
             throws InterruptedException, IOException {
         int currentTrial = 0;
-        AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
+        List<AggregatedResult> aggregatedResults = new ArrayList<>(numTrials);
         Double[] results = new Double[numTrials];
         Integer[] cacheHits = new Integer[numTrials];
         Integer[] cacheMisses = new Integer[numTrials];
@@ -2591,7 +2632,7 @@ public class Commander {
             throughput = aggregatedResult.throughput;
             aggregatedCacheHits = aggregatedResult.cacheHits;
             aggregatedCacheMisses = aggregatedResult.cacheMisses;
-            aggregatedResults[currentTrial] = aggregatedResult;
+            aggregatedResults.set(currentTrial, aggregatedResult);
 
             results[currentTrial] = throughput;
             cacheHits[currentTrial] = aggregatedCacheHits;
@@ -2910,6 +2951,12 @@ public class Commander {
         public int cacheHits;
         public int cacheMisses;
         public double durationSeconds;
+        public int numGCs;        // Number of GCs performed by the NNs.
+        public double gcTimeMs;   // Time in milliseconds spent GC-ing by the NNs.
+
+        public static final AggregatedResult DEFAULT_RESULT = new AggregatedResult(0, 0, 0,
+                "[INVALID METRICS STRING]", -1, -1, -1,
+                -1, -1, -1);
 
         // Format (for serverless):
         // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
@@ -2917,7 +2964,7 @@ public class Commander {
 
         public AggregatedResult(double throughput, int cacheHits, int cacheMisses, String metricsString,
                                 double avgTcpLatency, double avgHttpLatency, double avgCombinedLatency,
-                                double durationSeconds) {
+                                double durationSeconds, int numGCs, double gcTimeMs) {
             this.throughput = throughput;
             this.cacheHits = cacheHits;
             this.cacheMisses = cacheMisses;
@@ -2936,27 +2983,25 @@ public class Commander {
             return -1;
         }
 
-        public double getDurationInMilliseconds() {
-            return this.durationSeconds * 1000;
-        }
-
         @Override
         public String toString() {
-            return "Throughput (ops/sec): " + throughput + ", Cache Hits: " + cacheHits + ", Cache Misses: " +
+            return "Throughput: " + throughput + " ops/sec, Cache Hits: " + cacheHits + ", Cache Misses: " +
                     cacheMisses + ", Cache Hit Rate: " + getCacheHitRate() + ", Average TCP Latency: " + avgTcpLatency +
-                    ", Average HTTP Latency: " + avgHttpLatency + ", Average Combined Latency: " + avgCombinedLatency;
-
+                    " ms, Average HTTP Latency: " + avgHttpLatency + " ms, Average Combined Latency: " + avgCombinedLatency
+                    + " ms, Average duration: " + durationSeconds + " seconds, Number of GCs: " + numGCs +
+                    ", Total Time Spent GCing: " + gcTimeMs + " ms.";
         }
 
         public String toString(DecimalFormat df) {
             if (df == null)
                 throw new IllegalArgumentException("DecimalFormat parameter cannot be null.");
 
-            return "Throughput (ops/sec): " + df.format(throughput) + ", Cache Hits: " + cacheHits + ", Cache Misses: " +
+            return "Throughput: " + df.format(throughput) + " ops/sec, Cache Hits: " + cacheHits + ", Cache Misses: " +
                     cacheMisses + ", Cache Hit Rate: " + getCacheHitRate() + ", Average TCP Latency: " +
-                    df.format(avgTcpLatency) + ", Average HTTP Latency: " + df.format(avgHttpLatency) +
-                    ", Average Combined Latency: " + df.format(avgCombinedLatency) +
-                    ", Average Duration (seconds): " + durationSeconds;
+                    df.format(avgTcpLatency) + " ms, Average HTTP Latency: " + df.format(avgHttpLatency) +
+                    " ms, Average Combined Latency: " + df.format(avgCombinedLatency) +
+                    " ms, Average Duration: " + df.format(durationSeconds) + " seconds, Number of GCs: " + numGCs +
+                    ", Total Time Spent GCing: " + gcTimeMs + " ms.";
 
         }
     }
