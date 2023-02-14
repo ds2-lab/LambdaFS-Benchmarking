@@ -870,8 +870,9 @@ public class Commander {
 
             String metricsString;
             try {
-                metricsString = String.format("%f %f", localResult.getOpsPerSecond(),
-                        new DescriptiveStatistics(localResult.latencyStatistics).getMean());
+                metricsString = String.format("%f %f %f", localResult.getOpsPerSecond(),
+                        new DescriptiveStatistics(localResult.latencyStatistics).getMean(),
+                        localResult.durationSeconds);
             } catch (NullPointerException ex) {
                 LOG.warn("Could not generate metrics string due to NPE.");
                 metricsString = "";
@@ -890,7 +891,7 @@ public class Commander {
                     expectedNumResponses);
         }
 
-        System.out.println("throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency");
+        System.out.println("throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency, duration (seconds)");
         System.out.println(aggregatedResult.metricsString);
 
         String outputDirectory = "./random_workload_data/" + operationId;
@@ -988,8 +989,9 @@ public class Commander {
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
 
         DecimalFormat df = new DecimalFormat("#.####");
-        String metricsString = String.format("%s %s %s",
-                df.format(aggregateThroughput), df.format(trialAvgTcpLatency), df.format(duration.getMean()));
+        String metricsString = String.format("%s %s %s %s",
+                df.format(aggregateThroughput), df.format(trialAvgTcpLatency), df.format(duration.getMean()),
+                df.format(duration.getMean()));
 
         LOG.info(metricsString);
 
@@ -2170,7 +2172,8 @@ public class Commander {
                 DecimalFormat df = new DecimalFormat("#.####");
                 double avgTcpLatency = statistics.getMean();
                 // throughput (ops/sec), cache hits, cache misses, cache hit rate, avg tcp latency, avg http latency, avg combined latency
-                metricsString = String.format("%s %s", df.format(localResult.getOpsPerSecond()), df.format(avgTcpLatency));
+                metricsString = String.format("%s %s %s", df.format(localResult.getOpsPerSecond()), df.format(avgTcpLatency),
+                        localResult.durationSeconds);
             } catch (NullPointerException ex) {
                 LOG.warn("Could not generate metrics string due to NPE.");
             }
