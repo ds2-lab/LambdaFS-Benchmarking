@@ -689,10 +689,10 @@ public class Commander {
             Pair<Long, DescriptiveStatistics> gcInfo = PRIMARY_HDFS.getAbsoluteGCInformation();
 
             LOG.info("There have been a total of " + gcInfo.getFirst() + " GC events across all NNs thus far.");
-            LOG.info("Combined absolute time spent GCing: " + gcInfo.getSecond().getSum());
+            LOG.info("Combined absolute time spent GCing: " + gcInfo.getSecond().getSum() + " ms");
             LOG.info("Absolute time spent GCing per NameNode:");
             for (double val : gcInfo.getSecond().getValues())
-                LOG.info(String.valueOf(val));
+                LOG.info(val + " ms");
         }
         else {
             LOG.info("Getting relative GC information.");
@@ -700,12 +700,11 @@ public class Commander {
 
             LOG.info("There have been a total of " + gcInfo.getFirst() +
                     " GC events across all NNs since the previous query for relative GC information.");
-            LOG.info("Combined relative time spent GCing: " + gcInfo.getSecond().getSum());
+            LOG.info("Combined relative time spent GCing: " + gcInfo.getSecond().getSum() + " ms");
             LOG.info("Relative time spent GCing per NameNode:");
             for (double val : gcInfo.getSecond().getValues())
-                LOG.info(String.valueOf(val));
+                LOG.info(val + " ms");
         }
-
     }
 
     private void randomlyGeneratedWorkload(final DistributedFileSystem sharedHdfs)
@@ -1496,6 +1495,8 @@ public class Commander {
             aggregatedResults[currentTrial] = aggregatedResult;
             results[currentTrial] = aggregatedResult.throughput;
             currentTrial++;
+
+            getGarbageCollectionInformation(false);
 
             if (!(currentTrial >= numTrials)) {
                 LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
