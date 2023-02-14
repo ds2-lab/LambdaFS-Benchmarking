@@ -972,20 +972,10 @@ public class Commander {
         trialAvgTcpLatency = trialAvgTcpLatency / (1 + numDistributedResults);   // Add 1 to account for local result
         double aggregateThroughput = (opsPerformed.getSum() / duration.getMean());
 
-        double avgCombinedLatency = 0.0;
-        int divisor = 0; // We divide `avgCombinedLatency` by this.
-        if (trialAvgTcpLatency > 0) {
-            avgCombinedLatency += trialAvgTcpLatency;
-            divisor++; // TCP latency is non-zero, so we need to account for it when calculating average.
-        }
-        if (divisor > 0)
-            avgCombinedLatency /= divisor;
-
         LOG.info("");
         LOG.info("==== AGGREGATED RESULTS ====");
         LOG.info("Average Duration: " + duration.getMean() * 1000.0 + " ms.");
         LOG.info("Average TCP latency: " + trialAvgTcpLatency + " ms");
-        LOG.info("Average combined latency: " + avgCombinedLatency + " ms");
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
 
         DecimalFormat df = new DecimalFormat("#.####");
@@ -1004,7 +994,7 @@ public class Commander {
             System.out.println(formatted);
         }
 
-        return new AggregatedResult(aggregateThroughput, avgCombinedLatency, metricsString, opStats, duration.getMean());
+        return new AggregatedResult(aggregateThroughput, trialAvgTcpLatency, metricsString, opStats, duration.getMean());
     }
 
     /**
@@ -2576,10 +2566,6 @@ public class Commander {
             this.metricsString = metricsString;
             this.opsStats = opsStats;
             this.durationSeconds = durationSeconds;
-        }
-
-        public AggregatedResult(double throughput, double averageLatency, String metricsString, double durationSeconds) {
-            this(throughput, averageLatency, metricsString, new HashMap<>(), durationSeconds);
         }
 
         @Override
