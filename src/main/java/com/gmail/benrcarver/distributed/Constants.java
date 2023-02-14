@@ -18,6 +18,8 @@ public class Constants {
     public static final int OP_TOGGLE_BENCHMARK_MODE = -11;
     public static final int OP_TOGGLE_OPS_PERFORMED_FOLLOWERS = -10;
     public static final int OP_TRIGGER_CLIENT_GC = -9;
+    public static final int OP_GET_ABSOLUTE_GC_INFO = -7;
+    public static final int OP_GET_RELATIVE_GC_INFO = -6;
     public static final int OP_CHANGE_SLEEP_INTERVAL = -5;
     public static final int OP_CLEAR_METRIC_DATA = -4;
     public static final int OP_EXIT = 0;

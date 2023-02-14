@@ -15,6 +15,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jcraft.jsch.*;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.math3.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
@@ -529,6 +530,12 @@ public class Commander {
                     case OP_TRIGGER_CLIENT_GC:
                         performClientVMGarbageCollection();
                         break;
+                    case OP_GET_ABSOLUTE_GC_INFO:
+                        getGarbageCollectionInformation(true);
+                        break;
+                    case OP_GET_RELATIVE_GC_INFO:
+                        getGarbageCollectionInformation(false);
+                        break;
                     case OP_CHANGE_SLEEP_INTERVAL:
                         changeSleepInterval();
                         break;
@@ -674,6 +681,31 @@ public class Commander {
             if (numGCsPerformedDuringLastOp > 0)
                 LOG.debug("Spent " + timeSpentInGCDuringLastOp + " ms garbage collecting during the last operation.");
         }
+    }
+
+    private void getGarbageCollectionInformation(boolean getAbsoluteInfo) throws IOException {
+        if (getAbsoluteInfo) {
+            LOG.info("Getting absolute GC information.");
+            Pair<Long, DescriptiveStatistics> gcInfo = PRIMARY_HDFS.getAbsoluteGCInformation();
+
+            LOG.info("There have been a total of " + gcInfo.getFirst() + " GC events across all NNs thus far.");
+            LOG.info("Combined absolute time spent GCing: " + gcInfo.getSecond().getSum());
+            LOG.info("Absolute time spent GCing per NameNode:");
+            for (double val : gcInfo.getSecond().getValues())
+                LOG.info(String.valueOf(val));
+        }
+        else {
+            LOG.info("Getting relative GC information.");
+            Pair<Long, DescriptiveStatistics> gcInfo = PRIMARY_HDFS.getRelativeGCInformation();
+
+            LOG.info("There have been a total of " + gcInfo.getFirst() +
+                    " GC events across all NNs since the previous query for relative GC information.");
+            LOG.info("Combined relative time spent GCing: " + gcInfo.getSecond().getSum());
+            LOG.info("Relative time spent GCing per NameNode:");
+            for (double val : gcInfo.getSecond().getValues())
+                LOG.info(String.valueOf(val));
+        }
+
     }
 
     private void randomlyGeneratedWorkload(final DistributedFileSystem sharedHdfs)
@@ -2537,7 +2569,8 @@ public class Commander {
 
     private static void printMenu() {
         System.out.println("\n====== MENU ======");
-        System.out.println("(-9) Garbage Collection\n(-5) Change inter-trial sleep interval\n(-4) Clear metric data");
+        System.out.println("(-9) Garbage Collection\n(-7) Get absolute GC information\n(-6) Get relative GC information" +
+                "\n(-5) Change inter-trial sleep interval\n(-4) Clear metric data");
         System.out.println("(0) Exit\n(1) Create file\n(2) Create directory\n(3) Read contents of file.\n(4) Rename" +
                 "\n(5) Delete\n(6) List directory\n(7) Append\n(8) Create Subtree.\n(9) Ping\n(10) Prewarm" +
                 "\n(11) Write Files to Directory\n(12) Read files\n(13) Delete files\n(14) Write Files to Directories" +
