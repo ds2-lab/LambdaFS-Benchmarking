@@ -1454,6 +1454,9 @@ public class Commander {
 
         boolean writePathsToFile = getBooleanFromUser("Write HopsFS directory paths to file?");
 
+        // Establish baseline for number of GCs.
+        PRIMARY_HDFS.getRelativeGCInformation();
+
         int currentTrial = 0;
         AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
         double[] results = new double[numTrials];
@@ -1521,7 +1524,7 @@ public class Commander {
             System.out.println(throughputResult);
         }
 
-        System.out.println("\nThroughput, Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
+        System.out.println("\nThroughput, Total Duration (sec), Average Latency (ms), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
@@ -1576,6 +1579,9 @@ public class Commander {
         boolean shuffle = getBooleanFromUser("Shuffle file paths around?");
 
         int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
+
+        // Establish baseline for number of GCs.
+        PRIMARY_HDFS.getRelativeGCInformation();
 
         int currentTrial = 0;
         AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
@@ -1636,7 +1642,7 @@ public class Commander {
             System.out.println(throughputResult);
         }
 
-        System.out.println("\nThroughput, Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
+        System.out.println("\nThroughput, Total Duration (sec), Average Latency (ms), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
@@ -1657,6 +1663,9 @@ public class Commander {
         boolean shuffle = getBooleanFromUser("Shuffle file paths around?");
 
         int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
+
+        // Establish baseline for number of GCs.
+        PRIMARY_HDFS.getRelativeGCInformation();
 
         int currentTrial = 0;
         AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
@@ -1721,7 +1730,7 @@ public class Commander {
             System.out.println(throughputResult);
         }
 
-        System.out.println("\nThroughput, Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
+        System.out.println("\nThroughput, Total Duration (sec), Average Latency (ms), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
@@ -2140,6 +2149,9 @@ public class Commander {
 
         boolean writePathsToFile = getBooleanFromUser("Write HopsFS file paths to file?");
 
+        // Establish baseline for number of GCs.
+        PRIMARY_HDFS.getRelativeGCInformation();
+
         int currentTrial = 0;
         AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
         double[] results = new double[numTrials];
@@ -2207,7 +2219,7 @@ public class Commander {
             System.out.println(throughputResult);
         }
 
-        System.out.println("\nThroughput, Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
+        System.out.println("\nThroughput, Total Duration (sec), Average Latency (ms), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
@@ -2302,6 +2314,9 @@ public class Commander {
 
         int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
 
+        // Establish baseline for number of GCs.
+        PRIMARY_HDFS.getRelativeGCInformation();
+
         int currentTrial = 0;
         AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
         Double[] results = new Double[numTrials];
@@ -2363,7 +2378,7 @@ public class Commander {
             System.out.println(throughputResult);
         }
 
-        System.out.println("\nThroughput, Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
+        System.out.println("\nThroughput, Total Duration (sec), Average Latency (ms), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
@@ -2395,6 +2410,9 @@ public class Commander {
         boolean shuffle = getBooleanFromUser("Shuffle file paths around?");
 
         int numTrials = getIntFromUser("How many trials should this benchmark be performed?");
+
+        // Establish baseline for number of GCs.
+        PRIMARY_HDFS.getRelativeGCInformation();
 
         int currentTrial = 0;
         AggregatedResult[] aggregatedResults = new AggregatedResult[numTrials];
@@ -2459,7 +2477,7 @@ public class Commander {
             System.out.println(throughputResult);
         }
 
-        System.out.println("\nThroughput, Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
+        System.out.println("\nThroughput, Total Duration (sec), Average Latency (ms), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
