@@ -683,10 +683,12 @@ public class Commander {
         }
     }
 
-    private void getGarbageCollectionInformation(boolean getAbsoluteInfo) throws IOException {
+    private Pair<Long, DescriptiveStatistics> getGarbageCollectionInformation(boolean getAbsoluteInfo) throws IOException {
+        Pair<Long, DescriptiveStatistics> gcInfo;
+
         if (getAbsoluteInfo) {
             LOG.info("Getting absolute GC information.");
-            Pair<Long, DescriptiveStatistics> gcInfo = PRIMARY_HDFS.getAbsoluteGCInformation();
+            gcInfo = PRIMARY_HDFS.getAbsoluteGCInformation();
 
             LOG.info("There have been a total of " + gcInfo.getFirst() + " GC events across all NNs thus far.");
             LOG.info("Combined absolute time spent GCing: " + gcInfo.getSecond().getSum() + " ms");
@@ -696,7 +698,7 @@ public class Commander {
         }
         else {
             LOG.info("Getting relative GC information.");
-            Pair<Long, DescriptiveStatistics> gcInfo = PRIMARY_HDFS.getRelativeGCInformation();
+            gcInfo = PRIMARY_HDFS.getRelativeGCInformation();
 
             LOG.info("There have been a total of " + gcInfo.getFirst() +
                     " GC events across all NNs since the previous query for relative GC information.");
@@ -705,6 +707,8 @@ public class Commander {
             for (double val : gcInfo.getSecond().getValues())
                 LOG.info(val + " ms");
         }
+
+        return gcInfo;
     }
 
     private void randomlyGeneratedWorkload(final DistributedFileSystem sharedHdfs)
@@ -1496,10 +1500,13 @@ public class Commander {
             results[currentTrial] = aggregatedResult.throughput;
             currentTrial++;
 
-            getGarbageCollectionInformation(false);
+            Pair<Long, DescriptiveStatistics> gcInfo = getGarbageCollectionInformation(false);
+
+            aggregatedResult.numGCs = gcInfo.getFirst();
+            aggregatedResult.timeSpentGCing = gcInfo.getSecond().getSum();
 
             if (!(currentTrial >= numTrials)) {
-                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
+                LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing client GC and sleeping for " +
                         postTrialSleepInterval + " ms.");
                 performClientVMGarbageCollection();
                 Thread.sleep(postTrialSleepInterval);
@@ -1512,7 +1519,7 @@ public class Commander {
         }
 
         for (AggregatedResult result : aggregatedResults)
-            System.out.println(result.metricsString);
+            System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
 
     private void saveLatenciesToFile() {
@@ -2593,6 +2600,9 @@ public class Commander {
         public String metricsString; // All the metrics I'd want formatted so that I can copy & paste into Excel.
         public Map<String, List<BMOpStats>> opsStats;
 
+        public long numGCs;
+        public double timeSpentGCing; // Milliseconds
+
         public AggregatedResult(double throughput, double averageLatency, String metricsString,
                                 Map<String, List<BMOpStats>> opsStats, double durationSeconds) {
             this.throughput = throughput;
@@ -2605,7 +2615,8 @@ public class Commander {
         @Override
         public String toString() {
             return "Throughput (ops/sec): " + throughput + ", Average Latency: " + averageLatency +
-                    " ms, Duration (seconds): " + durationSeconds;
+                    " ms, Duration (seconds): " + durationSeconds + ", NumGCs: " + numGCs +
+                    ", Time Spent GCing: " + timeSpentGCing + " ms";
 
         }
     }
