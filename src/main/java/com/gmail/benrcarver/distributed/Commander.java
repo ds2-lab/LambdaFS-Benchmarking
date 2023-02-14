@@ -1524,7 +1524,7 @@ public class Commander {
             System.out.println(throughputResult);
         }
 
-        System.out.println("\nThroughput, Total Duration (sec), Average Latency (ms), Number of GCs, Time Spent GC-ing (ms)");
+        System.out.println("\nThroughput, Average Latency (ms), Total Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
@@ -1642,7 +1642,7 @@ public class Commander {
             System.out.println(throughputResult);
         }
 
-        System.out.println("\nThroughput, Total Duration (sec), Average Latency (ms), Number of GCs, Time Spent GC-ing (ms)");
+        System.out.println("\nThroughput, Average Latency (ms), Total Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
@@ -1730,7 +1730,7 @@ public class Commander {
             System.out.println(throughputResult);
         }
 
-        System.out.println("\nThroughput, Total Duration (sec), Average Latency (ms), Number of GCs, Time Spent GC-ing (ms)");
+        System.out.println("\nThroughput, Average Latency (ms), Total Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
@@ -2219,7 +2219,7 @@ public class Commander {
             System.out.println(throughputResult);
         }
 
-        System.out.println("\nThroughput, Total Duration (sec), Average Latency (ms), Number of GCs, Time Spent GC-ing (ms)");
+        System.out.println("\nThroughput, Average Latency (ms), Total Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
@@ -2378,7 +2378,7 @@ public class Commander {
             System.out.println(throughputResult);
         }
 
-        System.out.println("\nThroughput, Total Duration (sec), Average Latency (ms), Number of GCs, Time Spent GC-ing (ms)");
+        System.out.println("\nThroughput, Average Latency (ms), Total Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
@@ -2477,7 +2477,7 @@ public class Commander {
             System.out.println(throughputResult);
         }
 
-        System.out.println("\nThroughput, Total Duration (sec), Average Latency (ms), Number of GCs, Time Spent GC-ing (ms)");
+        System.out.println("\nThroughput, Average Latency (ms), Total Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
