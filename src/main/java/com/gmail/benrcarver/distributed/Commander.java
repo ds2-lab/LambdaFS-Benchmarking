@@ -1500,10 +1500,13 @@ public class Commander {
             results[currentTrial] = aggregatedResult.throughput;
             currentTrial++;
 
-            Pair<Long, DescriptiveStatistics> gcInfo = getGarbageCollectionInformation(false);
+            Pair<Long, DescriptiveStatistics> gcInfo = PRIMARY_HDFS.getRelativeGCInformation();
 
             aggregatedResult.numGCs = gcInfo.getFirst();
             aggregatedResult.timeSpentGCing = gcInfo.getSecond().getSum();
+
+            LOG.info("Number of GCs: " + gcInfo.getFirst());
+            LOG.info("Time spent GC-ing: " + gcInfo.getSecond().getSum() + " ms");
 
             if (!(currentTrial >= numTrials)) {
                 LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing client GC and sleeping for " +
@@ -1513,11 +1516,12 @@ public class Commander {
             }
         }
 
-        System.out.println("[THROUGHPUT]");
+        System.out.println("[THROUGHPUT ONLY]");
         for (double throughputResult : results) {
             System.out.println(throughputResult);
         }
 
+        System.out.println("\nThroughput, Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
             System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
@@ -1556,7 +1560,7 @@ public class Commander {
         }
     }
 
-    private void statFilesWeakScaling() throws InterruptedException, FileNotFoundException {
+    private void statFilesWeakScaling() throws InterruptedException, IOException {
         System.out.print("How many threads should be used?\n> ");
         String inputN = scanner.nextLine();
         int numThreads = Integer.parseInt(inputN);
@@ -1611,6 +1615,14 @@ public class Commander {
             results[currentTrial] = aggregatedResult.throughput;
             currentTrial++;
 
+            Pair<Long, DescriptiveStatistics> gcInfo = PRIMARY_HDFS.getRelativeGCInformation();
+
+            aggregatedResult.numGCs = gcInfo.getFirst();
+            aggregatedResult.timeSpentGCing = gcInfo.getSecond().getSum();
+
+            LOG.info("Number of GCs: " + gcInfo.getFirst());
+            LOG.info("Time spent GC-ing: " + gcInfo.getSecond().getSum() + " ms");
+
             if (!(currentTrial >= numTrials)) {
                 LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
                         postTrialSleepInterval + " ms.");
@@ -1619,16 +1631,17 @@ public class Commander {
             }
         }
 
-        System.out.println("[THROUGHPUT]");
+        System.out.println("[THROUGHPUT ONLY]");
         for (double throughputResult : results) {
             System.out.println(throughputResult);
         }
 
+        System.out.println("\nThroughput, Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
-            System.out.println(result.metricsString);
+            System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
 
-    private void listDirectoriesFromFile() throws InterruptedException, FileNotFoundException {
+    private void listDirectoriesFromFile() throws InterruptedException, IOException {
         System.out.print("How many clients (i.e., threads) should be used?\n> ");
         String inputN = scanner.nextLine();
         int n = Integer.parseInt(inputN);
@@ -1687,6 +1700,14 @@ public class Commander {
             results[currentTrial] = throughput;
             currentTrial++;
 
+            Pair<Long, DescriptiveStatistics> gcInfo = PRIMARY_HDFS.getRelativeGCInformation();
+
+            aggregatedResult.numGCs = gcInfo.getFirst();
+            aggregatedResult.timeSpentGCing = gcInfo.getSecond().getSum();
+
+            LOG.info("Number of GCs: " + gcInfo.getFirst());
+            LOG.info("Time spent GC-ing: " + gcInfo.getSecond().getSum() + " ms");
+
             if (!(currentTrial >= numTrials)) {
                 LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
                         postTrialSleepInterval + " ms.");
@@ -1695,12 +1716,14 @@ public class Commander {
             }
         }
 
-        System.out.println("[THROUGHPUT]");
-        for (double throughputResult : results)
+        System.out.println("[THROUGHPUT ONLY]");
+        for (double throughputResult : results) {
             System.out.println(throughputResult);
+        }
 
+        System.out.println("\nThroughput, Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
-            System.out.println(result.metricsString);
+            System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
 
     /**
@@ -2163,6 +2186,14 @@ public class Commander {
             results[currentTrial] = aggregatedResult.throughput;
             currentTrial++;
 
+            Pair<Long, DescriptiveStatistics> gcInfo = PRIMARY_HDFS.getRelativeGCInformation();
+
+            aggregatedResult.numGCs = gcInfo.getFirst();
+            aggregatedResult.timeSpentGCing = gcInfo.getSecond().getSum();
+
+            LOG.info("Number of GCs: " + gcInfo.getFirst());
+            LOG.info("Time spent GC-ing: " + gcInfo.getSecond().getSum() + " ms");
+
             if (!(currentTrial >= numTrials)) {
                 LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
                         postTrialSleepInterval + " ms.");
@@ -2171,13 +2202,14 @@ public class Commander {
             }
         }
 
-        System.out.println("[THROUGHPUT]");
+        System.out.println("[THROUGHPUT ONLY]");
         for (double throughputResult : results) {
             System.out.println(throughputResult);
         }
 
+        System.out.println("\nThroughput, Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
-            System.out.println(result.metricsString);
+            System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
 
     /**
@@ -2253,7 +2285,7 @@ public class Commander {
      *  - The number of files each thread should read.
      */
     private void weakScalingReadOperationV2()
-            throws InterruptedException, FileNotFoundException {
+            throws InterruptedException, IOException {
         System.out.print("How many threads should be used?\n> ");
         String inputN = scanner.nextLine();
         int numThreads = Integer.parseInt(inputN);
@@ -2310,6 +2342,14 @@ public class Commander {
             results[currentTrial] = aggregatedResult.throughput;
             currentTrial++;
 
+            Pair<Long, DescriptiveStatistics> gcInfo = PRIMARY_HDFS.getRelativeGCInformation();
+
+            aggregatedResult.numGCs = gcInfo.getFirst();
+            aggregatedResult.timeSpentGCing = gcInfo.getSecond().getSum();
+
+            LOG.info("Number of GCs: " + gcInfo.getFirst());
+            LOG.info("Time spent GC-ing: " + gcInfo.getSecond().getSum() + " ms");
+
             if (!(currentTrial >= numTrials)) {
                 LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
                         postTrialSleepInterval + " ms.");
@@ -2318,13 +2358,14 @@ public class Commander {
             }
         }
 
-        System.out.println("[THROUGHPUT]");
+        System.out.println("[THROUGHPUT ONLY]");
         for (double throughputResult : results) {
             System.out.println(throughputResult);
         }
 
+        System.out.println("\nThroughput, Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
-            System.out.println(result.metricsString);
+            System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
 
     /**
@@ -2338,7 +2379,7 @@ public class Commander {
      * This function will use `n` threads to read those `n` files.
      */
     private void weakScalingReadOperation()
-            throws InterruptedException, FileNotFoundException {
+            throws InterruptedException, IOException {
         System.out.print("How many files should be read?\n> ");
         String inputN = scanner.nextLine();
         int n = Integer.parseInt(inputN);
@@ -2397,6 +2438,14 @@ public class Commander {
             results[currentTrial] = throughput;
             currentTrial++;
 
+            Pair<Long, DescriptiveStatistics> gcInfo = PRIMARY_HDFS.getRelativeGCInformation();
+
+            aggregatedResult.numGCs = gcInfo.getFirst();
+            aggregatedResult.timeSpentGCing = gcInfo.getSecond().getSum();
+
+            LOG.info("Number of GCs: " + gcInfo.getFirst());
+            LOG.info("Time spent GC-ing: " + gcInfo.getSecond().getSum() + " ms");
+
             if (!(currentTrial >= numTrials)) {
                 LOG.info("Trial " + currentTrial + "/" + numTrials + " completed. Performing GC and sleeping for " +
                         postTrialSleepInterval + " ms.");
@@ -2405,12 +2454,14 @@ public class Commander {
             }
         }
 
-        System.out.println("[THROUGHPUT]");
-        for (double throughputResult : results)
+        System.out.println("[THROUGHPUT ONLY]");
+        for (double throughputResult : results) {
             System.out.println(throughputResult);
+        }
 
+        System.out.println("\nThroughput, Duration (sec), Number of GCs, Time Spent GC-ing (ms)");
         for (AggregatedResult result : aggregatedResults)
-            System.out.println(result.metricsString);
+            System.out.println(result.metricsString + " " + result.numGCs + " " + result.timeSpentGCing);
     }
 
     private int getNextOperation() {
