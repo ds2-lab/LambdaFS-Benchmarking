@@ -2632,7 +2632,7 @@ public class Commander {
             throughput = aggregatedResult.throughput;
             aggregatedCacheHits = aggregatedResult.cacheHits;
             aggregatedCacheMisses = aggregatedResult.cacheMisses;
-            aggregatedResults.set(currentTrial, aggregatedResult);
+            aggregatedResults.add(aggregatedResult);
 
             results[currentTrial] = throughput;
             cacheHits[currentTrial] = aggregatedCacheHits;
