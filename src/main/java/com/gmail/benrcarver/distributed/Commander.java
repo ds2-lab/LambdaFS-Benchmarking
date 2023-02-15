@@ -2473,6 +2473,8 @@ public class Commander {
         LOG.info("Average HTTP latency: " + httpLatency.getMean() + " ms");
         LOG.info("Average combined latency: " + avgCombinedLatency + " ms");
         LOG.info("Aggregate Throughput (ops/sec): " + aggregateThroughput);
+        LOG.info("Number of GCs: " + totalNumberOfGCs);
+        LOG.info("Time spent GC-ing: " + gcTime.getSum() + " ms");
 
         DecimalFormat df = new DecimalFormat("#.####");
         String metricsString = String.format("%s %d %d %s %s %s %s %s", df.format(aggregateThroughput),
