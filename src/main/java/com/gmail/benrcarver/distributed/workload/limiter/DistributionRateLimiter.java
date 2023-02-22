@@ -165,6 +165,7 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
 
           if (this.throughputWriter != null) {
             this.throughputWriter.write("Completed: " +  (c - lastCompleted) + " Released: " + unfulfilled + "\n");
+            this.throughputWriter.flush();
           }
 
           lastCompleted = c;
@@ -183,6 +184,9 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
         lastInterval = System.currentTimeMillis();
         until = (long)OPS_INTERVAL;
       }
+
+      this.throughputWriter.flush();
+      this.throughputWriter.close();
 
       TimeUnit.MILLISECONDS.sleep(until);
     }
