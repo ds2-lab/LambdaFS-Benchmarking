@@ -525,6 +525,8 @@ public class Follower {
 
                         LOG.debug("Sending result to leader now...");
                         sendResultToLeader(result);
+
+                        activeWorkload.closeLimiterFileStream();
                     }
                     else {
                         LOG.error("Failed to execute random workload.");

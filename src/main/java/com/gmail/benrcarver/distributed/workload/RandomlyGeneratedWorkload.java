@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -88,6 +89,12 @@ public class RandomlyGeneratedWorkload {
         percentType2Workers = bmConf.getPercentWorkersType2();
 
         operationsPerformed = new ArrayBlockingQueue<>(bmConf.getThreadsPerWorker());
+    }
+
+    public void closeLimiterFileStream() throws IOException {
+        if (this.limiter instanceof DistributionRateLimiter) {
+            ((DistributionRateLimiter)limiter).closeFileStream();
+        }
     }
 
     public void doWarmup() throws InterruptedException {

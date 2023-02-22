@@ -1355,6 +1355,8 @@ public class Commander {
         }
 
         Utils.writeRandomWorkloadResultsToFile(outputDirectory, primaryHdfs.getOperationsPerformed());
+
+        workload.closeLimiterFileStream();
     }
 
     private void mkdirWeakScaling(final DistributedFileSystem sharedHdfs) throws IOException, InterruptedException {

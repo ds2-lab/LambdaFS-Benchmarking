@@ -120,6 +120,10 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
     }
   }
 
+  public void closeFileStream() throws IOException {
+    this.throughputWriter.close();
+  }
+
   @Override
   public Object call() throws Exception {
     // Skip units
@@ -163,10 +167,10 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
 
           // Log every 1 second
           long c = completed.get();
-          LOG.info("Completed: " +  (c - lastCompleted) + " Released: " + unfulfilled);
+          LOG.info("Completed: " + (c - lastCompleted) + " Released: " + unfulfilled);
 
           if (this.throughputWriter != null) {
-            this.throughputWriter.write("Completed: " +  (c - lastCompleted) + " Released: " + unfulfilled + "\n");
+            this.throughputWriter.write("Completed: " + (c - lastCompleted) + " Released: " + unfulfilled + "\n");
           }
 
           lastCompleted = c;
@@ -183,10 +187,8 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
 
         // Update interval to sleep
         lastInterval = System.currentTimeMillis();
-        until = (long)OPS_INTERVAL;
+        until = (long) OPS_INTERVAL;
       }
-
-      this.throughputWriter.close();
 
       TimeUnit.MILLISECONDS.sleep(until);
     }
