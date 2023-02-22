@@ -22,6 +22,8 @@ import com.gmail.benrcarver.distributed.coin.BMConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,6 +54,8 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
   // Workload will start after skiped unit.
   protected int opsUnitSkiped = 0;
 
+  private Writer throughputWriter;
+
   /**
    * DistributionRateLimiter constructor
    */
@@ -66,6 +70,13 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
     this.lastInterval = startTime - OPS_INTERVAL;
     this.opsUnit = bmConf.getInterleavedBMIaTUnit();
     this.opsUnitSkiped = bmConf.getInterleavedBMIaTSkipUnit();
+
+    try {
+      this.throughputWriter = new BufferedWriter(new OutputStreamWriter(
+              new FileOutputStream("rand-workload-throughput.txt"), StandardCharsets.UTF_8));
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    }
   }
 
   public int getOPS() {
@@ -151,6 +162,11 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
           // Log every 1 second
           long c = completed.get();
           LOG.info("Completed: " +  (c - lastCompleted) + " Released: " + unfulfilled);
+
+          if (this.throughputWriter != null) {
+            this.throughputWriter.write("Completed: " +  (c - lastCompleted) + " Released: " + unfulfilled + "\n");
+          }
+
           lastCompleted = c;
         }
 
