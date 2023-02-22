@@ -239,7 +239,7 @@ public class RandomlyGeneratedWorkload {
 
         boolean acquired = false;
         try {
-            acquired = endSemaphore.tryAcquire((long)(duration * 1.3), TimeUnit.MILLISECONDS);
+            acquired = endSemaphore.tryAcquire(duration * 2, TimeUnit.MILLISECONDS);
         } catch (InterruptedException ex) {
             LOG.error("Interrupted while waiting for workload to complete:", ex);
         }
