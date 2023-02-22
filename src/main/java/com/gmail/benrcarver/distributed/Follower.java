@@ -485,7 +485,7 @@ public class Follower {
                     LOG.error("ERROR: Could not deserialize BMConfiguration object.");
                     sendResultToLeader(new WorkloadResponse(true, null), operationId);
                 } else {
-                    activeWorkload = new RandomlyGeneratedWorkload(configuration, hdfs, numFollowers);
+                    activeWorkload = new RandomlyGeneratedWorkload(configuration, hdfs, numFollowers, operationId);
                     sendResultToLeader(new WorkloadResponse(false, null), operationId);
                 }
                 break;

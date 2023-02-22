@@ -56,10 +56,12 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
 
   private Writer throughputWriter;
 
+  private final String workloadId;
+
   /**
    * DistributionRateLimiter constructor
    */
-  public DistributionRateLimiter(BMConfiguration bmConf, DistributionGenerator distGenerator, int numWorkers) {
+  public DistributionRateLimiter(BMConfiguration bmConf, DistributionGenerator distGenerator, int numWorkers, String id) {
     try {
       this.lenSlave = numWorkers; // bmConf.getWork().size();
     } catch (Exception e) {
@@ -70,11 +72,11 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
     this.lastInterval = startTime - OPS_INTERVAL;
     this.opsUnit = bmConf.getInterleavedBMIaTUnit();
     this.opsUnitSkiped = bmConf.getInterleavedBMIaTSkipUnit();
+    this.workloadId = id;
 
     try {
-      this.throughputWriter = new BufferedWriter(new OutputStreamWriter(
-              new FileOutputStream("rand-workload-throughput.txt"), StandardCharsets.UTF_8));
-    } catch (FileNotFoundException e) {
+      this.throughputWriter = new BufferedWriter(new FileWriter("rand-workload-" + id + "-throughput.txt", true));
+    } catch (IOException e) {
       e.printStackTrace();
     }
   }

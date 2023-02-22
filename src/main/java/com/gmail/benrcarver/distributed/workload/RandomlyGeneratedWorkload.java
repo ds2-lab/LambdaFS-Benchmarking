@@ -61,18 +61,21 @@ public class RandomlyGeneratedWorkload {
 
     private final DistributedFileSystem sharedHdfs;
 
-    public RandomlyGeneratedWorkload(BMConfiguration bmConf, DistributedFileSystem sharedHdfs, int numWorkers) {
+    private final String workloadId;
+
+    public RandomlyGeneratedWorkload(BMConfiguration bmConf, DistributedFileSystem sharedHdfs, int numWorkers, String id) {
         BenchmarkDistribution distribution = bmConf.getInterleavedBMIaTDistribution();
         if (distribution == BenchmarkDistribution.POISSON) {
-            limiter = new DistributionRateLimiter(bmConf, new PoissonGenerator(bmConf), numWorkers);
+            limiter = new DistributionRateLimiter(bmConf, new PoissonGenerator(bmConf), numWorkers, id);
         } else if (distribution == BenchmarkDistribution.PARETO) {
-            limiter = new DistributionRateLimiter(bmConf, new ParetoGenerator(bmConf), numWorkers);
+            limiter = new DistributionRateLimiter(bmConf, new ParetoGenerator(bmConf), numWorkers, id);
         } else {
             limiter = new RateNoLimiter();
         }
 
         int numThreads = bmConf.getThreadsPerWorker();
 
+        this.workloadId = id;
         this.bmConf = bmConf;
         this.executor = Executors.newFixedThreadPool(numThreads + 1);
         this.sharedHdfs = sharedHdfs;

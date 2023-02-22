@@ -1133,7 +1133,7 @@ public class Commander {
 
         RandomlyGeneratedWorkload workload =
                 new RandomlyGeneratedWorkload(configuration,
-                        sharedHdfs, followers.size() + 1); // Add one to include self.
+                        sharedHdfs, followers.size() + 1, operationId); // Add one to include self.
 
         int counter = 0;
         long time = System.currentTimeMillis();
