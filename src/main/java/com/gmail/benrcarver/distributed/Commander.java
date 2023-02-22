@@ -1274,12 +1274,11 @@ public class Commander {
 
             counter += (System.currentTimeMillis() - time);
             time = System.currentTimeMillis();
-            if (counter >= 60000) {
+            if (counter >= 30000) {
                 boolean decision = getBooleanFromUser("Stop waiting early?");
 
                 if (decision) {
                     // We won't be waiting on these anymore.
-                    expectedNumResponses -= waitingOn.size();
                     break;
                 }
 
