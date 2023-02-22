@@ -171,6 +171,7 @@ public class DistributionRateLimiter implements WorkerRateLimiter {
 
           if (this.throughputWriter != null) {
             this.throughputWriter.write("Completed: " + (c - lastCompleted) + " Released: " + unfulfilled + "\n");
+            this.throughputWriter.flush();
           }
 
           lastCompleted = c;
