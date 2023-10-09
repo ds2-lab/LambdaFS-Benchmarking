@@ -8,7 +8,7 @@ The official repository for λFS (as well as the fork of HopsFS that is compatib
 
 _This software is in no way affiliated with HopsFS or its developers._
 
-# Build 
+# Building this Software
 
 This software was compiled and tested using the following software versions:
 
@@ -50,60 +50,6 @@ To compile/build the benchmarking application, please execute the following comm
 ```
 mvn clean compile assembly:single
 ```
-
-# Execute
-
-## The `HADOOP_HOME` Environment Variable
-
-Because this software interfaces with the client API of either λFS or HopsFS, it requires many of the same dependencies. We can easily include all of these dependencies by including on the classpath the following two directories: `$HADOOP_HOME/share/hadoop/hdfs/lib/` and `$HADOOP_HOME/share/hadoop/common/lib/`, where the `$HADOOP_HOME` environment variable contains the file path to the λFS or HopsFS installation directory.
-
-For example, on an Ubuntu virtual machine where the λFS local repository is in the `~/repos/LambdaFS` directory, the value of `$HADOOP_HOME` should be `/home/ubuntu/repos/LambdaFS/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT`. For HopsFS, it would instead be `/home/ubuntu/repos/LambdaFS/hadoop-dist/target/hadoop-3.2.0.2-RC0`.
-
-## Running the Application
-
-### **The General Command Format**
-
-This software can be executed with the following command:
-
-```
-java -Dlog4j.configuration=file:<PATH TO LOCAL LambdaFS-Benchmark-Utility REPO>/src/main/resources/log4j.properties \
--Dsun.io.serialization.extendedDebugInfo=true -Xmx8g -Xms8g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
--XX:ParGCCardsPerStrideChunk=4096 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
--XX:MaxNewSize=2000m -XX:+CMSClassUnloadingEnabled -XX:+ScavengeBeforeFullGC \
--cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
-com.gmail.benrcarver.distributed.InteractiveTest --leader_ip <PRIVATE IPv4 OF VM> --leader_port 8000 --yaml_path <PATH TO>/config.yaml
-```
-
-Make sure to replace the `<PATH TO LOCAL LambdaFS-Benchmark-Utility REPO>` with the appropriate path when executing the commands shown above. Likewise, do the same for the `<PATH TO>/config.yaml` file.
-
-### **Specific, Realistic Example**
-
-If you were to run this software on an Ubuntu VM with private IPv4 `10.0.8.53` using the `ubuntu` user, and the local repository were to be located in `~/repos/`, then the command would look like:
-
-```
-java -Dlog4j.configuration=file:/home/ubuntu/repos/LambdaFS-Benchmark-Utility/src/main/resources/log4j.properties \
--Dsun.io.serialization.extendedDebugInfo=true -Xmx8g -Xms8g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
--XX:ParGCCardsPerStrideChunk=4096 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
--XX:MaxNewSize=2000m -XX:+CMSClassUnloadingEnabled -XX:+ScavengeBeforeFullGC \
--cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
-com.gmail.benrcarver.distributed.InteractiveTest --leader_ip 10.0.8.53 --leader_port 8000 --yaml_path /home/ubuntu/repos/LambdaFS-Benchmark-Utility/config.yaml -n
-```
-
-You can optionally add the `-n` flag to run the benchmarking application in *non-distributed mode*. The application will not attempt to start other instances of itself on other virtual machines as configured in its `config.yaml` file when in *non-distributed mode*.
-
-Likewise, you should adjust the `-Xmx` and `-Xms` arguments according to how much RAM we have available. For our resource/hardware recommendations, see the next section of this README. 
-
-### **Simplest Example**
-
-Without the recommended GC and JVM arguments, execution the application in the same context as above would look like:
-```
-java -cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
-com.gmail.benrcarver.distributed.InteractiveTest --leader_ip 10.0.8.53 --leader_port 8000 --yaml_path /home/ubuntu/repos/LambdaFS-Benchmark-Utility/config.yaml -n
-```
-
-## Recommended Hardware 
-
-We recommend at least 8GB of RAM; however, we performed our λFS and HopsFS evaluations with the JVM heap set to 100GB for the benchmark application. In particular, we used AWS EC2 `r5.4xlarge` virtual machines for all client VMs, which have 16 vCPU and 128GB RAM. (Each client VM runs an instance of the benchmarking application.)
 
 # Configuration
 
@@ -158,6 +104,60 @@ This script was created and tested using Python 3.10.12. It generates a complete
 -a AUTOSCALING_GROUP_NAME, --autoscaling-group-name AUTOSCALING_GROUP_NAME
                     The name of the autoscaling group for the client VMs.
 ```
+
+# Executing this Software
+
+## The `HADOOP_HOME` Environment Variable
+
+Because this software interfaces with the client API of either λFS or HopsFS, it requires many of the same dependencies. We can easily include all of these dependencies by including on the classpath the following two directories: `$HADOOP_HOME/share/hadoop/hdfs/lib/` and `$HADOOP_HOME/share/hadoop/common/lib/`, where the `$HADOOP_HOME` environment variable contains the file path to the λFS or HopsFS installation directory.
+
+For example, on an Ubuntu virtual machine where the λFS local repository is in the `~/repos/LambdaFS` directory, the value of `$HADOOP_HOME` should be `/home/ubuntu/repos/LambdaFS/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT`. For HopsFS, it would instead be `/home/ubuntu/repos/LambdaFS/hadoop-dist/target/hadoop-3.2.0.2-RC0`.
+
+## Running the Application
+
+### **The General Command Format**
+
+This software can be executed with the following command:
+
+```
+java -Dlog4j.configuration=file:<PATH TO LOCAL LambdaFS-Benchmark-Utility REPO>/src/main/resources/log4j.properties \
+-Dsun.io.serialization.extendedDebugInfo=true -Xmx8g -Xms8g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
+-XX:ParGCCardsPerStrideChunk=4096 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
+-XX:MaxNewSize=2000m -XX:+CMSClassUnloadingEnabled -XX:+ScavengeBeforeFullGC \
+-cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
+com.gmail.benrcarver.distributed.InteractiveTest --leader_ip <PRIVATE IPv4 OF VM> --leader_port 8000 --yaml_path <PATH TO>/config.yaml
+```
+
+Make sure to replace the `<PATH TO LOCAL LambdaFS-Benchmark-Utility REPO>` with the appropriate path when executing the commands shown above. Likewise, do the same for the `<PATH TO>/config.yaml` file.
+
+### **Specific, Realistic Example**
+
+If you were to run this software on an Ubuntu VM with private IPv4 `10.0.8.53` using the `ubuntu` user, and the local repository were to be located in `~/repos/`, then the command would look like:
+
+```
+java -Dlog4j.configuration=file:/home/ubuntu/repos/LambdaFS-Benchmark-Utility/src/main/resources/log4j.properties \
+-Dsun.io.serialization.extendedDebugInfo=true -Xmx8g -Xms8g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
+-XX:ParGCCardsPerStrideChunk=4096 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
+-XX:MaxNewSize=2000m -XX:+CMSClassUnloadingEnabled -XX:+ScavengeBeforeFullGC \
+-cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
+com.gmail.benrcarver.distributed.InteractiveTest --leader_ip 10.0.8.53 --leader_port 8000 --yaml_path /home/ubuntu/repos/LambdaFS-Benchmark-Utility/config.yaml -n
+```
+
+You can optionally add the `-n` flag to run the benchmarking application in *non-distributed mode*. The application will not attempt to start other instances of itself on other virtual machines as configured in its `config.yaml` file when in *non-distributed mode*.
+
+Likewise, you should adjust the `-Xmx` and `-Xms` arguments according to how much RAM we have available. For our resource/hardware recommendations, see the next section of this README. 
+
+### **Simplest Example**
+
+Without the recommended GC and JVM arguments, execution the application in the same context as above would look like:
+```
+java -cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
+com.gmail.benrcarver.distributed.InteractiveTest --leader_ip 10.0.8.53 --leader_port 8000 --yaml_path /home/ubuntu/repos/LambdaFS-Benchmark-Utility/config.yaml -n
+```
+
+## Recommended Hardware 
+
+We recommend at least 8GB of RAM; however, we performed our λFS and HopsFS evaluations with the JVM heap set to 100GB for the benchmark application. In particular, we used AWS EC2 `r5.4xlarge` virtual machines for all client VMs, which have 16 vCPU and 128GB RAM. (Each client VM runs an instance of the benchmarking application.)
 
 # Associated Publications
 
