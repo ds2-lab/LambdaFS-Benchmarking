@@ -1,13 +1,7 @@
 namenodeEndpoint: hdfs://ip-10-0-11-108.ec2.internal:9000/
 hdfsConfigFile: /home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml
-commanderExecutesToo: false
+commanderExecutesToo: true
 followers:
         -
                 ip: 10.0.11.56
-                user: ubuntu
-        -
-                ip: 10.0.1.70
-                user: ubuntu
-        -
-                ip: 10.0.10.100
                 user: ubuntu
