@@ -29,14 +29,14 @@ The version of HopsFS modified to work with this benchmarking software can be fo
 After compiling the λFS and HopsFS source code, you can install the required JARs into your local Maven repository as follows:
 
 ### **λFS**
-```
+``` sh
 mvn install:install-file -Dfile=<PATH TO LOCAL λFS REPOSITORY>/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.3-SNAPSHOT.jar -DgroupId=io.hops -DartifactId=hadoop-hdfs -Dversion=3.2.0.3-SNAPSHOT -Dpackaging=jar -DgeneratePom=true
 
 mvn install:install-file -Dfile=<PATH TO LOCAL HopsFS REPOSITORY>/hadoop-common-project/hadoop-common/target/hadoop-common-3.2.0.3-SNAPSHOT.jar -DgroupId=io.hops -DartifactId=hadoop-common -Dversion=3.2.0.3-SNAPSHOT -Dpackaging=jar -DgeneratePom=true
 ```
 
 ### **HopsFS**
-```
+``` sh
 mvn install:install-file -Dfile=<PATH TO LOCAL λFS REPOSITORY>/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-3.2.0.2-RC0.jar -DgroupId=io.hops -DartifactId=hadoop-hdfs -Dversion=3.2.0.3-SNAPSHOT -Dpackaging=jar -DgeneratePom=true
 
 mvn install:install-file -Dfile=<PATH TO LOCAL HopsFS REPOSITORY>/hadoop-common-project/hadoop-common/target/hadoop-common-3.2.0.2-RC0.jar -DgroupId=io.hops -DartifactId=hadoop-common -Dversion=3.2.0.3-SNAPSHOT -Dpackaging=jar -DgeneratePom=true
@@ -47,7 +47,7 @@ Make sure to replace the `<PATH TO LOCAL λFS REPOSITORY>` with the appropriate 
 ## Build the Application
 
 To compile/build the benchmarking application, please execute the following command from the root directory:
-```
+``` sh
 mvn clean compile assembly:single
 ```
 
@@ -61,7 +61,7 @@ This application expects a `config.yaml` file to be present in the root director
 
 Lastly, there is the `followers` parameter. This is expected to be a list of the form:
 
-```
+``` yaml
 followers:
         -
                 ip: 10.0.0.1
@@ -89,7 +89,7 @@ The `get_client_ips.sh` script is called by `create_benchmark_config.py`; you sh
 This script was created and tested using Python 3.10.12. It generates a complete `config.yaml` file for you automatically, populated with the private IPv4s of any already-running client VMs from your EC2 autoscaling group.
 
 **Script Arguments:**
-```
+``` 
 -o OUTPUT, --output OUTPUT
                     Path of the `config.yaml` output file. Default: "config.yaml"
 
@@ -119,7 +119,7 @@ For example, on an Ubuntu virtual machine where the λFS local repository is in 
 
 This software can be executed with the following command:
 
-```
+``` sh
 java -Dlog4j.configuration=file:<PATH TO LOCAL LambdaFS-Benchmark-Utility REPO>/src/main/resources/log4j.properties \
 -Dsun.io.serialization.extendedDebugInfo=true -Xmx8g -Xms8g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
 -XX:ParGCCardsPerStrideChunk=4096 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
@@ -134,7 +134,7 @@ Make sure to replace the `<PATH TO LOCAL LambdaFS-Benchmark-Utility REPO>` with 
 
 If you were to run this software on an Ubuntu VM with private IPv4 `10.0.8.53` using the `ubuntu` user, and the local repository were to be located in `~/repos/`, then the command would look like:
 
-```
+``` sh
 java -Dlog4j.configuration=file:/home/ubuntu/repos/LambdaFS-Benchmark-Utility/src/main/resources/log4j.properties \
 -Dsun.io.serialization.extendedDebugInfo=true -Xmx8g -Xms8g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
 -XX:ParGCCardsPerStrideChunk=4096 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
@@ -150,7 +150,7 @@ Likewise, you should adjust the `-Xmx` and `-Xms` arguments according to how muc
 ### **Simplest Example**
 
 Without the recommended GC and JVM arguments, execution the application in the same context as above would look like:
-```
+``` sh
 java -cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
 com.gmail.benrcarver.distributed.InteractiveTest --leader_ip 10.0.8.53 --leader_port 8000 --yaml_path /home/ubuntu/repos/LambdaFS-Benchmark-Utility/config.yaml -n
 ```
@@ -164,7 +164,7 @@ We recommend at least 8GB of RAM; however, we performed our λFS and HopsFS eval
 This software was used to evaluate both λFS and HopsFS for the paper, *λFS: A Scalable and Elastic Distributed File System Metadata Service using Serverless Functions*. This paper can be found [here](https://arxiv.org/abs/2306.11877) and is set to appear in the proceedings of ASPLOS'23.
 
 **BibTeX Citation (for arXiv preprint)**:
-```
+``` TeX
 @misc{
     lambdafs_asplos23,
     title={$\lambda$FS: A Scalable and Elastic Distributed File System Metadata Service using Serverless Functions}, 
