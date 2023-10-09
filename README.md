@@ -1,12 +1,12 @@
 # Micro-Benchmarking & Real-World Workload Driver for λFS and HopsFS 
 
-_This is in no way affiliated with HopsFS._
-
 ![Logo](https://github.com/ds2-lab/ds2-lab.github.io/blob/master/docs/images/lfs_logo.png)
 
 This utility is designed to simplify the testing, debugging, and benchmarking process for λFS and HopsFS.
 
-This software is written in Java and built/compiled with Maven.
+The official repository for λFS (as well as the fork of HopsFS that is compatible with this software) can be found [here](https://github.com/ds2-lab/LambdaFS).
+
+_This software is in no way affiliated with HopsFS or its developers._
 
 # Build 
 
