@@ -134,10 +134,9 @@ The `ip` configuration parameter of each follower is the associated virtual mach
 
 There are two scripts to help setup the configuration file for you. These are `scripts/get_client_ips.sh` and `scripts/create_benchmark_config.py`. 
 
-The `get_client_ips.sh` script is called by `create_benchmark_config.py`; you shouldn't need to execute `get_client_ips.sh` yourself.
-
 ### **The `get_client_ips.sh` Script**
-The `get_client_ips.sh` expects a single command-line argument: the name of the EC2 autoscaling group associated with the other client VMs for your λFS or HopsFS deployment. This autoscaling group is created automatically by the `create_aws_infrastrucutre.py` script available in the λFS repository. If you do not specify the name of the autoscaling group when executing `get_client_ips.sh`, it will default to `"lambdafs_clients_ag"`. 
+
+The `get_client_ips.sh` script is called by `create_benchmark_config.py`; you shouldn't need to execute `get_client_ips.sh` yourself. That being said, the `get_client_ips.sh` expects a single command-line argument: the name of the EC2 autoscaling group associated with the other client VMs for your λFS or HopsFS deployment. This autoscaling group is created automatically by the `create_aws_infrastrucutre.py` script available in the λFS repository. If you do not specify the name of the autoscaling group when executing `get_client_ips.sh`, it will default to `"lambdafs_clients_ag"`. 
 
 ### **The `create_benchmark_config.py` Script**
 
