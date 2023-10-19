@@ -128,8 +128,8 @@ This software can be executed with the following command:
 ``` sh
 java -Dlog4j.configuration=file:<PATH TO LOCAL LambdaFS-Benchmark-Utility REPO>/src/main/resources/log4j.properties \
 -Dsun.io.serialization.extendedDebugInfo=true -Xmx2g -Xms2g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
--XX:ParGCCardsPerStrideChunk=4096 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
--XX:MaxNewSize=2000m -XX:+CMSClassUnloadingEnabled -XX:+ScavengeBeforeFullGC \
+-XX:ParGCCardsPerStrideChunk=512 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
+-XX:MaxNewSize=1000m -XX:+CMSClassUnloadingEnabled -XX:+ScavengeBeforeFullGC \
 -cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
 com.gmail.benrcarver.distributed.InteractiveTest --leader_ip <PRIVATE IPv4 OF VM> --leader_port 8000 --yaml_path <PATH TO>/config.yaml -n
 ```
@@ -143,8 +143,8 @@ If you were to run this software on an Ubuntu VM with private IPv4 `10.0.0.1` us
 ``` sh
 java -Dlog4j.configuration=file:/home/ubuntu/repos/LambdaFS-Benchmark-Utility/src/main/resources/log4j.properties \
 -Dsun.io.serialization.extendedDebugInfo=true -Xmx2g -Xms2g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
--XX:ParGCCardsPerStrideChunk=4096 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
--XX:MaxNewSize=2000m -XX:+CMSClassUnloadingEnabled -XX:+ScavengeBeforeFullGC \
+-XX:ParGCCardsPerStrideChunk=512 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
+-XX:MaxNewSize=1000m -XX:+CMSClassUnloadingEnabled -XX:+ScavengeBeforeFullGC \
 -cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
 com.gmail.benrcarver.distributed.InteractiveTest --leader_ip 10.0.0.1 --leader_port 8000 --yaml_path /home/ubuntu/repos/LambdaFS-Benchmark-Utility/config.yaml -n
 ```
