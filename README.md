@@ -138,7 +138,7 @@ Make sure to replace the `<PATH TO LOCAL LambdaFS-Benchmark-Utility REPO>` with 
 
 ### **Specific, Realistic Example**
 
-If you were to run this software on an Ubuntu VM with private IPv4 `10.0.8.53` using the `ubuntu` user, and the local repository were to be located in `~/repos/`, then the command would look like:
+If you were to run this software on an Ubuntu VM with private IPv4 `10.0.0.1` using the `ubuntu` user, and the local repository were to be located in `~/repos/`, then the command would look like:
 
 ``` sh
 java -Dlog4j.configuration=file:/home/ubuntu/repos/LambdaFS-Benchmark-Utility/src/main/resources/log4j.properties \
@@ -146,7 +146,7 @@ java -Dlog4j.configuration=file:/home/ubuntu/repos/LambdaFS-Benchmark-Utility/sr
 -XX:ParGCCardsPerStrideChunk=4096 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
 -XX:MaxNewSize=2000m -XX:+CMSClassUnloadingEnabled -XX:+ScavengeBeforeFullGC \
 -cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
-com.gmail.benrcarver.distributed.InteractiveTest --leader_ip 10.0.8.53 --leader_port 8000 --yaml_path /home/ubuntu/repos/LambdaFS-Benchmark-Utility/config.yaml -n
+com.gmail.benrcarver.distributed.InteractiveTest --leader_ip 10.0.0.1 --leader_port 8000 --yaml_path /home/ubuntu/repos/LambdaFS-Benchmark-Utility/config.yaml -n
 ```
 
 You can optionally add the `-n` flag to run the benchmarking application in `non-distributed` mode. The application will not attempt to start other instances of itself on other virtual machines as configured in its `config.yaml` file when in `non-distributed` mode.
@@ -160,7 +160,7 @@ Likewise, you should adjust the `-Xmx` and `-Xms` arguments according to how muc
 Without the recommended GC and JVM arguments, execution the application in the same context as above would look like:
 ``` sh
 java -cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
-com.gmail.benrcarver.distributed.InteractiveTest --leader_ip 10.0.8.53 --leader_port 8000 --yaml_path /home/ubuntu/repos/LambdaFS-Benchmark-Utility/config.yaml -n
+com.gmail.benrcarver.distributed.InteractiveTest --leader_ip 10.0.0.1 --leader_port 8000 --yaml_path /home/ubuntu/repos/LambdaFS-Benchmark-Utility/config.yaml -n
 ```
 
 ## Recommended Hardware 
