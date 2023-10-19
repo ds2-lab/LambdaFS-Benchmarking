@@ -127,7 +127,7 @@ This software can be executed with the following command:
 
 ``` sh
 java -Dlog4j.configuration=file:<PATH TO LOCAL LambdaFS-Benchmark-Utility REPO>/src/main/resources/log4j.properties \
--Dsun.io.serialization.extendedDebugInfo=true -Xmx8g -Xms8g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
+-Dsun.io.serialization.extendedDebugInfo=true -Xmx2g -Xms2g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
 -XX:ParGCCardsPerStrideChunk=4096 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
 -XX:MaxNewSize=2000m -XX:+CMSClassUnloadingEnabled -XX:+ScavengeBeforeFullGC \
 -cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
@@ -142,14 +142,16 @@ If you were to run this software on an Ubuntu VM with private IPv4 `10.0.8.53` u
 
 ``` sh
 java -Dlog4j.configuration=file:/home/ubuntu/repos/LambdaFS-Benchmark-Utility/src/main/resources/log4j.properties \
--Dsun.io.serialization.extendedDebugInfo=true -Xmx8g -Xms8g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
+-Dsun.io.serialization.extendedDebugInfo=true -Xmx2g -Xms2g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
 -XX:ParGCCardsPerStrideChunk=4096 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
 -XX:MaxNewSize=2000m -XX:+CMSClassUnloadingEnabled -XX:+ScavengeBeforeFullGC \
 -cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
 com.gmail.benrcarver.distributed.InteractiveTest --leader_ip 10.0.8.53 --leader_port 8000 --yaml_path /home/ubuntu/repos/LambdaFS-Benchmark-Utility/config.yaml -n
 ```
 
-You can optionally add the `-n` flag to run the benchmarking application in *non-distributed mode*. The application will not attempt to start other instances of itself on other virtual machines as configured in its `config.yaml` file when in *non-distributed mode*.
+You can optionally add the `-n` flag to run the benchmarking application in `non-distributed` mode. The application will not attempt to start other instances of itself on other virtual machines as configured in its `config.yaml` file when in `non-distributed` mode.
+
+We're setting the JVM heap size to 2GB in the above command via the flags `-Xmx2g -Xms2g`. If you're using a VM with less than 2GB of RAM, then you should adjust this value accordingly. We're also specifying several other garbage-collection-related JVM arguments in that of `-XX:ParGCCardsPerStrideChunk` and `-XX:MaxNewSize`. If you reduce the JVM heap size (via the `-Xmx` and `-Xms` flags), then you should also adjust these other GC-related flags accordingly.
 
 Likewise, you should adjust the `-Xmx` and `-Xms` arguments according to how much RAM we have available. For our resource/hardware recommendations, see the next section of this README. 
 
