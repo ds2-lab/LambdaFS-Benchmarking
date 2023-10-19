@@ -167,6 +167,35 @@ com.gmail.benrcarver.distributed.InteractiveTest --leader_ip 10.0.0.1 --leader_p
 
 We recommend at least 8GB of RAM; however, we performed our λFS and HopsFS evaluations with the JVM heap set to 100GB for the benchmark application. In particular, we used AWS EC2 `r5.4xlarge` virtual machines for all client VMs, which have 16 vCPU and 128GB RAM. (Each client VM runs an instance of the benchmarking application.)
 
+## Full List of Available Command-Line Arguments
+
+The following is the full list of available command-line arguments for the λFS Benchmarking Utility.
+```
+-w  --worker                      [no value] [default: false]
+  If passed/set, then run the application as a "worker", listening to commands provided by a remote leader.
+
+-l  --leader_ip                   [string] [required]
+  The IP address of the Leader. Only used when this process is designated as a worker.
+  When running on AWS EC2 within a VPC, this should be the private IPv4 of the leader's VM.
+
+-p  --leader_port                 [int] [required]
+  The port of the Leader. Only used when this process is designated as a worker.
+
+-n  --nondistributed              [no value] [default: false]
+  Run in non-distributed mode, meaning we don't launch any followers.
+
+-f  --num_followers               [int] [default: -1]
+  Start only the first 'f' followers listed in the config.
+
+-j  --scp_jars                    [no value] [default: false]
+  The commander should SCP the JAR files to each follower.
+
+-c  --scp_config                  [no value] [default: false]
+  The command should SCP the hdfs-site.xml config file to each follower.
+
+-m  --manually_launch_followers   [no value] [default: false]
+```
+
 # Associated Publications
 
 This software was used to evaluate both λFS and HopsFS for the paper, *λFS: A Scalable and Elastic Distributed File System Metadata Service using Serverless Functions*. This paper can be found [here](https://arxiv.org/abs/2306.11877) and is set to appear in the proceedings of ASPLOS'23.

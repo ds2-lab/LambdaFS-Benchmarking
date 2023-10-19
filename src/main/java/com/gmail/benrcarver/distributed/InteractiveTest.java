@@ -25,7 +25,7 @@ public class InteractiveTest {
         Option leaderPort = new Option("p", "leader_port", true, "The port of the Leader. Only used when this process is designated as a worker.");
         Option localOption = new Option("n", "nondistributed", false, "Run in non-distributed mode, meaning we don't launch any followers.");
         //Option logLevelOption = new Option("ll", "loglevel", true, "The log4j log level to pass to the NameNodes.");
-        Option consistencyProtocolOption = new Option("c", "disable_consistency", false, "If passed, then we default to disabling the consistency protocol.");
+        Option consistencyProtocolOption = new Option("d", "disable_consistency", false, "If passed, then we default to disabling the consistency protocol.");
         Option numFollowersOpt = new Option("f", "num_followers", true, "Start only the first 'f' followers listed in the config.");
         Option scpJarsOpt = new Option("j", "scp_jars", false, "The commander should SCP the JAR files to each follower.");
         Option scpConfigOpt = new Option("c", "scp_config", false, "The command should SCP the config file to each follower.");
