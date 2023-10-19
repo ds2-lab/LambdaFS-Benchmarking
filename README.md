@@ -53,28 +53,33 @@ mvn clean compile assembly:single
 
 # Configuration
 
-This application expects a `config.yaml` file to be present in the root directory of the GitHub repository. There are several configuration parameters to set:
+This application expects a `config.yaml` file to be present in the root directory of the GitHub repository. There is a sample `config.yaml` already provided in the repository. When creating a `config.yaml` file, there are several configuration parameters to set:
 
 - `hdfsConfigFile`: The path to the `hdfs-site.xml` configuration file associated with your local λFS or HopsFS installation.
-- `commanderExecutesToo`: Determines whether the experiment driver also hosts actual file system clients that execute file system operations during benchmarks. This is `true` by default; it hasn't been fully tested when set to `false`.
 - `namenodeEndpoint`: This is the endpoint of the local NameNode; this is relevant only when using this application with HopsFS (as opposed to λFS, in which case this configuration parameter is ignored).
+
+## Distributed Mode
+
+The remaining configuration is used only when running in `distributed` mode. As described above, `distributed` mode is enabled by default but can be disabled by passing the `-n` flag, which is recommended for basic testing and debugging.
+
+- `commanderExecutesToo`: Determines whether the experiment driver also hosts actual file system clients that execute file system operations during benchmarks. This is `true` by default; it hasn't been fully tested when set to `false`.
 
 Lastly, there is the `followers` parameter. This is expected to be a list of the form:
 
 ``` yaml
 followers:
         -
-                ip: 10.0.0.1
-                user: ubuntu
-        -
                 ip: 10.0.0.2
                 user: ubuntu
         -
                 ip: 10.0.0.3
                 user: ubuntu
+        -
+                ip: 10.0.0.4
+                user: ubuntu
 ```
 
-The `ip` configuration parameter of each follower is the associated virtual machine's private IPv4 address. The `user` configuration parameter is the username that should be used when using `SSH` or `SFTP` to start/stop the client automatically and to copy configuration files to the client VM.
+For each "follower" (i.e., other machine on which you'd like to run the benchmarking software), you must add an entry to the `followers` list using the format shown above. If deployed on AWS EC2 within a VPC, then the `ip` is the private IPv4 of the EC2 VM. For `user`, specify the OS username that should be used when SSH-ing to the machine. If using our provided EC2 AMIs, then this will be `ubuntu`. The `user` configuration parameter is the username that should be used when using `SSH` or `SFTP` to start/stop the client automatically and to copy configuration files to the client VM.
 
 ## Automated Configuration
 
@@ -99,8 +104,7 @@ This script was created and tested using Python 3.10.12. It generates a complete
 -c HDFS_SITE_CONFIG_FILE_PATH, --hdfs-config-file HDFS_SITE_CONFIG_FILE_PATH
                     Path to the hdfs-site configuration file. Default: "/home/ubuntu/repos/hops/hadoop-dist/target/hadoop-3.2.0.3-SNAPSHOT/etc/hadoop/hdfs-site.xml"
 -i PRIVATE_IP, --private-ip PRIVATE_IP
-                    Private IPv4 of the primary client/experiment driver. This script does not check that a specified IP is actually valid. By default, the script attempts to resolve this
-                    automatically.
+                    Private IPv4 of the primary client/experiment driver. This script does not check that a specified IP is actually valid. By default, the script attempts to resolve this automatically.
 -a AUTOSCALING_GROUP_NAME, --autoscaling-group-name AUTOSCALING_GROUP_NAME
                     The name of the autoscaling group for the client VMs.
 ```
@@ -115,6 +119,8 @@ For example, on an Ubuntu virtual machine where the λFS local repository is in 
 
 ## Running the Application
 
+This software can be run in two modes: `distributed` and `non-distributed` mode. `distributed` mode is enabled by default but can be disabled by passing the `-n` flag, which is recommended for basic testing and debugging. All of the commands below include the `-n` flag, but the same exact commands could be used with the `-n` flag ommitted to run the application in `distributed` mode.
+
 ### **The General Command Format**
 
 This software can be executed with the following command:
@@ -125,7 +131,7 @@ java -Dlog4j.configuration=file:<PATH TO LOCAL LambdaFS-Benchmark-Utility REPO>/
 -XX:ParGCCardsPerStrideChunk=4096 -XX:+CMSScavengeBeforeRemark -XX:MaxGCPauseMillis=350 -XX:MaxTenuringThreshold=2 \
 -XX:MaxNewSize=2000m -XX:+CMSClassUnloadingEnabled -XX:+ScavengeBeforeFullGC \
 -cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
-com.gmail.benrcarver.distributed.InteractiveTest --leader_ip <PRIVATE IPv4 OF VM> --leader_port 8000 --yaml_path <PATH TO>/config.yaml
+com.gmail.benrcarver.distributed.InteractiveTest --leader_ip <PRIVATE IPv4 OF VM> --leader_port 8000 --yaml_path <PATH TO>/config.yaml -n
 ```
 
 Make sure to replace the `<PATH TO LOCAL LambdaFS-Benchmark-Utility REPO>` with the appropriate path when executing the commands shown above. Likewise, do the same for the `<PATH TO>/config.yaml` file.
