@@ -1,0 +1,73 @@
+-
+  label: L-MDS 
+  path: /home/ubuntu/data/LMDS-OP 25k ALC4
+  secondarylabel: L-MDS NNs (right y-axis)
+  secondarypath: /home/ubuntu/data/LMDS-OP 25k ALC4/nns.csv
+  linecolor: EA4027
+  linestyle: solid
+  marker: 'D'
+  markersize: 7
+  markevery: 0.05
+  linewidth: 6
+  buckets-path: "/home/ubuntu/data/LMDS-OP 25k ALC4/L-MDS_buckets.pkl"
+-
+  label: HopsFS 
+  path: /home/ubuntu/data/10-10-2022/V1/df2.csv
+  linecolor: 3D85C6
+  linestyle: "(1.25, (5, 1.95))"
+  marker: +
+  markersize: 11
+  markevery: 0.05
+  linewidth: 6
+  buckets-path: "/home/ubuntu/data/10-10-2022/V1/HopsFS_buckets.pkl"
+- 
+  label: HopsFS+Cache
+  path: /home/ubuntu/data/V+C 25k
+  linecolor: 60C955
+  linestyle: "(3.75, (5, 1.95))"
+  marker: x
+  markersize: 10
+  markevery: 0.05
+  linewidth: 6
+  buckets-path: /home/ubuntu/data/V+C 25k/HopsFS+Cache_buckets.pkl
+-
+  label: L-MDS Reduced Cache 
+  path: /home/ubuntu/data/10-11-2022/S4 (25k, 25kCache)/df3.csv
+  linecolor: A92A16
+  linestyle: "(2.5, (5, 1.95))"
+  marker: d
+  markersize: 9
+  markevery: 0.05
+  linewidth: 6
+  buckets-path: /home/ubuntu/data/10-11-2022/S4 (25k, 25kCache)/L-MDS Reduced Cache_buckets.pkl
+-
+  label: CN HopsFS+Cache
+  path: /home/ubuntu/data/Cost-Normal HopsFS+Cache 25k
+  linecolor: 2F9824
+  linestyle: "(5, (5, 1.95))"
+  marker: "X"
+  markersize: 9
+  markevery: 0.05
+  linewidth: 6
+  buckets-path: /home/ubuntu/data/Cost-Normal HopsFS+Cache 25k/CN HopsFS+Cache_buckets.pkl
+# -
+#   label: InfiniCache
+#   path: /home/ubuntu/data/InfiniCache 25k
+#   linecolor: 4CB399
+#   linestyle: "solid"
+#   marker: None
+#   markersize: 0.01
+#   markevery: 0.01
+#   linewidth: 6
+#   buckets-path: /home/ubuntu/data/InfiniCache 25k/InfiniCache_buckets.pkl
+# -
+#   label: CN HopsFS [AWS]
+#   path: /home/ubuntu/data/Cost-Normal HopsFS 25k/
+#   linecolor: 2A5D8A
+#   linestyle: dashed
+#   marker: "P"
+#   markersize: 9
+#   markevery: 0.05
+#   linewidth: 6
+
+# python throughput_yaml.py -d 300 -u ms --show --legend -i "./plots/sample_yaml_configs/inputs_25k.yaml"

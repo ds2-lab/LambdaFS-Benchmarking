@@ -228,6 +228,12 @@ This software also drives simulations of the HDFS Spotify workload described in 
 
 For documentation concerning how to reproduce the experiments used in the ASPLOS'23 paper, please refer to the documentation contained within the `./documentation/asplos23_experiments.md` file.
 
+## Plots
+
+The scripts used to generate the plots found in the ASPLOS'23 paper are located within the `./plots` directory.
+
+The scripts with `_yaml` in their name are the most up-to-date. They expect a `.YAML` file specifying each of the inputs for each of the different file systems. We provide some sample `.YAML` configuration files in the `./plots/sample_yaml_configs/` directory.
+
 # Associated Publications
 
 This software was used to evaluate both λFS and HopsFS for the paper, *λFS: A Scalable and Elastic Distributed File System Metadata Service using Serverless Functions*. This paper can be found [here](https://arxiv.org/abs/2306.11877) and is set to appear in the proceedings of ASPLOS'23.

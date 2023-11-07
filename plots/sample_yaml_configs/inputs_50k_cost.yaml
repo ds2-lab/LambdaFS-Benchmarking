@@ -1,0 +1,24 @@
+-
+  label: L-MDS [GCP]
+  path: /home/ubuntu/data/10-11-2022/S3 (50k)/L-MDS [GCP]-cost-df.csv
+  secondarylabel: L-MDS NNs
+  secondarypath: /home/ubuntu/data/10-11-2022/S3 (50k)/nns.csv
+  buckets-path: /home/ubuntu/data/10-11-2022/S3 (50k)/L-MDS [GCP]_buckets.pkl
+  linecolor: EA4027
+  linestyle: solid
+  marker: 'D'
+  markersize: 7
+  markevery: 0.05
+  linewidth: 4
+- 
+  label: HopsFS+Cache [AWS]
+  path: /home/ubuntu/data/HopsFS+Cache 50k AWS/HopsFS+Cache [AWS]-cost-df.csv
+  buckets-path: /home/ubuntu/data/HopsFS+Cache 50k AWS/HopsFS+Cache [AWS]_buckets.pkl
+  linecolor: 60C955
+  linestyle: "(3.75, (5, 1.95))"
+  marker: x
+  markersize: 10
+  markevery: 0.05
+  linewidth: 4
+
+# python throughput_yaml_per_cost.py -d 300 -u ms --show --legend -i "./plots/sample_yaml_configs/inputs_50k_cost.yaml"

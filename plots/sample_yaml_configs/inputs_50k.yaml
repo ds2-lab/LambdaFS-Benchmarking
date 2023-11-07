@@ -1,0 +1,62 @@
+-
+  label: L-MDS 
+  path: /home/ubuntu/data/LMDS-OP 50k ALC3 v1
+  secondarylabel: L-MDS NNs (right y-axis)
+  secondarypath: /home/ubuntu/data/10-11-2022/S3 (50k)/nns.csv 
+  linecolor: EA4027
+  linestyle: solid
+  marker: 'D'
+  markersize: 7
+  markevery: 0.05
+  linewidth: 4
+  buckets-path: /home/ubuntu/data/10-11-2022/S3 (50k)/L-MDS [GCP]_buckets.pkl
+-
+  label: HopsFS 
+  path: /home/ubuntu/data/10-9-2022/V2
+  linecolor: 3D85C6
+  linestyle: "(1.25, (5, 1.95))"
+  marker: +
+  markersize: 11
+  markevery: 0.05
+  linewidth: 4 
+  buckets-path: /home/ubuntu/data/10-9-2022/HopsFS_buckets.pkl
+- 
+  label: HopsFS+Cache 
+  path: /home/ubuntu/data/Revision/HopsFS+Cache 50k AWS v2)/
+  linecolor: 60C955
+  linestyle: "(3.75, (5, 1.95))"
+  marker: x
+  markersize: 10
+  markevery: 0.05
+  linewidth: 4
+  buckets-path: /home/ubuntu/data/Revision/HopsFS+Cache 50k AWS v2/HopsFS+Cache_buckets.pkl
+-
+  label: CN HopsFS+Cache 
+  path: /home/ubuntu/data/Revision/Cost-Normal-50 HopsFS+Cache 50k
+  linecolor: 2F9824
+  linestyle: "(5, (5, 1.95))"
+  marker: "X"
+  markersize: 9
+  markevery: 0.05
+  linewidth: 4
+  buckets-path: /home/ubuntu/data/Revision/Cost-Normal-50 HopsFS+Cache 50k/CN HopsFS+Cache_buckets.pkl
+# -
+#   label: HopsFS [AWS]
+#   path: /home/ubuntu/data/HopsFS 50k AWS/
+#   linecolor: 3DC6C3
+#   linestyle: "(2.5, (5, 1.95))"
+#   marker: "P"
+#   markersize: 9
+#   markevery: 0.05
+#   linewidth: 4   
+# -
+#   label: CN HopsFS [AWS]
+#   path: /home/ubuntu/data/Cost-Normal-50 HopsFS 50k
+#   linecolor: 244F76
+#   linestyle: "(2.5, (5, 1.95))"
+#   marker: "P"
+#   markersize: 9
+#   markevery: 0.05
+#   linewidth: 4
+
+# python throughput_yaml.py -d 300 -u ms --show -i "./plots/sample_yaml_configs/inputs_50k.yaml"

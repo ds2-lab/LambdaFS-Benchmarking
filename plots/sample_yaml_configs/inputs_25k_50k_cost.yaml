@@ -1,0 +1,47 @@
+-
+  label: L-MDS 25k
+  path: /home/ubuntu/data/25k/L-MDS [GCP]-cost-df.csv
+  secondarylabel: L-MDS NNs (right y-axis)
+  secondarypath: /home/ubuntu/data/25k/nns.csv
+  linecolor: EA4027
+  buckets-path: /home/ubuntu/data/25k/L-MDS [GCP]_buckets.pkl
+  linestyle: solid
+  marker: 'D'
+  markersize: 11
+  markevery: 0.05
+  linewidth: 4.5
+- 
+  label: HopsFS+Cache 25k
+  path: /home/ubuntu/data/V+C 25k/HopsFS+Cache [AWS]-cost-df.csv
+  buckets-path: /home/ubuntu/data/V+C 25k/HopsFS+Cache [AWS]_buckets.pkl
+  linecolor: "333232"
+  linestyle: "solid"
+  marker: "."
+  markersize: 16
+  markevery: 0.05
+  linewidth: 4.5
+
+-
+  label: L-MDS 50k
+  path: /home/ubuntu/data/S3 50k/L-MDS [GCP]-cost-df.csv
+  secondarylabel: L-MDS NNs
+  secondarypath: /home/ubuntu/data/S3 50k/nns.csv
+  buckets-path: /home/ubuntu/data/S3 50k/L-MDS [GCP]_buckets.pkl
+  linecolor: "4D7EA8"
+  linestyle: "(0, (4, 0.25))"
+  marker: 'd'
+  markersize: 12
+  markevery: 0.05
+  linewidth: 4.5
+- 
+  label: HopsFS+Cache 50k
+  path: /home/ubuntu/data/HopsFS+Cache 50k AWS v2/HopsFS+Cache [AWS]-cost-df.csv
+  buckets-path: /home/ubuntu/data/HopsFS+Cache 50k AWS/HopsFS+Cache [AWS]_buckets.pkl
+  linecolor: "8CB369"
+  linestyle: "(2, (4, 0.5))"
+  marker: '*'
+  markersize: 12
+  markevery: 0.05
+  linewidth: 4.5
+
+# python throughput_yaml_per_cost.py -d 300 -u ms --show --legend -i "./plots/sample_yaml_configs/inputs_25k_50k_cost.yaml"

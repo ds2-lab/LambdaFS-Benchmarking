@@ -1,0 +1,52 @@
+-
+  label: L 25k
+  path: "./Data/Latency/l-mds-25k"
+  linestyle: solid
+  marker: "(5, 1, 0)"
+  markersize: 13
+  markevery: 0.075
+  linewidth: 3
+-
+  label: L 50k
+  path: "./Data/Latency/l-mds-50k"
+  secondarylabel: L-MDS NNs
+  secondarypath: "./Data/Latency/25k/nns.csv"
+  linestyle: "(0, (4, 0.5))"
+  marker: "(5, 1, 180)"
+  markersize: 13
+  markevery: 0.075
+  linewidth: 3
+-
+  label: H 25k
+  path: "./Data/Latency/hopsfs-25k"
+  linestyle: solid
+  marker: "(3, 0, 0)"
+  markersize: 15
+  markevery: 0.075
+  linewidth: 3
+-
+  label: H 50k
+  path: "./Data/Latency/hopsfs-50k"
+  linestyle: "(0, (4, 0.5))"
+  marker: "(3, 0, 180)"
+  markersize: 15
+  markevery: 0.075
+  linewidth: 3
+-
+  label: H+C 25k
+  path: "./Data/Latency/hopsfs-cache-25k"
+  linestyle: solid
+  marker: D
+  markersize: 10
+  markevery: 0.075
+  linewidth: 3
+-
+  label: H+C 50k
+  path: "./Data/Latency/hopsfs-cache-50k"
+  linestyle: "(0, (4, 0.5))"
+  marker: d
+  markersize: 11
+  markevery: 0.075
+  linewidth: 3
+
+# python latency_25k_50k.py --show --legend -n 1000 -ylim 0.75 -i "./plots/sample_yaml_configs/latency_input.yaml" -o "latency_cdf.pdf"
