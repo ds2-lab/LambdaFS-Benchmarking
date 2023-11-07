@@ -1364,7 +1364,7 @@ public class Commander {
                 "SAME DIRECTORY [1], DIFFERENT DIRECTORIES [2], or \"RANDOM MKDIRs\" [3]?");
 
         // Validate input.
-        if (directoryChoice < 1 || directoryChoice > 3) {
+        if (directoryChoice < 1 || directoryChoice > 2) {
             LOG.error("Invalid argument specified. Should be \"1\" for same directory, \"2\" for different directories. " +
                     "Or \"3\" for random MKDIRs. Instead, got \"" + directoryChoice + "\"");
             return;
