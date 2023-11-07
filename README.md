@@ -224,6 +224,10 @@ This software also drives simulations of the HDFS Spotify workload described in 
 - `interleaved.file.getInfo.percentage`(**recommended:** `13.54`): Percentage of `STAT-FILE` operations.
 - `interleaved.dir.getInfo.percentage`(**recommended:** `3.77`): Percentage of `STAT-DIRECTORY` operations.
 
+# Reproducing the Experiments from the ASPLOS'23 Paper
+
+For documentation concerning how to reproduce the experiments used in the ASPLOS'23 paper, please refer to the documentation contained within the `./documentation/asplos23_experiments.md` file.
+
 # Associated Publications
 
 This software was used to evaluate both λFS and HopsFS for the paper, *λFS: A Scalable and Elastic Distributed File System Metadata Service using Serverless Functions*. This paper can be found [here](https://arxiv.org/abs/2306.11877) and is set to appear in the proceedings of ASPLOS'23.
