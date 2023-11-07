@@ -119,12 +119,13 @@ For example, on an Ubuntu virtual machine where the λFS local repository is in 
 
 ## Running the Application
 
+All (Java) commands related to executing the benchmarking utility must be executed from the root directory of the local repository. On the publicly available AMIs, this is the `/home/ubuntu/repos/LambdaFS-BenchmarkingUtility` directory. 
+
 This software can be run in two modes: `distributed` and `non-distributed` mode. `distributed` mode is enabled by default but can be disabled by passing the `-n` flag, which is recommended for basic testing and debugging. All of the commands below include the `-n` flag, but the same exact commands could be used with the `-n` flag ommitted to run the application in `distributed` mode.
 
 ### **The General Command Format**
 
-This software can be executed with the following command:
-
+This software can be executed with the following command (from the root of the benchmarking repository):
 ``` sh
 java -Dlog4j.configuration=file:<PATH TO LOCAL LambdaFS-Benchmark-Utility REPO>/src/main/resources/log4j.properties \
 -Dsun.io.serialization.extendedDebugInfo=true -Xmx2g -Xms2g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
@@ -139,7 +140,6 @@ Make sure to replace the `<PATH TO LOCAL LambdaFS-Benchmark-Utility REPO>` with 
 ### **Specific, Realistic Example**
 
 If you were to run this software on an Ubuntu VM with private IPv4 `10.0.0.1` using the `ubuntu` user, and the local repository were to be located in `~/repos/`, then the command would look like:
-
 ``` sh
 java -Dlog4j.configuration=file:/home/ubuntu/repos/LambdaFS-Benchmark-Utility/src/main/resources/log4j.properties \
 -Dsun.io.serialization.extendedDebugInfo=true -Xmx2g -Xms2g -XX:+UseConcMarkSweepGC -XX:+UnlockDiagnosticVMOptions \
@@ -162,6 +162,8 @@ Without the recommended GC and JVM arguments, execution the application in the s
 java -cp ".:target/HopsFSBenchmark-1.0-jar-with-dependencies.jar:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/common/lib/*" \
 com.gmail.benrcarver.distributed.InteractiveTest --leader_ip 10.0.0.1 --leader_port 8000 --yaml_path /home/ubuntu/repos/LambdaFS-Benchmark-Utility/config.yaml -n
 ```
+
+Again, the above Java commands must be executed from the root directory of the benchmarking repository. 
 
 ## Recommended Hardware 
 

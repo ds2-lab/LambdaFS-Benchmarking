@@ -17,6 +17,12 @@ public class InteractiveTest {
     public static final Logger LOG = LoggerFactory.getLogger(InteractiveTest.class);
 
     public static void main(String[] args) throws InterruptedException, IOException, JSchException {
+        // Create the "./output/" directory if it does not already exist.
+        File directory = new File("./output/");
+        if (! directory.exists()){
+            directory.mkdir();
+        }
+
         LoadBalancerRegistry.getDefaultRegistry().register(new PickFirstLoadBalancerProvider());
 
         Options cmdLineOpts = new Options();
